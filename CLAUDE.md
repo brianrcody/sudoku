@@ -7,6 +7,16 @@ application. It covers roles, workflow, artifact storage, decision authority, an
 of success. It does **not** cover technical stack or implementation choices — those live
 in `docs/aspecs/`.
 
+## Reading This File
+
+At the start of each session, read this file and the following before doing any work:
+
+- `docs/agents/` — role definitions, subagent types, models, and prompt instructions for
+  every subagent used in this project. Always consult the relevant role file before
+  briefing a subagent.
+- Any existing specs in `docs/rspecs/`, `docs/fspecs/`, `docs/vspecs/`, `docs/aspecs/`,
+  `docs/tspecs/` — to understand what has already been decided and documented.
+
 ---
 
 ## Roles
