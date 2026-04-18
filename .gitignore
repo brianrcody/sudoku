@@ -1,0 +1,17 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Editor
+.vscode/
+.idea/
+
+# Build output and dependencies (to be expanded when stack is defined)
+node_modules/
+dist/
+build/
