@@ -117,7 +117,9 @@ sudoku/
 │   ├── providers/
 │   │   ├── puzzleProvider.js         # Public facade: requestPuzzle, peekReady, primeNext
 │   │   ├── clientGenProvider.js      # Wraps the Worker; manages the pre-gen cache
-│   │   └── hintProvider.js           # SolverHintProvider
+│   │   ├── hintProvider.js           # SolverHintProvider
+│   │   ├── statsProvider.js          # Stats facade; wraps a StatsStore adapter
+│   │   └── cookieStatsStore.js       # v1 StatsStore: cookie-backed
 │   ├── game/
 │   │   ├── state.js                  # In-memory game state reducer
 │   │   ├── conflicts.js              # Conflict detection on row/col/box
@@ -169,6 +171,8 @@ sudoku/
 │       │   ├── conflicts.test.js
 │       │   ├── correctness.test.js
 │       │   ├── statistics.test.js
+│       │   ├── statsProvider.test.js
+│       │   ├── cookieStatsStore.test.js
 │       │   ├── cookies.test.js
 │       │   ├── storage.test.js
 │       │   └── hintProvider.test.js
@@ -204,6 +208,21 @@ Notes:
 - Restores in-progress puzzle from `localStorage` per fspec §13.2.
 - Owns the top-level coordinator for user actions: New Puzzle, Reset, Difficulty change, Check, Hint, theme change.
 
+### 4.1.1 Bootstrap sequence (`main.js`)
+
+Strict order — no step may be reordered:
+
+1. (Inline head script from §12.3 has already set the body theme class before this module runs.)
+2. `initTheme()` — reconcile cookie with `classList` in case of drift between inline script and module load.
+3. Construct persistence primitives: `cookieStatsStore`, `createStatsProvider(cookieStatsStore)`, `createStatistics(provider)`; `await stats.init()` — so the stats panel renders with real values on first paint.
+4. Construct `clientGenProvider` (spawns the Worker) and `puzzleProvider`.
+5. Construct `SolverHintProvider`.
+6. Construct `GameState` via `createGameState({ stats, hintProvider, puzzleProvider })`.
+7. Attempt to restore `sudoku.state.v1` via `persist/storage.js`. If present and valid, dispatch `PUZZLE_LOADED` from the restored blob. If absent, read `sudoku.currentDifficulty.v1` (default `'easy'`), dispatch `SET_GENERATING` true, call `puzzleProvider.requestPuzzle({ difficulty })`, then dispatch `PUZZLE_LOADED` on resolution.
+8. Mount UI modules in order: `srLive`, `themes` (select control), `controls`, `grid`, `numpad`, `stats`, `winBanner`, `dialog`, `keyboard`.
+9. Subscribe the persistence writer (§5.5) to state `'changed'` events.
+10. Call `puzzleProvider.primeNext(currentDifficulty)`.
+
 ### 4.2 `js/config.js`
 Frozen constant tables:
 - `DIFFICULTY_ORDER = ['kiddie','easy','medium','hard','death-march']`
@@ -227,6 +246,35 @@ Frozen constant tables:
 - Exports `PEERS[i]` — precomputed length-20 array of peer indices per cell.
 - Exports `UNITS` — 27 length-9 arrays (9 rows + 9 cols + 9 boxes).
 - Exports `UNITS_OF[i]` — 3 units each cell belongs to.
+
+### 4.4a `js/util/events.js`
+
+Tiny typed event emitter. Exports a single factory:
+
+```js
+createEmitter() → {
+  on(type: string, listener: (payload: any) => void) → () => void,
+  off(type: string, listener: Function) → void,
+  emit(type: string, payload?: any) → void,
+  clear(type?: string) → void,   // clear one type, or all types if omitted
+}
+```
+
+Semantics:
+- `on` returns an unsubscribe function. Calling it more than once is a no-op.
+- `emit` invokes listeners synchronously in registration order with a single `payload` argument.
+- Listeners added during an `emit` call do **not** fire for the in-flight emission.
+- Listeners removed during an `emit` call (including via their own returned unsubscribe) do not fire for the remainder of the in-flight emission if they have not yet been called.
+- Re-entrant `emit` calls from within a listener are allowed and run to completion before the outer `emit` resumes.
+- If a listener throws, the error is caught, logged via `console.error`, and remaining listeners for that emission still fire. The error does not propagate out of `emit`.
+- Emitting to a type with no listeners is a no-op; unknown types are not errors.
+
+Consumers that wish to expose `.on`/`.off` on their own object (e.g. `GameState`, `Statistics`) compose by holding an emitter instance internally and delegating:
+
+```js
+const e = createEmitter();
+return { ...api, on: e.on, off: e.off };  // emit stays private to the owner
+```
 
 ### 4.5 `js/util/bitset.js`
 - 9-bit candidate set helpers over JS numbers: `has`, `add`, `remove`, `count`, `iterate`, `fromDigits(arr)`, `ALL = 0b111111111`.
@@ -304,6 +352,22 @@ Public facade conforming to follow-up §3.1:
 
 Internally delegates to `clientGenProvider.js`. The module exports an instance (constructed with the single Worker).
 
+**`Puzzle` shape** (returned by `requestPuzzle` and `peekReady`; matches `state.puzzle` in §5.1):
+
+```js
+Puzzle = {
+  id: string,               // FNV-1a hex per §9.1 toPuzzle
+  difficulty: Tier,         // actual rated tier; may differ from requested on fallback (§9.1)
+  givens: Uint8Array(81),   // 0 = empty
+  solution: Uint8Array(81),
+  solveTrace: Step[],       // always present on freshly generated puzzles
+}
+```
+
+Typed arrays survive `postMessage` structured clone; the worker posts `Uint8Array` directly. The localStorage pregen cache (§6.2) serializes to plain `number[]` on write and restores to `Uint8Array` on read — the provider handles this conversion at the persistence boundary. All consumers always receive `Uint8Array`.
+
+On attempt-budget fallback, `difficulty` reflects the actually-achieved tier, not the requested tier. The provider does not surface `fallback: true` to callers (§9.4 — logged only).
+
 ### 4.17 `js/providers/clientGenProvider.js`
 - Owns the single `Worker` instance.
 - Owns the pre-gen cache (in-memory map `difficulty → Puzzle`, mirrored to `localStorage`).
@@ -323,6 +387,30 @@ Internally delegates to `clientGenProvider.js`. The module exports an instance (
 ### 4.19 `js/game/state.js`
 Central state reducer. See §5.1 for shape and §5.2 for actions.
 
+**Factory:**
+```js
+createGameState({ stats, hintProvider }) → {
+  dispatch(action) → void,
+  getState() → GameState,          // returns the live object; consumers treat as read-only
+  on(type, listener) → unsubscribe // 'changed' event per §5.4
+}
+```
+
+- `stats` — the `Statistics` instance from §4.22. Used by `PEN_ENTER` / `ON_COMPLETION_EVALUATE` handlers per §5.2.1. Required.
+- `hintProvider` — the `SolverHintProvider` from §4.18. Used by the `HINT` action handler. Required.
+- `puzzleProvider` is **not** a reducer dependency. `main.js` calls `puzzleProvider.requestPuzzle(...)` and dispatches `PUZZLE_LOADED` (see §4.1.1 step 7). The reducer never initiates puzzle generation.
+- Config values (`HINT_LIMITS`, `CHECK_VISIBLE`, `CORRECTNESS_MODE`, `CHECK_HIGHLIGHT_MS`) are imported directly from `js/config.js`, not injected.
+
+**HINT action handler** constructs the `playerState` argument for `nextHint`:
+```js
+hintProvider.nextHint(
+  state.puzzle,
+  { pen: state.pen, conflicts: state.conflicts },
+  { targetCell: state.selected }
+);
+```
+`conflicts` is required so the hint provider can filter out conflict-flagged pen entries when building the working board (§4.18, §11.1 step 3).
+
 ### 4.20 `js/game/conflicts.js`
 - `computeConflicts(board) → Set<int>` — indices of all cells participating in any row/col/box duplicate pen digit. Recomputed on every pen-edit event.
 
@@ -332,10 +420,17 @@ Central state reducer. See §5.1 for shape and §5.2 for actions.
 - `checkOnComplete(state) → { correct: bool, wrong: Set<int> }` — Hard/Death March full-grid.
 
 ### 4.22 `js/game/statistics.js`
-- `loadStats() → StatsMap`
-- `saveStats(stats)` — writes cookie.
-- `recordAttemptOnce(difficulty)` — gated by `state.attemptRecorded`.
-- `recordWin(difficulty)`.
+
+Factory `createStatistics(provider: StatsProvider) → Statistics`.
+
+Statistics interface:
+- `init() → Promise<void>` — loads from provider, caches in memory, emits `'stats-changed'`.
+- `get() → StatsMap` — returns the current cached map (synchronous).
+- `recordAttemptOnce(difficulty) → Promise<void>` — increments `attempted` for that difficulty, persists via provider, emits `'stats-changed'`. Idempotent safety guard is the caller's responsibility (see §5.2.1 PEN_ENTER gating).
+- `recordWin(difficulty) → Promise<void>` — increments `won`, persists, emits `'stats-changed'`.
+- `on(type, listener) → unsubscribe` — event subscription (uses `util/events.js`).
+
+This module holds no storage knowledge. All persistence is delegated to the provider (§4.29). Construction and `await stats.init()` happen in `main.js` before UI mount (see §4.1.1 step 3).
 
 ### 4.23 `js/persist/cookies.js`
 - `get(name)`, `set(name, value, { maxAge, path, sameSite })`, `remove(name)`.
@@ -346,7 +441,32 @@ Central state reducer. See §5.1 for shape and §5.2 for actions.
 - Keys listed in §6.2.
 
 ### 4.25 `js/ui/*`
-Each UI module owns exactly one DOM subtree, exposes `mount(root, state, dispatch)` and `render(state)`. No direct DOM access outside the module's root. Events are dispatched to the reducer in `state.js`.
+
+Each UI module owns exactly one DOM subtree. Each module default-exports a factory:
+
+```js
+export default function createXxxUI(/* optional closed-over deps */) → {
+  mount(root: HTMLElement, gameState: GameState) → void,
+}
+```
+
+- `gameState` is the object returned by `createGameState(...)`, exposing `dispatch`, `getState`, and `on`.
+- `mount` is called once. The module stores references to `root` and `gameState`, subscribes to events, and performs the first render inline before returning:
+  ```js
+  function mount(root, gameState) {
+    this.#root = root;
+    this.#gs = gameState;
+    gameState.on('changed', ({ changed }) => {
+      if (this.#relevant(changed)) this.#render(gameState.getState());
+    });
+    this.#render(gameState.getState());  // first render
+  }
+  ```
+- Each module defines its own relevant-keys set and short-circuits on irrelevant changes.
+- `dispatch` is accessed via `gameState.dispatch` inside the module — not passed as a separate argument.
+- Modules that subscribe to additional emitters (e.g. `ui/stats.js` subscribing to `statistics.on('stats-changed', ...)` per §13.7) receive those instances as constructor arguments to the factory, not via `mount`.
+- No UI module imports from `game/*`, `providers/*`, or `persist/*` — all cross-module data flows via `gameState` or its emitter.
+- No direct DOM access outside the module's `root`.
 
 ### 4.26 `js/ui/srLive.js`
 A single hidden `#sr-live` region. Exposes `announce(text)` with the double-frame clear-then-set pattern so repeated messages are re-announced.
@@ -357,6 +477,29 @@ Global `keydown` handler on `document`. Handles: digits 1–9, Backspace/Delete,
 ### 4.28 `js/ui/themes.js`
 - `applyTheme(className)` — removes all `THEME_CLASSES` from `<body>`, adds given one; writes cookie; announces via sr-live.
 - `initTheme()` — read cookie, apply before first render. Called by `main.js` before DOM is mounted.
+
+### 4.29 `js/providers/statsProvider.js`
+
+Factory `createStatsProvider(store: StatsStore) → StatsProvider`.
+
+StatsStore adapter contract:
+- `load() → Promise<StatsMap>` — resolves to stored map, or the zero-initialized default if missing/invalid. Never throws.
+- `save(stats: StatsMap) → Promise<void>` — persists; best-effort (swallow I/O errors per persist-layer policy).
+
+StatsProvider is a thin pass-through that currently delegates 1:1 to the store but serves as the stable seam if stats ever move server-side (e.g., retry/backoff, request coalescing would live here without touching `game/statistics.js`).
+
+### 4.30 `js/providers/cookieStatsStore.js`
+
+The v1 StatsStore implementation. Exports `cookieStatsStore` (singleton).
+- Owns cookie name `'sudoku.stats'` and the on-the-wire schema from §6.1.
+- `load()` reads the cookie via `persist/cookies.js`, URL-decodes, JSON-parses, checks `version === 1`, returns the inner `stats` map; otherwise returns the default zero-counts map for all five difficulties.
+- `save(stats)` wraps `{ version: 1, stats }`, JSON-encodes, URL-encodes, calls `cookies.set('sudoku.stats', value, { maxAge: 2y, path: '/', sameSite: 'Lax' })`.
+
+This is the only module outside `persist/cookies.js` that names the stats cookie.
+
+### 4.31 Future stats stores (informational)
+
+A server-backed store (e.g., `serverStatsStore.js`) would implement the same StatsStore contract against `fetch()`. Swapping requires a single edit in `main.js`: replace `cookieStatsStore` with the new store in the `createStatsProvider(...)` call. No other module changes.
 
 ---
 
@@ -422,6 +565,26 @@ All state transitions go through `GameState.dispatch(action)`. Action types:
 - `CHANGE_DIFFICULTY` — `{ difficulty }`.
 - `SET_GENERATING` — `{ flag, message }`.
 
+### 5.2.1 Stats wiring inside the reducer
+
+`PEN_ENTER` action handler, immediately after a non-given cell transitions from empty to a non-empty pen value and `action.fromHint !== true`:
+```js
+if (!state.attemptRecorded) {
+  state.attemptRecorded = true;
+  stats.recordAttemptOnce(state.puzzle.difficulty); // fire-and-forget
+}
+```
+
+`ON_COMPLETION_EVALUATE` action handler, when evaluation yields `correct === true` and `!state.winHandled`:
+```js
+state.won = true;
+state.winHandled = true;
+stats.recordWin(state.puzzle.difficulty); // fire-and-forget
+```
+
+`RESET_PUZZLE` does not touch `attemptRecorded` (fspec §10.3 — "no stats impact").
+`NEW_PUZZLE` resets `attemptRecorded` to `false`.
+
 ### 5.3 Immutability policy
 
 The reducer mutates internal arrays in place for performance. UI modules treat the state object as read-only and subscribe via an emitter.
@@ -430,17 +593,25 @@ The reducer mutates internal arrays in place for performance. UI modules treat t
 
 ```
 User gesture / key
-    ↓
-ui/* module dispatches action
-    ↓
-state.js reducer mutates state
-    ↓
-state.js emits 'changed' with affected keys
-    ↓
-ui/* modules re-render affected subtrees
-    ↓
-persist/storage.js writes puzzle state (async microtask)
+    → ui/* module dispatches action
+    → state.js reducer mutates state
+    → state.js emits 'changed' with { action, changed: Set<string> }
+      (keys of GameState that changed)
+    → ui/* subscribers re-render affected subtrees
+    → persistence subscriber (§5.5) debounces a localStorage write
 ```
+
+The reducer exposes:
+- `dispatch(action) → void`
+- `getState() → GameState` (read-only by convention)
+- `on('changed', (payload) => {}) → unsubscribe` (built on `util/events.js`)
+
+### 5.5 Persistence writer
+
+Registered from `main.js` step 9. Single subscriber to state `'changed'` events:
+- If `changed` intersects `{ puzzle, pen, pencil, hintsRemaining, attemptRecorded }`, schedule a debounced (100 ms) write of `sudoku.state.v1` via `persist/storage.js`.
+- If `changed` includes `puzzle.difficulty`, synchronously write `sudoku.currentDifficulty.v1`.
+- On `NEW_PUZZLE` action or when `won && winHandled` transitions to `true`, clear `sudoku.state.v1` (puzzle is no longer resumable).
 
 ---
 
@@ -715,7 +886,7 @@ When `HINT` action fires:
 2. Call `SolverHintProvider.nextHint(state.puzzle, { pen: state.pen }, { targetCell: state.selected })`.
 3. Provider builds working board: start with `puzzle.givens`, overlay `state.pen` values that are non-zero and not conflict-flagged.
 4. Run `solveLogically(board)`.
-5. Return `{ cellIndex: targetCell, digit: puzzle.solution[targetCell], technique }` where `technique` is derived from the solver trace or `'solution-lookup'` if the solver doesn't reach that cell.
+5. Derive `technique`: scan the solver trace for the first `Step` where `cellIndex === targetCell` and `digit !== null` (a placement step). Return that step's `technique` name. If no such step exists (the target appears only in elimination steps, or the solver did not reach it), return `'solution-lookup'`. Return `{ cellIndex: targetCell, digit: puzzle.solution[targetCell], technique }`.
 6. Reducer applies digit via PEN_ENTER path with `fromHint=true`, decrements hints, re-evaluates conflicts and correctness.
 
 ### 11.2 Coach mode hook
@@ -774,6 +945,23 @@ This constraint is documented in `README.md` under "Adding a theme" and enforced
 
 ## 13. UI Layer and Event Flow
 
+### 13.0 `index.html` mount point skeleton
+
+The Implementor creates the following container IDs in `index.html`. UI modules mount to these exact IDs; tests reference them.
+
+| ID | Mounted by |
+|---|---|
+| `#app-root` | Outermost wrapper |
+| `#grid-root` | `ui/grid.js` |
+| `#numpad-root` | `ui/numpad.js` |
+| `#controls-root` | `ui/controls.js` (New Puzzle, Reset, Difficulty, Theme) |
+| `#stats-root` | `ui/stats.js` |
+| `#win-banner-root` | `ui/winBanner.js` — absolute-positioned over grid; empty until won |
+| `#dialog-root` | `ui/dialog.js` — modal container; empty until opened |
+| `#sr-live` | `ui/srLive.js` — `aria-live` region |
+
+No UI module queries the DOM outside its own root.
+
 ### 13.1 Module boundaries
 
 Each `js/ui/*` module owns exactly one DOM subtree. Mount returns nothing; render is driven by subscriptions to the state emitter.
@@ -808,8 +996,9 @@ Each `js/ui/*` module owns exactly one DOM subtree. Mount returns nothing; rende
 
 ### 13.7 Statistics
 
-- `ui/stats.js` renders the 5-row table; marks active difficulty row with class `.active-diff`.
-- Subscribes to `stats-changed` events from `game/statistics.js`.
+- `ui/stats.js` mounts at `#stats-root`, renders a 5-row table from `stats.get()` on first mount, and subscribes to `statistics.on('stats-changed', ...)` for subsequent renders.
+- Also subscribes to state-level `'changed'` events; when `payload.changed` includes `puzzle` (difficulty change or new puzzle), it recomputes the `.active-diff` row marker. This marker is driven by `state.puzzle.difficulty`, not by statistics.
+- Row order follows `DIFFICULTY_ORDER` from `config.js`.
 
 ### 13.8 SR live region
 
@@ -896,20 +1085,24 @@ All tests that invoke the generator pass an explicit seed; behavior is fully rep
 
 **Phase 5 — Game core**
 20. `game/state.js` reducer + tests
-21. `game/conflicts.js`, `correctness.js`, `statistics.js` + tests
-22. `providers/hintProvider.js` + tests
-23. `persist/cookies.js`, `storage.js` + tests
+21. `game/conflicts.js`, `correctness.js` + tests
+22. `persist/cookies.js`, `storage.js` + tests
+23. `providers/cookieStatsStore.js` + tests
+24. `providers/statsProvider.js` + tests
+25. `game/statistics.js` (emitter + wiring) + tests
+26. `providers/hintProvider.js` + tests
+27. Re-visit `game/state.js` to integrate stats wiring per §5.2.1 + tests
 
 **Phase 6 — UI**
-24. `index.html` skeleton + all CSS files
-25. `ui/themes.js`, `srLive.js`, `dialog.js`, `keyboard.js`
-26. `ui/grid.js`, `numpad.js`, `controls.js`, `stats.js`, `winBanner.js`
-27. `main.js` bootstrap
+28. `index.html` skeleton + all CSS files
+29. `ui/themes.js`, `srLive.js`, `dialog.js`, `keyboard.js`
+30. `ui/grid.js`, `numpad.js`, `controls.js`, `stats.js`, `winBanner.js`
+31. `main.js` bootstrap (follow §4.1.1 order exactly)
 
 **Phase 7 — Polish and validation**
-28. Integration tests (game-flows, persistence, a11y)
-29. Performance validation: <1 s for all non-generation actions; Death March cold-start <5 s on mid-range device baseline
-30. README and deployment documentation
+32. Integration tests (game-flows, persistence, a11y)
+33. Performance validation: <1 s for all non-generation actions; Death March cold-start <5 s on mid-range device baseline
+34. README and deployment documentation
 
 **Milestone exits:**
 - Phase 2: solver correctly rates 100% of a curated 50-puzzle regression set at known difficulty.

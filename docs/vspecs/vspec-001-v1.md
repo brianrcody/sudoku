@@ -2,7 +2,7 @@
 **Status:** Final
 **Date:** 2026-04-18
 **Author:** Visual Designer
-**Approved mockup:** docs/mockups/game-v3.html
+**Approved mockup:** docs/mockups/game-v4.html
 
 ---
 
@@ -155,7 +155,7 @@ Applied via `body.theme-mountain`.
 | `--border-strong`| `#1a3a52`    | Deep navy                  |
 | `--text`         | `#0f2233`    |                            |
 | `--text-muted`   | `#4d7a99`    |                            |
-| `--text-given`   | `#0f2233`    |                            |
+| `--text-given`   | `#1a4d2e`    | Dark forest green          |
 | `--given-bg`     | `#dce8f2`    |                            |
 | `--accent`       | `#1a6b8a`    | Teal                       |
 | `--accent-light` | `#cfe8f3`    |                            |
@@ -182,7 +182,7 @@ Applied via `body.theme-mountain`.
 - Theme control label color: `#adc6de`
 - Theme select in header: `background-color: #2d5878`, `color: #e8f0f7`, `border-color: #4d7a99`
 - Pencil marks: `color: #2d6e4e`
-- Player pen digits: `color: #1a6b8a`
+- Player pen digits: `color: #1f6b45`
 - Difficulty select arrow fill: `#4d7a99`
 
 ### 2.5 Digital Terminal
@@ -416,7 +416,7 @@ Applied via `body.theme-terminal`.
 - School: `color: #4a5568`, `font-style: italic`, `font-weight: 400`
 - Terminal: `color: #b0ffb0`, `text-shadow: 0 0 4px rgba(176,255,176,0.3)`
 - Coffee: `color: #8b4513`
-- Mountain: `color: #1a6b8a`
+- Mountain: `color: #1f6b45`
 
 **Pencil marks:** cell contains a 3×3 sub-grid of `.pencil-mark` spans. Digits not present have class `empty` and `visibility: hidden`. Font size `9px` (Terminal/School: `8px`), color `var(--pencil)`.
 
