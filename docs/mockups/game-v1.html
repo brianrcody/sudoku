@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sudoku — Minimalist</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:            #f7f6f2;
+      --surface:       #ffffff;
+      --border:        #c8c4bb;
+      --border-strong: #2e2b25;
+      --text:          #1c1a16;
+      --text-muted:    #7a7570;
+      --text-given:    #1c1a16;
+      --given-bg:      #eceae4;
+      --accent:        #2c5282;
+      --accent-light:  #dbeafe;
+      --conflict:      #b91c1c;
+      --conflict-bg:   #fef2f2;
+      --pencil:        #5a6778;
+      --btn-bg:        #f0ede6;
+      --btn-hover:     #e4e0d7;
+      --btn-border:    #c8c4bb;
+      --active-mode:   #2c5282;
+      --win:           #15803d;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.4;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Live region (screen reader announcements) ─────────────────── */
+    #sr-live {
+      position: absolute;
+      width: 1px; height: 1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+    }
+
+    /* ── Header ────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .theme-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .theme-control label {
+      white-space: nowrap;
+    }
+
+    #theme-select {
+      font-size: 13px;
+      padding: 4px 8px;
+      border: 1px solid var(--btn-border);
+      border-radius: 4px;
+      background: var(--btn-bg);
+      color: var(--text);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: 24px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+
+    #theme-select:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* ── Main layout ───────────────────────────────────────────────── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 32px;
+      gap: 24px;
+    }
+
+    .game-area {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 32px;
+      width: 100%;
+      max-width: 860px;
+      justify-content: center;
+    }
+
+    /* ── Left column: difficulty + grid ────────────────────────────── */
+    .left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    /* ── Difficulty selector ────────────────────────────────────────── */
+    .difficulty-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .difficulty-row label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    #difficulty-select {
+      font-size: 14px;
+      font-weight: 500;
+      padding: 6px 28px 6px 10px;
+      border: 1px solid var(--btn-border);
+      border-radius: 5px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-color: var(--surface);
+    }
+
+    #difficulty-select:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* ── Sudoku grid ────────────────────────────────────────────────── */
+    .grid-wrapper {
+      position: relative;
+    }
+
+    .sudoku-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      grid-template-rows: repeat(9, 1fr);
+      border: 2.5px solid var(--border-strong);
+      border-radius: 3px;
+      overflow: hidden;
+      width: 414px;
+      height: 414px;
+      background: var(--surface);
+      user-select: none;
+    }
+
+    .cell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 22px;
+      font-weight: 500;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--text);
+      background: var(--surface);
+      transition: background 0.08s;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Remove right/bottom border on last column/row to avoid double borders with wrapper */
+    .cell:nth-child(9n) { border-right: none; }
+
+    /* Thicker box borders — right side of columns 3, 6 */
+    .cell[data-col="3"], .cell[data-col="6"] {
+      border-right: 2.5px solid var(--border-strong);
+    }
+
+    /* Thicker box borders — bottom of rows 3, 6 */
+    .cell[data-row="3"], .cell[data-row="6"] {
+      border-bottom: 2.5px solid var(--border-strong);
+    }
+
+    /* Remove bottom border on row 9 */
+    .cell[data-row="9"] { border-bottom: none; }
+
+    /* Given cells */
+    .cell.given {
+      background: var(--given-bg);
+      color: var(--text-given);
+      font-weight: 700;
+      cursor: default;
+    }
+
+    /* Player pen digit */
+    .cell.pen {
+      color: var(--accent);
+    }
+
+    /* Selected cell */
+    .cell.selected {
+      background: var(--accent-light) !important;
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+      z-index: 1;
+    }
+
+    /* Conflict */
+    .cell.conflict {
+      background: var(--conflict-bg) !important;
+      color: var(--conflict) !important;
+    }
+
+    .cell.conflict.selected {
+      background: #fee2e2 !important;
+      outline-color: var(--conflict);
+    }
+
+    /* Pencil marks container */
+    .pencil-marks {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      width: 100%;
+      height: 100%;
+      padding: 2px;
+    }
+
+    .pencil-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-weight: 500;
+      color: var(--pencil);
+      line-height: 1;
+    }
+
+    .pencil-mark.empty {
+      visibility: hidden;
+    }
+
+    /* ── Right column: controls + stats ─────────────────────────────── */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 220px;
+      flex-shrink: 0;
+    }
+
+    /* ── Number pad ──────────────────────────────────────────────────── */
+    .numpad {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .numpad-digits {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .numpad-utils {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .numpad-bottom {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 8px;
+      border: 1px solid var(--btn-border);
+      border-radius: 5px;
+      background: var(--btn-bg);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.1s, border-color 0.1s;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--btn-hover);
+      border-color: #b0aca3;
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .btn:disabled {
+      opacity: 0.38;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .btn-digit {
+      font-size: 20px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 500;
+      padding: 12px 6px;
+    }
+
+    /* Active mode toggle */
+    .btn-mode {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-mode.mode-pen {
+      background: var(--surface);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .btn-mode.mode-pencil {
+      background: var(--surface);
+      border-color: #5a6778;
+      color: #5a6778;
+      font-weight: 600;
+    }
+
+    .btn-mode .mode-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+    }
+
+    .btn-mode .mode-main {
+      font-size: 13px;
+    }
+
+    .btn-mode .mode-sub {
+      font-size: 10px;
+      opacity: 0.7;
+      font-family: inherit;
+    }
+
+    /* Hint button */
+    .btn-hint {
+      position: relative;
+    }
+
+    .hint-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: inherit;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      line-height: 1;
+    }
+
+    .btn:disabled .hint-badge {
+      background: var(--text-muted);
+    }
+
+    /* Check button */
+    .btn-check {
+      grid-column: span 2;
+    }
+
+    /* Action buttons row */
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    /* ── Stats panel ─────────────────────────────────────────────────── */
+    .stats-panel {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .stats-heading {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 8px 12px 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .stats-table th {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      text-align: right;
+      padding: 6px 12px 4px;
+    }
+
+    .stats-table th:first-child {
+      text-align: left;
+    }
+
+    .stats-table td {
+      padding: 5px 12px;
+      text-align: right;
+      border-top: 1px solid #f0ede6;
+    }
+
+    .stats-table td:first-child {
+      text-align: left;
+      font-weight: 500;
+    }
+
+    /* Active difficulty row */
+    .stats-table tr.active-diff td {
+      background: var(--accent-light);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .stats-table tr.active-diff td:first-child::after {
+      content: " ●";
+      font-size: 8px;
+      vertical-align: middle;
+    }
+
+    /* ── Modal / Dialog ──────────────────────────────────────────────── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 28px 28px 22px;
+      max-width: 340px;
+      width: 90%;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    }
+
+    .modal h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .modal p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover {
+      background: #1e3a6e;
+      border-color: #1e3a6e;
+    }
+
+    /* ── Win banner ──────────────────────────────────────────────────── */
+    .win-banner {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.92);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 6px;
+      border-radius: 3px;
+      z-index: 10;
+    }
+
+    .win-banner.show {
+      display: flex;
+    }
+
+    .win-banner .win-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--win);
+      letter-spacing: 0.02em;
+    }
+
+    .win-banner .win-sub {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* ── Responsive: mobile ──────────────────────────────────────────── */
+    @media (max-width: 720px) {
+      header {
+        padding: 12px 16px;
+      }
+
+      header h1 {
+        font-size: 16px;
+      }
+
+      main {
+        padding: 16px 12px 28px;
+        gap: 16px;
+      }
+
+      .game-area {
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .left-col {
+        width: 100%;
+        align-items: center;
+      }
+
+      .sudoku-grid {
+        width: min(calc(100vw - 32px), 414px);
+        height: min(calc(100vw - 32px), 414px);
+      }
+
+      .cell {
+        font-size: clamp(14px, 4.5vw, 22px);
+      }
+
+      .pencil-mark {
+        font-size: clamp(6px, 2vw, 9px);
+      }
+
+      .right-col {
+        width: 100%;
+        max-width: 414px;
+      }
+
+      .numpad-digits {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 375px) {
+      .sudoku-grid {
+        width: calc(100vw - 32px);
+        height: calc(100vw - 32px);
+      }
+    }
+
+    /* ── Focus ring for grid cells ───────────────────────────────────── */
+    .cell:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+      z-index: 2;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Screen reader live region -->
+<div id="sr-live" aria-live="assertive" aria-atomic="true" role="status"></div>
+
+<!-- ── Header ─────────────────────────────────────────────────────────── -->
+<header>
+  <h1>Sudoku</h1>
+  <div class="theme-control">
+    <label for="theme-select">Theme</label>
+    <select id="theme-select" aria-label="Select visual theme">
+      <option value="minimalist" selected>Minimalist</option>
+      <option value="coffee">Coffee Shop</option>
+      <option value="school">School</option>
+      <option value="terminal">Digital Terminal</option>
+    </select>
+  </div>
+</header>
+
+<!-- ── Main ───────────────────────────────────────────────────────────── -->
+<main>
+  <div class="game-area">
+
+    <!-- Left column: difficulty + grid -->
+    <div class="left-col">
+      <div class="difficulty-row">
+        <label for="difficulty-select">Difficulty</label>
+        <select id="difficulty-select" aria-label="Select difficulty level">
+          <option value="kiddie">Kiddie</option>
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+          <option value="deathmarch">Death March</option>
+        </select>
+      </div>
+
+      <div class="grid-wrapper">
+        <!-- Win banner (hidden by default) -->
+        <div class="win-banner" id="win-banner" aria-hidden="true">
+          <div class="win-title">Puzzle Complete!</div>
+          <div class="win-sub">Well done.</div>
+        </div>
+
+        <!-- 9×9 grid -->
+        <div
+          class="sudoku-grid"
+          id="sudoku-grid"
+          role="grid"
+          aria-label="Sudoku puzzle"
+          tabindex="0"
+        >
+          <!-- Cells injected by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column: numpad + actions + stats -->
+    <div class="right-col">
+
+      <!-- Number pad -->
+      <div class="numpad" role="group" aria-label="Number pad">
+        <div class="numpad-digits" id="numpad-digits">
+          <!-- digit buttons injected by JS -->
+        </div>
+        <div class="numpad-utils">
+          <button class="btn" id="btn-erase" aria-label="Erase selected cell">
+            Erase
+          </button>
+          <button
+            class="btn btn-mode mode-pen"
+            id="btn-mode"
+            aria-label="Switch to Pencil mode"
+            aria-pressed="false"
+          >
+            <span class="mode-label">
+              <span class="mode-main" id="mode-label-main">Pen</span>
+              <span class="mode-sub" id="mode-label-sub">tap for pencil</span>
+            </span>
+          </button>
+        </div>
+        <div class="numpad-bottom">
+          <button
+            class="btn btn-hint"
+            id="btn-hint"
+            aria-label="Hint, 3 remaining"
+          >
+            Hint <span class="hint-badge" id="hint-count">3</span>
+          </button>
+          <button
+            class="btn btn-check"
+            id="btn-check"
+            aria-label="Check answers"
+          >
+            Check
+          </button>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="action-row">
+        <button class="btn" id="btn-new" aria-label="Start new puzzle">
+          New Puzzle
+        </button>
+        <button class="btn" id="btn-reset" aria-label="Reset current puzzle">
+          Reset
+        </button>
+      </div>
+
+      <!-- Statistics panel -->
+      <div class="stats-panel" aria-label="Statistics">
+        <div class="stats-heading">Statistics</div>
+        <table class="stats-table" aria-label="Game statistics by difficulty">
+          <thead>
+            <tr>
+              <th scope="col">Level</th>
+              <th scope="col">Tried</th>
+              <th scope="col">Won</th>
+            </tr>
+          </thead>
+          <tbody id="stats-tbody">
+            <!-- injected by JS -->
+          </tbody>
+        </table>
+      </div>
+
+    </div><!-- /right-col -->
+  </div><!-- /game-area -->
+</main>
+
+<!-- ── Confirmation dialog (reused for all confirmations) ─────────────── -->
+<div
+  class="modal-backdrop"
+  id="modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="modal-title"
+>
+  <div class="modal">
+    <h2 id="modal-title"></h2>
+    <p id="modal-body"></p>
+    <div class="modal-actions">
+      <button class="btn" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-confirm"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ── Demo puzzle ───────────────────────────────────────────────────────────
+// 0 = player cell, non-zero = given
+const GIVEN_PUZZLE = [
+  5,3,0, 0,7,0, 0,0,0,
+  6,0,0, 1,9,5, 0,0,0,
+  0,9,8, 0,0,0, 0,6,0,
+
+  8,0,0, 0,6,0, 0,0,3,
+  4,0,0, 8,0,3, 0,0,1,
+  7,0,0, 0,2,0, 0,0,6,
+
+  0,6,0, 0,0,0, 2,8,0,
+  0,0,0, 4,1,9, 0,0,5,
+  0,0,0, 0,8,0, 0,7,9
+];
+
+// Known correct solution for this puzzle
+const SOLUTION = [
+  5,3,4, 6,7,8, 9,1,2,
+  6,7,2, 1,9,5, 3,4,8,
+  1,9,8, 3,4,2, 5,6,7,
+
+  8,5,9, 7,6,1, 4,2,3,
+  4,2,6, 8,5,3, 7,9,1,
+  7,1,3, 9,2,4, 8,5,6,
+
+  9,6,1, 5,3,7, 2,8,4,
+  2,8,7, 4,1,9, 6,3,5,
+  3,4,5, 2,8,6, 1,7,9
+];
+
+// ── App state ─────────────────────────────────────────────────────────────
+const state = {
+  mode: "pen",                  // "pen" | "pencil"
+  selected: null,               // index 0..80, or null
+  cells: [],                    // array of 81 objects
+  hintCount: 3,
+  difficulty: "medium",
+  puzzleInProgress: false,
+  stats: {
+    kiddie:    { attempted: 4,  won: 3  },
+    easy:      { attempted: 7,  won: 5  },
+    medium:    { attempted: 12, won: 8  },
+    hard:      { attempted: 3,  won: 1  },
+    deathmarch:{ attempted: 1,  won: 0  }
+  }
+};
+
+// Initialise cell data
+for (let i = 0; i < 81; i++) {
+  const g = GIVEN_PUZZLE[i];
+  state.cells.push({
+    given:    g !== 0,
+    value:    g !== 0 ? g : 0,    // 0 = empty
+    pencil:   new Set(),          // pencil candidate digits
+    conflict: false,
+    incorrect: false
+  });
+}
+
+// ── Utility ───────────────────────────────────────────────────────────────
+function rowOf(i)  { return Math.floor(i / 9); }
+function colOf(i)  { return i % 9; }
+function boxOf(i)  { return Math.floor(rowOf(i) / 3) * 3 + Math.floor(colOf(i) / 3); }
+
+function announce(msg) {
+  const el = document.getElementById("sr-live");
+  el.textContent = "";
+  requestAnimationFrame(() => { el.textContent = msg; });
+}
+
+// ── DOM helpers ───────────────────────────────────────────────────────────
+function cellEl(i) {
+  return document.querySelector(`.cell[data-index="${i}"]`);
+}
+
+// ── Build grid ────────────────────────────────────────────────────────────
+function buildGrid() {
+  const grid = document.getElementById("sudoku-grid");
+  grid.innerHTML = "";
+
+  for (let i = 0; i < 81; i++) {
+    const r = rowOf(i) + 1;
+    const c = colOf(i) + 1;
+    const cell = state.cells[i];
+
+    const el = document.createElement("div");
+    el.className = "cell";
+    el.dataset.index = i;
+    el.dataset.row = r;
+    el.dataset.col = c;
+
+    if (cell.given) {
+      el.classList.add("given");
+      el.setAttribute("aria-readonly", "true");
+      el.setAttribute("role", "gridcell");
+      el.setAttribute("tabindex", "0");
+      el.textContent = cell.value;
+      el.setAttribute("aria-label", `Row ${r}, column ${c}: ${cell.value} (given)`);
+    } else {
+      el.setAttribute("role", "gridcell");
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("aria-selected", "false");
+      renderCellContent(el, i);
+    }
+
+    el.addEventListener("click", () => handleCellClick(i));
+    el.addEventListener("keydown", handleCellKeydown);
+    grid.appendChild(el);
+  }
+
+  // Demo: pre-populate some interesting cells for the visual showcase
+  setDemoState();
+}
+
+function setDemoState() {
+  // Pen digit (player, no conflict) at a few cells
+  const penCells = [
+    { i: 2,  v: 4 },   // row1 col3 — player pen digit
+    { i: 11, v: 7 },   // row2 col3
+    { i: 13, v: 9 },   // row2 col5 — already a given! skip
+  ];
+
+  // Index 2 = row1, col3 → player cell, value 4 (solution is 4, correct)
+  applyPlayerValue(2, 4, false);
+  // Index 11 = row2, col3 → player cell
+  applyPlayerValue(11, 7, false);
+
+  // Pencil marks on a cell
+  state.cells[20].pencil = new Set([1, 4, 7]);
+  renderCellEl(20);
+
+  // Conflict: put two 5s in row 0 (columns 2 and 5 — cell 2 is col2 but it's given=5... pick
+  // open cells: index 5 (row1,col6) and index 6 (row1,col7) are open in row0
+  // Actually let's use row 3: givens at indices 27(8),30(6),35(3). Indices 28,29,31,32,33,34 open.
+  // Put value 6 in two of them to conflict with given at col5(index30=6)
+  // Let's pick a cleaner demo: index 33 (row4,col7) and index 31 (row4,col5 = 3, given) — skip
+  // Simple: put 8 in indices 28 and 32 (row3,col2 and row3,col6) — 8 is given at index27(row3,col1)
+  // They won't conflict with each other unless same row/col/box
+  // Best demo: put a duplicate digit explicitly
+  state.cells[28].value = 8; // row4,col2 — same as given at row4,col1(index27=8)
+  state.cells[28].pencil = new Set();
+  computeConflicts();
+  renderCellEl(28);
+  // Also render the given that now conflicts
+  renderCellEl(27);
+
+  // Selected cell demo
+  selectCell(32); // row4, col6 — open player cell, no content
+}
+
+function applyPlayerValue(i, v, updateProgress) {
+  const cell = state.cells[i];
+  if (cell.given) return;
+  cell.value = v;
+  cell.pencil = new Set();
+  if (updateProgress) state.puzzleInProgress = true;
+  computeConflicts();
+  renderCellEl(i);
+}
+
+function renderCellContent(el, i) {
+  const cell = state.cells[i];
+  el.classList.remove("pen", "conflict", "selected");
+
+  if (cell.value !== 0) {
+    el.textContent = cell.value;
+    el.classList.add("pen");
+    el.setAttribute("aria-label", buildCellLabel(i));
+  } else if (cell.pencil.size > 0) {
+    renderPencilMarks(el, cell.pencil);
+    el.setAttribute("aria-label", buildCellLabel(i));
+  } else {
+    el.textContent = "";
+    el.setAttribute("aria-label", buildCellLabel(i));
+  }
+
+  if (cell.conflict) el.classList.add("conflict");
+  if (state.selected === i) el.classList.add("selected");
+}
+
+function renderCellEl(i) {
+  const el = cellEl(i);
+  if (!el) return;
+  const cell = state.cells[i];
+
+  el.classList.remove("pen", "conflict", "selected");
+  el.innerHTML = "";
+
+  if (cell.given) {
+    el.textContent = cell.value;
+  } else if (cell.value !== 0) {
+    el.textContent = cell.value;
+    el.classList.add("pen");
+  } else if (cell.pencil.size > 0) {
+    renderPencilMarks(el, cell.pencil);
+  }
+
+  if (cell.conflict) el.classList.add("conflict");
+  if (state.selected === i) {
+    el.classList.add("selected");
+    el.setAttribute("aria-selected", "true");
+  } else if (!cell.given) {
+    el.setAttribute("aria-selected", "false");
+  }
+
+  el.setAttribute("aria-label", buildCellLabel(i));
+}
+
+function renderPencilMarks(el, marks) {
+  const grid = document.createElement("div");
+  grid.className = "pencil-marks";
+  for (let d = 1; d <= 9; d++) {
+    const span = document.createElement("span");
+    span.className = "pencil-mark" + (marks.has(d) ? "" : " empty");
+    span.textContent = marks.has(d) ? d : d; // keep text for layout
+    grid.appendChild(span);
+  }
+  el.appendChild(grid);
+}
+
+function buildCellLabel(i) {
+  const r = rowOf(i) + 1;
+  const c = colOf(i) + 1;
+  const cell = state.cells[i];
+  let label = `Row ${r}, column ${c}`;
+  if (cell.given) {
+    label += `: ${cell.value} (given)`;
+  } else if (cell.value !== 0) {
+    label += `: ${cell.value}`;
+    if (cell.conflict) label += " — conflict";
+  } else if (cell.pencil.size > 0) {
+    label += `: pencil marks ${[...cell.pencil].sort().join(", ")}`;
+  } else {
+    label += ": empty";
+  }
+  if (state.selected === i) label += " (selected)";
+  return label;
+}
+
+// ── Conflict detection ────────────────────────────────────────────────────
+function computeConflicts() {
+  // Reset all
+  state.cells.forEach(c => { c.conflict = false; });
+
+  for (let i = 0; i < 81; i++) {
+    const ci = state.cells[i];
+    if (ci.value === 0) continue;
+    for (let j = i + 1; j < 81; j++) {
+      const cj = state.cells[j];
+      if (cj.value === 0) continue;
+      if (ci.value !== cj.value) continue;
+      if (rowOf(i) === rowOf(j) || colOf(i) === colOf(j) || boxOf(i) === boxOf(j)) {
+        ci.conflict = true;
+        cj.conflict = true;
+      }
+    }
+  }
+}
+
+// ── Cell selection ────────────────────────────────────────────────────────
+function selectCell(i) {
+  const prev = state.selected;
+  state.selected = i;
+
+  if (prev !== null && prev !== i) {
+    renderCellEl(prev);
+  }
+
+  if (i !== null) {
+    const el = cellEl(i);
+    if (el) {
+      el.classList.add("selected");
+      if (!state.cells[i].given) el.setAttribute("aria-selected", "true");
+      el.setAttribute("aria-label", buildCellLabel(i));
+    }
+    updateHintButton();
+  }
+}
+
+function clearSelection() {
+  const prev = state.selected;
+  state.selected = null;
+  if (prev !== null) renderCellEl(prev);
+  updateHintButton();
+}
+
+// ── Cell click ────────────────────────────────────────────────────────────
+function handleCellClick(i) {
+  if (state.cells[i].given) return;   // givens not selectable
+  selectCell(i);
+}
+
+// ── Grid keyboard navigation ──────────────────────────────────────────────
+function handleCellKeydown(e) {
+  const i = parseInt(e.currentTarget.dataset.index, 10);
+
+  const arrowMap = {
+    ArrowLeft:  (r,c) => [r, (c - 1 + 9) % 9],
+    ArrowRight: (r,c) => [r, (c + 1) % 9],
+    ArrowUp:    (r,c) => [(r - 1 + 9) % 9, c],
+    ArrowDown:  (r,c) => [(r + 1) % 9, c],
+  };
+
+  if (arrowMap[e.key]) {
+    e.preventDefault();
+    let r = rowOf(i), c = colOf(i);
+    let attempts = 0;
+    do {
+      [r, c] = arrowMap[e.key](r, c);
+      attempts++;
+    } while (state.cells[r * 9 + c].given && attempts < 81);
+    const next = r * 9 + c;
+    selectCell(next);
+    cellEl(next)?.focus();
+    return;
+  }
+
+  if (e.key >= "1" && e.key <= "9") {
+    e.preventDefault();
+    handleDigitInput(parseInt(e.key, 10));
+    return;
+  }
+
+  if (e.key === "Backspace" || e.key === "Delete") {
+    e.preventDefault();
+    handleErase();
+    return;
+  }
+
+  if (e.key === "p" || e.key === "P") {
+    e.preventDefault();
+    toggleMode();
+    return;
+  }
+}
+
+// ── Digit input ───────────────────────────────────────────────────────────
+function handleDigitInput(d) {
+  const i = state.selected;
+  if (i === null) return;
+  const cell = state.cells[i];
+  if (cell.given) return;
+
+  if (state.mode === "pen") {
+    if (cell.value === d) return; // no-op
+    cell.value = d;
+    cell.pencil = new Set();
+    state.puzzleInProgress = true;
+    computeConflicts();
+    renderAllCells();
+    announce(`Cell row ${rowOf(i)+1}, column ${colOf(i)+1}: ${d}`);
+    if (cell.conflict) announce(`Conflict: ${d} appears more than once`);
+    updateHintButton();
+  } else {
+    // pencil mode
+    if (cell.value !== 0) return;
+    if (cell.pencil.has(d)) {
+      cell.pencil.delete(d);
+    } else {
+      cell.pencil.add(d);
+    }
+    renderCellEl(i);
+  }
+}
+
+function handleErase() {
+  const i = state.selected;
+  if (i === null) return;
+  const cell = state.cells[i];
+  if (cell.given) return;
+
+  if (cell.value !== 0) {
+    cell.value = 0;
+    computeConflicts();
+    renderAllCells();
+    announce(`Cell row ${rowOf(i)+1}, column ${colOf(i)+1} cleared`);
+    updateHintButton();
+  } else if (cell.pencil.size > 0) {
+    cell.pencil = new Set();
+    renderCellEl(i);
+  }
+}
+
+function renderAllCells() {
+  for (let i = 0; i < 81; i++) renderCellEl(i);
+}
+
+// ── Mode toggle ───────────────────────────────────────────────────────────
+function toggleMode() {
+  state.mode = state.mode === "pen" ? "pencil" : "pen";
+  updateModeButton();
+}
+
+function updateModeButton() {
+  const btn = document.getElementById("btn-mode");
+  const mainLbl = document.getElementById("mode-label-main");
+  const subLbl = document.getElementById("mode-label-sub");
+
+  if (state.mode === "pen") {
+    btn.className = "btn btn-mode mode-pen";
+    mainLbl.textContent = "Pen";
+    subLbl.textContent = "tap for pencil";
+    btn.setAttribute("aria-label", "Switch to Pencil mode");
+    btn.setAttribute("aria-pressed", "false");
+  } else {
+    btn.className = "btn btn-mode mode-pencil";
+    mainLbl.textContent = "Pencil";
+    subLbl.textContent = "tap for pen";
+    btn.setAttribute("aria-label", "Switch to Pen mode");
+    btn.setAttribute("aria-pressed", "true");
+  }
+}
+
+// ── Hint button state ─────────────────────────────────────────────────────
+function updateHintButton() {
+  const btn = document.getElementById("btn-hint");
+  const badge = document.getElementById("hint-count");
+  const i = state.selected;
+
+  const exhausted = state.hintCount <= 0;
+  const selectedHasPen = i !== null && state.cells[i].value !== 0 && !state.cells[i].given;
+
+  btn.disabled = exhausted || selectedHasPen;
+
+  if (exhausted) {
+    badge.textContent = "0";
+    btn.setAttribute("aria-label", "Hint — no hints remaining");
+  } else {
+    badge.textContent = state.hintCount;
+    btn.setAttribute("aria-label", `Hint, ${state.hintCount} remaining`);
+  }
+}
+
+// ── Digit buttons ─────────────────────────────────────────────────────────
+function buildNumpad() {
+  const container = document.getElementById("numpad-digits");
+  for (let d = 1; d <= 9; d++) {
+    const btn = document.createElement("button");
+    btn.className = "btn btn-digit";
+    btn.textContent = d;
+    btn.setAttribute("aria-label", `Enter ${d}`);
+    btn.addEventListener("click", () => handleDigitInput(d));
+    container.appendChild(btn);
+  }
+}
+
+// ── Stats table ───────────────────────────────────────────────────────────
+function buildStats() {
+  const tbody = document.getElementById("stats-tbody");
+  const levels = [
+    { key: "kiddie",     label: "Kiddie"      },
+    { key: "easy",       label: "Easy"        },
+    { key: "medium",     label: "Medium"      },
+    { key: "hard",       label: "Hard"        },
+    { key: "deathmarch", label: "Death March" },
+  ];
+
+  tbody.innerHTML = "";
+  levels.forEach(({ key, label }) => {
+    const s = state.stats[key];
+    const tr = document.createElement("tr");
+    if (key === state.difficulty) tr.classList.add("active-diff");
+    tr.setAttribute("aria-label", `${label}: ${s.attempted} attempted, ${s.won} won`);
+    tr.innerHTML = `
+      <td>${label}</td>
+      <td>${s.attempted}</td>
+      <td>${s.won}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Confirmation modal ────────────────────────────────────────────────────
+let pendingConfirm = null;
+
+function showModal(title, body, confirmLabel, onConfirm) {
+  document.getElementById("modal-title").textContent = title;
+  document.getElementById("modal-body").textContent = body;
+  document.getElementById("modal-confirm").textContent = confirmLabel;
+  pendingConfirm = onConfirm;
+
+  const backdrop = document.getElementById("modal-backdrop");
+  backdrop.classList.add("open");
+  document.getElementById("modal-cancel").focus();
+}
+
+function closeModal() {
+  document.getElementById("modal-backdrop").classList.remove("open");
+  pendingConfirm = null;
+}
+
+document.getElementById("modal-cancel").addEventListener("click", closeModal);
+document.getElementById("modal-confirm").addEventListener("click", () => {
+  closeModal();
+  if (pendingConfirm) pendingConfirm();
+});
+
+document.getElementById("modal-backdrop").addEventListener("keydown", e => {
+  if (e.key === "Escape") closeModal();
+});
+
+// ── New puzzle button ─────────────────────────────────────────────────────
+document.getElementById("btn-new").addEventListener("click", () => {
+  if (state.puzzleInProgress) {
+    showModal(
+      "Start a new puzzle?",
+      "Your current progress will be lost.",
+      "New Puzzle",
+      () => {
+        announce("New puzzle started.");
+        state.puzzleInProgress = false;
+        document.getElementById("btn-new").focus();
+      }
+    );
+  } else {
+    announce("New puzzle started.");
+  }
+});
+
+// ── Reset button ──────────────────────────────────────────────────────────
+document.getElementById("btn-reset").addEventListener("click", () => {
+  showModal(
+    "Reset puzzle?",
+    "Your entries will be cleared.",
+    "Reset",
+    () => {
+      // Clear all player cells
+      state.cells.forEach(c => {
+        if (!c.given) { c.value = 0; c.pencil = new Set(); c.conflict = false; }
+      });
+      state.mode = "pen";
+      state.selected = null;
+      state.puzzleInProgress = false;
+      computeConflicts();
+      renderAllCells();
+      updateModeButton();
+      updateHintButton();
+      announce("Puzzle reset.");
+      document.getElementById("btn-reset").focus();
+    }
+  );
+});
+
+// ── Erase button ──────────────────────────────────────────────────────────
+document.getElementById("btn-erase").addEventListener("click", handleErase);
+
+// ── Mode button ───────────────────────────────────────────────────────────
+document.getElementById("btn-mode").addEventListener("click", toggleMode);
+
+// ── Hint button ───────────────────────────────────────────────────────────
+document.getElementById("btn-hint").addEventListener("click", () => {
+  const i = state.selected;
+  if (i === null || state.cells[i].given || state.cells[i].value !== 0) return;
+  if (state.hintCount <= 0) return;
+
+  const correct = SOLUTION[i];
+  state.cells[i].value = correct;
+  state.cells[i].pencil = new Set();
+  state.hintCount--;
+  state.puzzleInProgress = true;
+  computeConflicts();
+  renderAllCells();
+  updateHintButton();
+  announce(`Hint used: ${correct} placed in cell row ${rowOf(i)+1}, column ${colOf(i)+1}. ${state.hintCount} hints remaining.`);
+});
+
+// ── Check button ──────────────────────────────────────────────────────────
+document.getElementById("btn-check").addEventListener("click", () => {
+  let incorrectCount = 0;
+  const incorrectIndices = [];
+
+  for (let i = 0; i < 81; i++) {
+    const cell = state.cells[i];
+    if (cell.given || cell.value === 0) continue;
+    if (cell.value !== SOLUTION[i]) {
+      cell.incorrect = true;
+      incorrectIndices.push(i);
+      incorrectCount++;
+    } else {
+      cell.incorrect = false;
+    }
+  }
+
+  // Apply incorrect styling
+  incorrectIndices.forEach(i => {
+    const el = cellEl(i);
+    if (el) el.style.color = "var(--conflict)";
+  });
+
+  if (incorrectCount === 0) {
+    announce("All filled cells are correct.");
+  } else {
+    announce(`${incorrectCount} cell${incorrectCount > 1 ? "s" : ""} incorrect.`);
+  }
+
+  // Auto-clear after 3s
+  setTimeout(() => {
+    incorrectIndices.forEach(i => {
+      const el = cellEl(i);
+      if (el) el.style.color = "";
+      state.cells[i].incorrect = false;
+    });
+  }, 3000);
+});
+
+// ── Difficulty selector ───────────────────────────────────────────────────
+document.getElementById("difficulty-select").addEventListener("change", function() {
+  const newDiff = this.value;
+  if (state.puzzleInProgress) {
+    const prev = state.difficulty;
+    showModal(
+      "Change difficulty?",
+      "Your current progress will be lost.",
+      "Change Difficulty",
+      () => {
+        state.difficulty = newDiff;
+        buildStats();
+        updateCheckVisibility();
+      }
+    );
+    // Revert selector if user cancels (restore on cancel)
+    document.getElementById("modal-cancel").addEventListener("click", () => {
+      document.getElementById("difficulty-select").value = prev;
+    }, { once: true });
+  } else {
+    state.difficulty = newDiff;
+    buildStats();
+    updateCheckVisibility();
+  }
+});
+
+function updateCheckVisibility() {
+  const checkBtn = document.getElementById("btn-check");
+  const showCheck = state.difficulty === "easy" || state.difficulty === "medium";
+  checkBtn.style.display = showCheck ? "" : "none";
+
+  // Update hint count for difficulty
+  const hintMap = { kiddie: "∞", easy: "3", medium: "1", hard: "0", deathmarch: "0" };
+  const badge = document.getElementById("hint-count");
+  badge.textContent = hintMap[state.difficulty];
+  if (state.difficulty === "kiddie") {
+    badge.textContent = "∞";
+    state.hintCount = Infinity;
+  } else if (state.difficulty === "easy") {
+    state.hintCount = 3;
+  } else if (state.difficulty === "medium") {
+    state.hintCount = 1;
+  } else {
+    state.hintCount = 0;
+  }
+  updateHintButton();
+}
+
+// ── Theme selector (stub — placeholder for future implementation) ─────────
+document.getElementById("theme-select").addEventListener("change", function() {
+  // Theme switching will be implemented with CSS custom property overrides
+  // For this mockup, just announce the selection
+  announce(`Theme changed to ${this.options[this.selectedIndex].text}.`);
+});
+
+// ── Click outside grid to deselect ───────────────────────────────────────
+document.addEventListener("click", (e) => {
+  const grid = document.getElementById("sudoku-grid");
+  if (!grid.contains(e.target)) {
+    clearSelection();
+  }
+});
+
+// ── Global keyboard shortcuts ─────────────────────────────────────────────
+document.addEventListener("keydown", (e) => {
+  // P to toggle mode (when not in an input/select)
+  if ((e.key === "p" || e.key === "P") &&
+      !["INPUT","SELECT","TEXTAREA","BUTTON"].includes(document.activeElement.tagName)) {
+    toggleMode();
+  }
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────
+buildGrid();
+buildNumpad();
+buildStats();
+updateModeButton();
+updateHintButton();
+updateCheckVisibility();
+</script>
+</body>
+</html>
