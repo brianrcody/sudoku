@@ -285,6 +285,7 @@ body.theme-terminal .win-banner {
 
 .win-banner.show {
   display: flex;
+  pointer-events: auto;
 }
 
 .win-banner .win-title {

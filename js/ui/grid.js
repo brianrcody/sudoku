@@ -67,6 +67,7 @@ function _buildGrid(state) {
     el.setAttribute('tabindex', '0');
 
     el.addEventListener('click', () => _handleClick(i));
+    el.addEventListener('focus', () => _gameState.dispatch({ type: 'SELECT_CELL', index: i }));
     el.addEventListener('keydown', (e) => _handleCellKeydown(e, i));
 
     _gridEl.appendChild(el);
