@@ -1,0 +1,208 @@
+/* ── Reset & base typography ──────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif);
+  font-size: 15px;
+  line-height: 1.4;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* Terminal: monospace throughout */
+body.theme-terminal {
+  font-family: "Courier New", Courier, monospace;
+}
+
+/* ── Screen reader live region ────────────────────────────────────────── */
+#sr-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--header-bg);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body.theme-terminal header {
+  border-bottom: 1px solid var(--accent);
+  box-shadow: 0 1px 0 0 var(--accent);
+}
+
+body.theme-terminal header h1 {
+  color: var(--accent);
+  text-shadow: 0 0 8px rgba(57,255,20,0.4);
+  letter-spacing: 0.15em;
+}
+
+body.theme-mountain header {
+  color: #e8f0f7;
+  border-bottom-color: #2d5878;
+}
+
+body.theme-mountain header h1 {
+  color: #f7fafc;
+  letter-spacing: 0.06em;
+}
+
+body.theme-coffee header {
+  color: #f5ede0;
+  border-bottom-color: #7c4f22;
+}
+
+body.theme-coffee header h1 {
+  color: #f5ede0;
+}
+
+body.theme-school header {
+  border-bottom: 2px solid #b8c4d4;
+}
+
+/* ── Theme control (header right) ────────────────────────────────────── */
+.theme-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+body.theme-mountain .theme-control {
+  color: #adc6de;
+}
+
+body.theme-coffee .theme-control {
+  color: #c9a97a;
+}
+
+.theme-control label {
+  white-space: nowrap;
+}
+
+/* ── Main layout ──────────────────────────────────────────────────────── */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 32px;
+  gap: 24px;
+}
+
+body.theme-coffee main {
+  background: linear-gradient(160deg, #3b2a1a 0%, #4a3020 50%, #3b2a1a 100%);
+}
+
+body.theme-school main {
+  background-color: #f8f5e6;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 27px,
+    #a8b8cc 27px,
+    #a8b8cc 28px
+  );
+  background-position: 0 14px;
+}
+
+body.theme-mountain main {
+  background: linear-gradient(175deg, #d4e8f5 0%, #e8f0f7 40%, #f0f5fa 100%);
+}
+
+body.theme-terminal main {
+  background: #0d0d0d;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.15) 2px,
+    rgba(0,0,0,0.15) 4px
+  );
+}
+
+/* ── Game area layout ─────────────────────────────────────────────────── */
+.game-area {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 32px;
+  width: 100%;
+  max-width: 860px;
+  justify-content: center;
+}
+
+.left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 220px;
+  flex-shrink: 0;
+}
+
+/* ── Responsive: mobile ───────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  header {
+    padding: 12px 16px;
+  }
+
+  header h1 {
+    font-size: 16px;
+  }
+
+  main {
+    padding: 16px 12px 28px;
+    gap: 16px;
+  }
+
+  .game-area {
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .left-col {
+    width: 100%;
+    align-items: center;
+  }
+
+  .right-col {
+    width: 100%;
+    max-width: 414px;
+  }
+}

@@ -1,0 +1,86 @@
+/* ── Statistics panel ─────────────────────────────────────────────────── */
+.stats-panel {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  overflow: hidden;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+body.theme-terminal .stats-panel {
+  border-radius: 0;
+}
+
+body.theme-terminal .stats-panel:hover,
+body.theme-terminal .stats-panel:focus-within {
+  border-color: var(--accent);
+}
+
+.stats-heading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+body.theme-terminal .stats-heading {
+  color: var(--accent);
+  letter-spacing: 0.15em;
+  font-size: 10px;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.stats-table th {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: right;
+  padding: 6px 12px 4px;
+}
+
+.stats-table th:first-child {
+  text-align: left;
+}
+
+.stats-table td {
+  padding: 5px 12px;
+  text-align: right;
+  border-top: 1px solid var(--stats-row-sep);
+}
+
+.stats-table td:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+/* Active difficulty row */
+.stats-table tr.active-diff td {
+  background: var(--accent-light);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+body.theme-terminal .stats-table tr.active-diff td {
+  text-shadow: 0 0 4px rgba(57,255,20,0.3);
+}
+
+.stats-table tr.active-diff td:first-child::after {
+  content: " \25CF"; /* bullet */
+  font-size: 8px;
+  vertical-align: middle;
+}
+
+body.theme-terminal .stats-table tr.active-diff td:first-child::after {
+  content: " >";
+  font-size: 10px;
+}

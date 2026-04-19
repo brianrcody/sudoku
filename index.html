@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sudoku</title>
+
+  <!--
+    Apply saved theme before CSS loads to prevent a flash of the default theme.
+    Sets a data-theme attribute on the root element immediately, then replaces
+    body.className on DOMContentLoaded so the CSS theme class is in place before
+    first paint.
+  -->
+  <script>
+    (function() {
+      var m = document.cookie.match(/(?:^|; )sudoku\.theme=([^;]+)/);
+      var v = m ? decodeURIComponent(m[1]) : 'minimalist';
+      document.documentElement.setAttribute('data-theme', v);
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.className = 'theme-' + v;
+      });
+    })();
+  </script>
+
+  <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/grid.css">
+  <link rel="stylesheet" href="css/controls.css">
+  <link rel="stylesheet" href="css/stats.css">
+</head>
+<body class="theme-minimalist">
+
+  <!-- Screen reader live region -->
+  <div id="sr-live" aria-live="assertive" aria-atomic="true" role="status"></div>
+
+  <!-- Header -->
+  <header>
+    <h1>Sudoku</h1>
+    <div class="theme-control">
+      <label for="theme-select">Theme</label>
+      <select id="theme-select" aria-label="Select visual theme">
+        <option value="minimalist" selected>Minimalist</option>
+        <option value="coffee">Coffee Shop</option>
+        <option value="school">School</option>
+        <option value="terminal">Digital Terminal</option>
+        <option value="mountain">Mountain</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main>
+    <div id="app-root" class="game-area">
+
+      <!-- Left column: difficulty selector + grid -->
+      <div class="left-col">
+
+        <!-- Difficulty selector (mounted by controls.js) -->
+        <div id="controls-root"></div>
+
+        <!-- Grid wrapper: contains win banner overlay + grid -->
+        <div class="grid-wrapper">
+          <!-- Win banner overlay (mounted by winBanner.js, positioned absolute) -->
+          <div id="win-banner-root" style="position:absolute;inset:0;z-index:10;"></div>
+
+          <!-- Grid root: contains .sudoku-grid; mounted by grid.js -->
+          <div id="grid-root">
+            <div
+              class="sudoku-grid"
+              role="grid"
+              aria-label="Sudoku puzzle"
+              tabindex="0"
+            ></div>
+          </div>
+        </div>
+
+      </div><!-- /left-col -->
+
+      <!-- Right column: numpad + action buttons + stats -->
+      <div class="right-col">
+
+        <!-- Number pad (mounted by numpad.js) -->
+        <div id="numpad-root"></div>
+
+        <!-- Action buttons -->
+        <div class="action-row">
+          <button class="btn" id="btn-new" aria-label="Start new puzzle">New Puzzle</button>
+          <button class="btn" id="btn-reset" aria-label="Reset current puzzle">Reset</button>
+        </div>
+
+        <!-- Statistics panel (mounted by stats.js) -->
+        <div id="stats-root"></div>
+
+      </div><!-- /right-col -->
+
+    </div><!-- /app-root -->
+  </main>
+
+  <!-- Confirmation dialog (mounted by dialog.js) -->
+  <div id="dialog-root"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

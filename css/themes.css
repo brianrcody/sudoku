@@ -1,0 +1,135 @@
+/* ── Default / Minimalist theme values ───────────────────────────────── */
+:root,
+body.theme-minimalist {
+  --bg:            #f7f6f2;
+  --surface:       #ffffff;
+  --border:        #c8c4bb;
+  --border-strong: #2e2b25;
+  --text:          #1c1a16;
+  --text-muted:    #7a7570;
+  --text-given:    #1c1a16;
+  --given-bg:      #eceae4;
+  --accent:        #2c5282;
+  --accent-light:  #dbeafe;
+  --conflict:      #b91c1c;
+  --conflict-bg:   #fef2f2;
+  --pencil:        #5a6778;
+  --btn-bg:        #f0ede6;
+  --btn-hover:     #e4e0d7;
+  --btn-border:    #c8c4bb;
+  --active-mode:   #2c5282;
+  --win:           #15803d;
+  --stats-row-sep: #f0ede6;
+  --header-bg:     var(--surface);
+  --modal-bg:      var(--surface);
+  --win-banner-bg: rgba(255,255,255,0.92);
+  --primary-hover: #1e3a6e;
+}
+
+/* ── Coffee Shop ──────────────────────────────────────────────────────── */
+body.theme-coffee {
+  --bg:            #3b2a1a;
+  --surface:       #f5ede0;
+  --border:        #c9a97a;
+  --border-strong: #7c4f22;
+  --text:          #2b1d0e;
+  --text-muted:    #8c6642;
+  --text-given:    #2b1d0e;
+  --given-bg:      #e8d5b8;
+  --accent:        #8b4513;
+  --accent-light:  #fde8cc;
+  --conflict:      #c0392b;
+  --conflict-bg:   #fdf0ee;
+  --pencil:        #7a5c3a;
+  --btn-bg:        #ecdfc8;
+  --btn-hover:     #e0cead;
+  --btn-border:    #c9a97a;
+  --active-mode:   #8b4513;
+  --win:           #2d6a4f;
+  --stats-row-sep: #ecdfc8;
+  --header-bg:     #2b1d0e;
+  --modal-bg:      #f5ede0;
+  --win-banner-bg: rgba(245,237,224,0.93);
+  --primary-hover: #6b3410;
+}
+
+/* ── School ───────────────────────────────────────────────────────────── */
+body.theme-school {
+  --bg:            #f8f5e6;
+  --surface:       #fdfaf0;
+  --border:        #b8c4d4;
+  --border-strong: #4a5568;
+  --text:          #2d3748;
+  --text-muted:    #718096;
+  --text-given:    #1a202c;
+  --given-bg:      #edf0f5;
+  --accent:        #4a5568;
+  --accent-light:  #e2e8f0;
+  --conflict:      #c53030;
+  --conflict-bg:   #fff5f5;
+  --pencil:        #718096;
+  --btn-bg:        #edf2f7;
+  --btn-hover:     #e2e8f0;
+  --btn-border:    #b8c4d4;
+  --active-mode:   #4a5568;
+  --win:           #276749;
+  --stats-row-sep: #edf2f7;
+  --header-bg:     #fdfaf0;
+  --modal-bg:      #fdfaf0;
+  --win-banner-bg: rgba(253,250,240,0.93);
+  --primary-hover: #2d3748;
+}
+
+/* ── Mountain ─────────────────────────────────────────────────────────── */
+body.theme-mountain {
+  --bg:            #e8f0f7;
+  --surface:       #f7fafc;
+  --border:        #adc6de;
+  --border-strong: #1a3a52;
+  --text:          #0f2233;
+  --text-muted:    #4d7a99;
+  --text-given:    #1a4d2e;
+  --given-bg:      #dce8f2;
+  --accent:        #1a6b8a;
+  --accent-light:  #cfe8f3;
+  --conflict:      #b91c1c;
+  --conflict-bg:   #fef2f2;
+  --pencil:        #2d6e4e;
+  --btn-bg:        #dce8f2;
+  --btn-hover:     #c8dcea;
+  --btn-border:    #adc6de;
+  --active-mode:   #1a6b8a;
+  --win:           #1a6b4e;
+  --stats-row-sep: #dce8f2;
+  --header-bg:     #1a3a52;
+  --modal-bg:      #f7fafc;
+  --win-banner-bg: rgba(247,250,252,0.93);
+  --primary-hover: #145a75;
+}
+
+/* ── Digital Terminal ─────────────────────────────────────────────────── */
+body.theme-terminal {
+  --bg:            #0d0d0d;
+  --surface:       #111111;
+  --border:        #1f4a1f;
+  --border-strong: #39ff14;
+  --text:          #b0ffb0;
+  --text-muted:    #3d7a3d;
+  --text-given:    #39ff14;
+  --given-bg:      #0a1a0a;
+  --accent:        #39ff14;
+  --accent-light:  #0a2a0a;
+  --conflict:      #ff4444;
+  --conflict-bg:   #1a0505;
+  --pencil:        #3d7a3d;
+  --btn-bg:        #0f1f0f;
+  --btn-hover:     #162b16;
+  --btn-border:    #1f4a1f;
+  --active-mode:   #39ff14;
+  --win:           #39ff14;
+  --stats-row-sep: #0f1f0f;
+  --header-bg:     #090909;
+  --modal-bg:      #111111;
+  --win-banner-bg: rgba(11,11,11,0.95);
+  --primary-hover: #22cc00;
+}

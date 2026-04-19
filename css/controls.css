@@ -1,0 +1,335 @@
+/* ── Number pad ───────────────────────────────────────────────────────── */
+.numpad {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.numpad-digits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.numpad-utils {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.numpad-bottom {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+/* ── Base button ──────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border: 1px solid var(--btn-border);
+  border-radius: 5px;
+  background: var(--btn-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: var(--btn-hover);
+  border-color: var(--border);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Terminal */
+body.theme-terminal .btn {
+  border-radius: 0;
+  border-color: var(--border);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+body.theme-terminal .btn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 6px rgba(57,255,20,0.2);
+}
+
+/* Coffee */
+body.theme-coffee .btn {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(59,42,26,0.15);
+}
+
+/* School */
+body.theme-school .btn {
+  border-radius: 3px;
+}
+
+/* Mountain */
+body.theme-mountain .btn {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(26,58,82,0.1);
+}
+
+/* ── Digit buttons ────────────────────────────────────────────────────── */
+.btn-digit {
+  font-size: 20px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  padding: 12px 6px;
+}
+
+body.theme-terminal .btn-digit {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.theme-school .btn-digit {
+  font-family: Georgia, serif;
+  font-style: italic;
+}
+
+/* ── Mode toggle button ───────────────────────────────────────────────── */
+.btn-mode {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-mode.mode-pen {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.btn-mode.mode-pencil {
+  background: var(--surface);
+  border-color: var(--pencil);
+  color: var(--pencil);
+  font-weight: 600;
+}
+
+body.theme-terminal .btn-mode.mode-pen {
+  box-shadow: 0 0 8px rgba(57,255,20,0.25);
+}
+
+.btn-mode .mode-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.btn-mode .mode-main {
+  font-size: 13px;
+}
+
+body.theme-terminal .btn-mode .mode-main {
+  font-size: 12px;
+}
+
+.btn-mode .mode-sub {
+  font-size: 10px;
+  opacity: 0.7;
+  font-family: inherit;
+}
+
+/* ── Hint button ──────────────────────────────────────────────────────── */
+.btn-hint {
+  position: relative;
+}
+
+.hint-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--surface);
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  line-height: 1;
+  transition: background 0.2s, color 0.2s;
+}
+
+body.theme-terminal .hint-badge {
+  border-radius: 0;
+  color: #000;
+}
+
+.btn:disabled .hint-badge {
+  background: var(--text-muted);
+}
+
+/* ── Check button ─────────────────────────────────────────────────────── */
+.btn-check {
+  grid-column: span 2;
+}
+
+/* ── Action row ───────────────────────────────────────────────────────── */
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* ── Primary button (dialog confirm) ─────────────────────────────────── */
+.btn-primary {
+  background: var(--accent);
+  color: var(--surface);
+  border-color: var(--accent);
+}
+
+body.theme-terminal .btn-primary {
+  color: #000;
+  font-weight: 700;
+}
+
+body.theme-school .btn-primary {
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+body.theme-terminal .btn-primary:hover {
+  box-shadow: 0 0 10px rgba(57,255,20,0.4);
+}
+
+/* ── Confirmation dialog / modal ──────────────────────────────────────── */
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+body.theme-terminal .modal-backdrop {
+  background: rgba(0,0,0,0.75);
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal {
+  background: var(--modal-bg);
+  border-radius: 10px;
+  padding: 28px 28px 22px;
+  max-width: 340px;
+  width: 90%;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  border: 1px solid var(--border);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+body.theme-terminal .modal {
+  border-radius: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 24px rgba(57,255,20,0.2);
+}
+
+body.theme-coffee .modal {
+  box-shadow: 0 8px 40px rgba(59,42,26,0.4);
+}
+
+.modal h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.modal p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 22px;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ── Theme select (header) ────────────────────────────────────────────── */
+#theme-select {
+  font-size: 13px;
+  padding: 4px 24px 4px 8px;
+  border: 1px solid var(--btn-border);
+  border-radius: 4px;
+  background-color: var(--btn-bg);
+  color: var(--text);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  font-family: inherit;
+}
+
+body.theme-coffee #theme-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238c6642'/%3E%3C/svg%3E");
+}
+
+body.theme-school #theme-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23718096'/%3E%3C/svg%3E");
+}
+
+body.theme-terminal #theme-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2339ff14'/%3E%3C/svg%3E");
+  border-color: var(--accent);
+}
+
+body.theme-mountain .theme-control #theme-select {
+  background-color: #2d5878;
+  color: #e8f0f7;
+  border-color: #4d7a99;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23adc6de'/%3E%3C/svg%3E");
+}
+
+body.theme-coffee .theme-control #theme-select {
+  background-color: #3b2a1a;
+  color: #f5ede0;
+  border-color: #7c4f22;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c9a97a'/%3E%3C/svg%3E");
+}
+
+#theme-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
