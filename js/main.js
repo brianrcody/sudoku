@@ -42,6 +42,7 @@ const hintProvider = { nextHint };
 
 // ── Step 6: game state ────────────────────────────────────────────────────
 const gameState = createGameState({ stats, hintProvider });
+if (typeof window !== 'undefined') window.gameState = gameState;
 
 // ── Step 7: restore or request puzzle ─────────────────────────────────────
 const STATE_KEY = 'sudoku.state.v1';

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sudoku Test Suite</title>
+  <link rel="stylesheet" href="/node_modules/mocha/mocha.css">
+</head>
+<body>
+  <div id="mocha"></div>
+
+  <script src="/node_modules/mocha/mocha.js"></script>
+  <script src="/node_modules/chai/chai.js"></script>
+  <script>
+    mocha.setup('bdd');
+    window.expect = chai.expect;
+    window.assert = chai.assert;
+  </script>
+
+  <!-- Global test helpers (must load before test files) -->
+  <script type="module" src="/js/tests/setup.js"></script>
+
+  <!-- Puzzle-track unit tests -->
+  <script type="module" src="/js/tests/unit/prng.test.js"></script>
+  <script type="module" src="/js/tests/unit/grid.test.js"></script>
+  <script type="module" src="/js/tests/unit/bitset.test.js"></script>
+  <script type="module" src="/js/tests/unit/events.test.js"></script>
+  <script type="module" src="/js/tests/unit/uniqueness.test.js"></script>
+  <script type="module" src="/js/tests/unit/candidates.test.js"></script>
+  <script type="module" src="/js/tests/unit/techniques/nakedSingle.test.js"></script>
+  <script type="module" src="/js/tests/unit/techniques/hiddenSingle.test.js"></script>
+  <script type="module" src="/js/tests/unit/techniques/lockedCandidates.test.js"></script>
+  <script type="module" src="/js/tests/unit/techniques/nakedSubsets.test.js"></script>
+  <script type="module" src="/js/tests/unit/techniques/hiddenSubsets.test.js"></script>
+  <script type="module" src="/js/tests/unit/techniques/xWing.test.js"></script>
+  <script type="module" src="/js/tests/unit/techniques/swordfish.test.js"></script>
+  <script type="module" src="/js/tests/unit/techniques/jellyfish.test.js"></script>
+  <script type="module" src="/js/tests/unit/techniques/xyWing.test.js"></script>
+  <script type="module" src="/js/tests/unit/techniques/coloring.test.js"></script>
+  <script type="module" src="/js/tests/unit/techniques/forcingChains.test.js"></script>
+  <script type="module" src="/js/tests/unit/techniques/index.test.js"></script>
+  <script type="module" src="/js/tests/unit/logical.test.js"></script>
+  <script type="module" src="/js/tests/unit/fillGrid.test.js"></script>
+  <script type="module" src="/js/tests/unit/removeCells.test.js"></script>
+  <script type="module" src="/js/tests/unit/rater.test.js"></script>
+  <script type="module" src="/js/tests/unit/pipeline.test.js"></script>
+  <script type="module" src="/js/tests/unit/protocol.test.js"></script>
+  <script type="module" src="/js/tests/unit/puzzleProvider.test.js"></script>
+
+  <!-- App-track unit tests (created by app-track agent) -->
+  <script type="module" src="/js/tests/unit/hintProvider.test.js"></script>
+  <script type="module" src="/js/tests/unit/state.test.js"></script>
+  <script type="module" src="/js/tests/unit/conflicts.test.js"></script>
+  <script type="module" src="/js/tests/unit/correctness.test.js"></script>
+  <script type="module" src="/js/tests/unit/statistics.test.js"></script>
+  <script type="module" src="/js/tests/unit/statsProvider.test.js"></script>
+  <script type="module" src="/js/tests/unit/cookieStatsStore.test.js"></script>
+  <script type="module" src="/js/tests/unit/cookies.test.js"></script>
+  <script type="module" src="/js/tests/unit/storage.test.js"></script>
+  <script type="module" src="/js/tests/unit/ui-grid.test.js"></script>
+  <script type="module" src="/js/tests/unit/ui-numpad.test.js"></script>
+  <script type="module" src="/js/tests/unit/ui-controls.test.js"></script>
+  <script type="module" src="/js/tests/unit/ui-stats.test.js"></script>
+  <script type="module" src="/js/tests/unit/ui-winBanner.test.js"></script>
+  <script type="module" src="/js/tests/unit/ui-dialog.test.js"></script>
+  <script type="module" src="/js/tests/unit/ui-srLive.test.js"></script>
+  <script type="module" src="/js/tests/unit/ui-themes.test.js"></script>
+  <script type="module" src="/js/tests/unit/ui-keyboard.test.js"></script>
+  <script type="module" src="/js/tests/unit/arch.test.js"></script>
+
+  <!-- Integration tests -->
+  <script type="module" src="/js/tests/integration/worker.test.js"></script>
+  <script type="module" src="/js/tests/integration/game-flows.test.js"></script>
+  <script type="module" src="/js/tests/integration/persistence.test.js"></script>
+  <script type="module" src="/js/tests/integration/a11y.test.js"></script>
+  <script type="module" src="/js/tests/integration/system.test.js"></script>
+
+  <script>
+    // Run after all type="module" scripts have registered their describe/it blocks.
+    // All ESM scripts run before classic scripts in the same task — but to be safe,
+    // we yield one task with setTimeout so any synchronous module-top-level
+    // registrations complete.
+    setTimeout(function () {
+      const failureDetails = [];
+      const runner = mocha.run();
+
+      runner.on('fail', function (test, err) {
+        failureDetails.push({
+          fullTitle: test.fullTitle(),
+          error: err.message,
+        });
+      });
+
+      runner.on('end', function () {
+        const results = {
+          passes: runner.stats.passes,
+          failures: runner.stats.failures,
+          pending: runner.stats.pending,
+          failureDetails,
+        };
+        window.mochaResults = results;
+        window.dispatchEvent(new CustomEvent('mocha:done', { detail: results }));
+      });
+    }, 0);
+  </script>
+</body>
+</html>
