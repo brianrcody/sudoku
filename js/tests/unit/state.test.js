@@ -510,6 +510,31 @@ describe('game/state.js', () => {
     expect(HINT_LIMITS['death-march']).to.equal(0);
   });
 
+  // S33a: HINT records attempt on first hint
+  it('S33a: HINT calls recordAttemptOnce on first hint', () => {
+    const puzzle = makeEasyPuzzle();
+    const hint = { cellIndex: 1, digit: 2, technique: 'nakedSingle' };
+    const { gs: gsH, stats: sH } = makeGs(hint);
+    loadPuzzle(gsH, puzzle);
+    select(gsH, 1);
+    gsH.dispatch({ type: 'HINT' });
+    expect(sH.attempts).to.have.length(1);
+    expect(sH.attempts[0]).to.equal('easy');
+  });
+
+  // S33b: HINT does not double-record attempt
+  it('S33b: HINT does not call recordAttemptOnce more than once', () => {
+    const puzzle = makeEasyPuzzle();
+    const hint1 = { cellIndex: 1, digit: 2, technique: 'nakedSingle' };
+    const { gs: gsH, stats: sH } = makeGs(hint1);
+    loadPuzzle(gsH, puzzle);
+    select(gsH, 1);
+    gsH.dispatch({ type: 'HINT' });
+    select(gsH, 2);
+    gsH.dispatch({ type: 'HINT' });
+    expect(sH.attempts).to.have.length(1);
+  });
+
   // S34: CHECK on Easy/Medium flags incorrect cells
   it('S34: CHECK on Easy flags incorrect cells', () => {
     const puzzle = makeEasyPuzzle();

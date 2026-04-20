@@ -201,9 +201,9 @@ When a puzzle is completed correctly (§5.3):
 Statistics are tracked independently per difficulty level (Kiddie, Easy, Medium, Hard,
 Death March):
 
-- **Games attempted:** increments the first time the player enters a pen digit in a new
-  puzzle at that difficulty. Resuming a saved in-progress puzzle does not increment this
-  counter again.
+- **Games attempted:** increments the first time the player enters a pen digit or uses a
+  hint in a new puzzle at that difficulty. Resuming a saved in-progress puzzle does not
+  increment this counter again.
 - **Games won:** increments on correct puzzle completion at that difficulty.
 
 ### 9.2 Display

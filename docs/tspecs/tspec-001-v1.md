@@ -360,7 +360,7 @@ XYC1 length-4 chain; XYC2 length-6 chain; XYC3 non-fire; AIC1 short AIC; AIC2 lo
 | S12 | PEN_ENTER same digit is no-op | U | Idempotent branch | existing digit | no change, no persist |
 | S13 | PEN_ENTER different digit replaces | U | Replace branch | existing digit | new digit committed, conflicts recomputed |
 | S14 | PEN_ENTER on given cell ignored | U | Given-guard branch | given index | unchanged |
-| S15 | PEN_ENTER with fromHint=true skips attempt increment | U | fromHint branch | hint flow | stats.recordAttemptOnce NOT called |
+| S15 | PEN_ENTER with fromHint=true skips attempt increment (HINT action records it instead) | U | fromHint branch | hint flow | stats.recordAttemptOnce NOT called via PEN_ENTER |
 | S16 | PEN_ENTER first user entry increments attempt once | U | attemptRecorded=false branch | first user digit | stats.recordAttemptOnce called with difficulty |
 | S17 | PEN_ENTER subsequent entries do not re-increment | U | attemptRecorded=true branch | already recorded | stats.recordAttemptOnce NOT called again |
 | S18 | PEN_ENTER triggers auto-clear of peer pencil marks | U | Auto-clear branch | peers have that pencil | peers updated |
@@ -379,6 +379,8 @@ XYC1 length-4 chain; XYC2 length-6 chain; XYC3 non-fire; AIC1 short AIC; AIC2 lo
 | S31 | HINT disabled when hintsRemaining===0 | U | Guard | hints=0 | no-op |
 | S32 | HINT disabled when selected is given or has pen | U | Fspec §8.1 guard | given/pen | no-op |
 | S33 | HINT disabled when hintsRemaining===0 permanently (Hard/DM) | U | Config limit | difficulty=hard | HINT_LIMITS used |
+| S33a | HINT records attempt on first hint | U | attemptRecorded=false branch | first hint | stats.recordAttemptOnce called with difficulty |
+| S33b | HINT does not double-record attempt | U | attemptRecorded=true branch | second hint | stats.recordAttemptOnce NOT called again |
 | S34 | CHECK on Easy/Medium flags incorrect | U | Check branch | wrong digits | incorrect set populated |
 | S35 | CHECK sets incorrectShownUntil = now+3000 | U | Timer branch | — | timestamp set |
 | S36 | CLEAR_INCORRECT clears incorrect set | U | Timer-expiry | after 3s | incorrect=∅ |
@@ -802,7 +804,7 @@ c8 `--include=js/** --exclude=js/tests/**` gate enforced by test runner. `run.js
 | §9.2 Reset dialog | UC5, UC6 |
 | §10.2 post-win input disabled | GF13 |
 | §10.3 post-win Reset preserves stats | GF14 |
-| §11.1 attempted increment rule | S15–S17 |
+| §11.1 attempted increment rule | S15–S17, S33a, S33b |
 | §13.1 mode not persisted | PE3 |
 | §13.2 correctness flags not restored | PE2 |
 | §13.3 state invalidation cases | PE9, PE10 |

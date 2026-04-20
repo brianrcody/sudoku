@@ -575,6 +575,14 @@ if (!state.attemptRecorded) {
 }
 ```
 
+`HINT` action handler, immediately after the hint digit is written to `state.pen`:
+```js
+if (!state.attemptRecorded) {
+  state.attemptRecorded = true;
+  stats.recordAttemptOnce(state.puzzle.difficulty); // fire-and-forget
+}
+```
+
 `ON_COMPLETION_EVALUATE` action handler, when evaluation yields `correct === true` and `!state.winHandled`:
 ```js
 state.won = true;

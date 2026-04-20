@@ -299,6 +299,11 @@ export function createGameState({ stats, hintProvider }) {
         state.pen[hint.cellIndex] = hint.digit;
         state.pencil[hint.cellIndex] = 0;
 
+        if (!state.attemptRecorded) {
+          state.attemptRecorded = true;
+          stats.recordAttemptOnce(state.puzzle.difficulty);
+        }
+
         if (state.hintsRemaining !== Infinity) {
           state.hintsRemaining -= 1;
         }

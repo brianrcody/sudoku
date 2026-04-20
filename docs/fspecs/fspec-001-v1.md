@@ -529,14 +529,15 @@ Statistics are tracked and displayed independently for each of the five difficul
 
 | Statistic       | Definition                                                                 |
 |-----------------|----------------------------------------------------------------------------|
-| Games attempted | Increments the first time the player enters a pen digit in a new puzzle.   |
-| Games won       | Increments when the player correctly completes a puzzle.                   |
+| Games attempted | Increments the first time the player enters a pen digit or uses a hint in a new puzzle. |
+| Games won       | Increments when the player correctly completes a puzzle.                                 |
 
 **Games attempted — increment rule:** The counter increments exactly once per puzzle
-instance. Resuming a saved puzzle does not re-increment. Resetting a puzzle does not
-re-increment (the attempt was already recorded). Starting a new puzzle (or changing
+instance, on whichever comes first: the player's first pen digit entry or the player's
+first hint use. Resuming a saved puzzle does not re-increment. Resetting a puzzle does
+not re-increment (the attempt was already recorded). Starting a new puzzle (or changing
 difficulty) creates a new puzzle instance; the counter will increment again on first
-pen entry into that new puzzle.
+pen entry or hint use in that new puzzle.
 
 **Games won** increments only on correct completion. Abandoning, resetting, or
 completing incorrectly (Hard/Death March partial submission) does not affect games won.
