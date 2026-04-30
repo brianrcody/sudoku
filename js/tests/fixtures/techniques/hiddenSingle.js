@@ -49,7 +49,7 @@ export const position1 = (() => {
   const b2 = new Uint8Array(81);
   b2[18] = 0; // target: 7 should go here
   // Place 7 in the column or box for cells 19-26 to force only cell 18.
-  b2[1] = 7;  // col 1 row 0: blocks cell 19 (row2 col1)
+  b2[28] = 7;  // col 1 row 3: blocks cell 19 (row2 col1) without contaminating box0
   b2[20] = 4; // row2 col2 is given=4: eliminates it
   b2[21] = 3; // given
   b2[22] = 5; // given
@@ -74,15 +74,14 @@ export const position1 = (() => {
 // Col 5 has digit 3 possible only in cell 14 (row 1, col 5).
 export const position2 = (() => {
   const bb = new Uint8Array(81);
-  bb[3] = 3;  // row 0 → blocks cell 5 (row0, col5)
-  // cell 14 (row1) — leave free
-  bb[25] = 3; // row 2, col7 → blocks row2 → cell 23 blocked (row2 col5)
-  bb[33] = 3; // row 3, col6 → blocks row3 → cell 32 blocked
-  bb[43] = 3; // row 4, col7 → blocks row4 → cell 41 blocked
-  bb[51] = 3; // row 5, col6 → blocks row5 → cell 50 blocked
-  bb[60] = 3; // row 6, col6 → blocks row6 → cell 59 blocked
-  bb[70] = 3; // row 7, col7 → blocks row7 → cell 68 blocked
-  bb[78] = 3; // row 8, col6 → blocks row8 → cell 77 blocked
+  // Spread the four 3-placements across distinct rows/cols/boxes so the
+  // hidden single fires first on cell 14 (row 1, col 5) — see comment below.
+  bb[8]  = 3; // r0c8 → row 0 + col 8 + box 2 → blocks cells 5, 17 (row1) and box-2 cells in row1
+  bb[18] = 3; // r2c0 → row 2 + col 0 + box 0 → blocks cell 23 (row2,col5) and cells 9,10,11 (row1)
+  bb[39] = 3; // r4c3 → row 4 + col 3 + box 4 → blocks cells 41,50 (col5) and cell 12 (row1)
+  bb[67] = 3; // r7c4 → row 7 + col 4 + box 7 → blocks cells 59,68,77 (col5) and cell 13 (row1)
+  // Row 1 is also a HS for digit 3: cells 9,10,11 blocked via box 0, cell 12 via col 3,
+  // cell 13 via col 4, cells 15,16 via box 2, cell 17 via col 8 → only cell 14 has 3.
   return {
     board: bb,
     state: makeState(bb),

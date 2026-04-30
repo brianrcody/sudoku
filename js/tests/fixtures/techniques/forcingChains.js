@@ -41,14 +41,12 @@ export const xyc1 = (() => {
   // That's fine — cell1 is not in our chain.
 
   // Row2: give digits 2,4,5,6,8 at cells 21,22,23,24,25 → row2 missing {1,3,7,9}.
-  b[21] = 2; b[22] = 4; b[23] = 5; b[24] = 6; b[25] = 8;
-  // row2 missing = {1,3,7,9}. Cells 18,19,20,26 have {1,3,7,9} from row.
-  // Block 3 and 7 from cell18 (to get {1,9}): col0 has {7}(b[27]) → cell18 loses 7. ✓
-  // Block 3 from cell18 via col0 or row: col0 needs 3. b[36]=3 (r4c0).
-  b[36] = 3; // col0 → cell18 loses 3. Cell18 = {1,9}. ✓ (row missing {1,3,7,9} minus col{7,3} = {1,9})
-  // Block 1 and 3 from cell20 (to get {7,9}): col2 has {1}(b[29]) → loses 1. ✓
-  // Block 3 from cell20 via col2: b[29]=1 doesn't block 3. Need 3 in col2:
-  b[38] = 3; // r4c2 → col2 → cell20 loses 3. Cell20 = {7,9}. ✓
+  b[21] = 3; b[22] = 4; b[23] = 5; b[24] = 6; b[25] = 8; b[26] = 2;
+  // row2 has {2,3,4,5,6,8} given → missing {1,7,9}.
+  // Cell18 (r2c0): row2 missing {1,7,9}; col0 has {7}(b[27]) → loses 7. = {1,9}. ✓
+  // Cell20 (r2c2): row2 missing {1,7,9}; col2 has {1}(b[29]) → loses 1. = {7,9}. ✓
+  // Cell0 (r0c0): row0 missing {1,3,7}; col0 has {7}(b[27]) only → loses 7. = {1,3}. ✓
+  // Cell2 (r0c2): row0 missing {1,3,7}; col2 has {1}(b[29]) → loses 1. = {3,7}. ✓
   // Verify cell20: row2 missing {1,3,7,9}; col2 has {1,3} → loses 1,3. = {7,9}. ✓
 
   // Cell9 (r1c0): will be elimination target.

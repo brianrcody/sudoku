@@ -193,8 +193,13 @@ describe('integration/persistence', () => {
     const gs2 = iframe.contentWindow.gameState;
     if (!gs2) return this.skip();
 
+    // Wait for async puzzle generation to complete.
+    const deadline = Date.now() + 10000;
+    while (gs2.getState().puzzle === null && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 100));
+    }
+
     // Should load a fresh puzzle, not the stale blob.
-    // The state should be valid but puzzle may differ; importantly no crash.
     expect(gs2.getState().puzzle).to.not.be.null;
   });
 

@@ -14,7 +14,9 @@ spec that the Architect and Implementor work from.
 
 ## Inputs
 - Functional spec: `docs/fspecs/[feature].md`
-- Existing visual design specs (for consistency): `docs/vspecs/`
+- Existing visual design specs (for consistency): `docs/vspecs/` — load only if this
+  feature extends or modifies an existing feature area. If it is unclear whether the
+  new feature overlaps existing work, stop and ask the Orchestrator before loading.
 - Existing mockups (when iterating): `docs/mockups/`
 
 ## Instructions

@@ -210,18 +210,24 @@ let _persistTimer = null;
 gameState.on('changed', ({ action, changed }) => {
   // Clear persisted state on explicit new puzzle or completed game.
   if (action.type === 'NEW_PUZZLE') {
-    removeItem(STATE_KEY);
-  }
-
-  const s = gameState.getState();
-  if (s.won && s.winHandled) {
+    if (_persistTimer !== null) clearTimeout(_persistTimer);
+    _persistTimer = null;
     removeItem(STATE_KEY);
     return;
   }
 
-  // Persist current difficulty immediately on any puzzle change.
-  if (changed.has('puzzle') && s.puzzle?.difficulty) {
-    setItem(DIFF_KEY, s.puzzle.difficulty);
+  const s = gameState.getState();
+  if (s.won && s.winHandled) {
+    if (_persistTimer !== null) clearTimeout(_persistTimer);
+    _persistTimer = null;
+    removeItem(STATE_KEY);
+    return;
+  }
+
+  // Persist difficulty only on explicit user change. Async PUZZLE_LOADED for a
+  // stale request must not overwrite the user's most recent CHANGE_DIFFICULTY.
+  if (action.type === 'CHANGE_DIFFICULTY') {
+    setItem(DIFF_KEY, action.difficulty);
   }
 
   // Debounced state write for in-progress saves.

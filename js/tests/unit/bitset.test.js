@@ -57,7 +57,7 @@ describe('bitset.js', function () {
 
   // B8: iterate yields digits ascending
   it('B8: iterate yields digits in ascending order', function () {
-    expect(iterate(0b010100001)).to.deep.equal([1, 3, 5]);
+    expect(iterate(0b000010101)).to.deep.equal([1, 3, 5]);
     expect(iterate(ALL)).to.deep.equal([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(iterate(0b100000001)).to.deep.equal([1, 9]);
   });

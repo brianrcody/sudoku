@@ -74,33 +74,28 @@
   <script type="module" src="/js/tests/integration/a11y.test.js"></script>
   <script type="module" src="/js/tests/integration/system.test.js"></script>
 
-  <script>
-    // Run after all type="module" scripts have registered their describe/it blocks.
-    // All ESM scripts run before classic scripts in the same task — but to be safe,
-    // we yield one task with setTimeout so any synchronous module-top-level
-    // registrations complete.
-    setTimeout(function () {
-      const failureDetails = [];
-      const runner = mocha.run();
+  <!-- Must be type="module" so it executes after all preceding module scripts. -->
+  <script type="module">
+    const failureDetails = [];
+    const runner = mocha.run();
 
-      runner.on('fail', function (test, err) {
-        failureDetails.push({
-          fullTitle: test.fullTitle(),
-          error: err.message,
-        });
+    runner.on('fail', function (test, err) {
+      failureDetails.push({
+        fullTitle: test.fullTitle(),
+        error: err.message,
       });
+    });
 
-      runner.on('end', function () {
-        const results = {
-          passes: runner.stats.passes,
-          failures: runner.stats.failures,
-          pending: runner.stats.pending,
-          failureDetails,
-        };
-        window.mochaResults = results;
-        window.dispatchEvent(new CustomEvent('mocha:done', { detail: results }));
-      });
-    }, 0);
+    runner.on('end', function () {
+      const results = {
+        passes: runner.stats.passes,
+        failures: runner.stats.failures,
+        pending: runner.stats.pending,
+        failureDetails,
+      };
+      window.mochaResults = results;
+      window.dispatchEvent(new CustomEvent('mocha:done', { detail: results }));
+    });
   </script>
 </body>
 </html>

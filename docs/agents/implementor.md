@@ -14,7 +14,6 @@ handing off to QE.
 ## Inputs
 - Architectural spec / implementation plan: `docs/aspecs/[feature].md`
 - Functional spec (for behavior reference): `docs/fspecs/[feature].md`
-- Visual design spec (for design reference): `docs/vspecs/[feature].md`
 
 ## Tech Stack
 > **TBD** — to be filled in once the Architect defines the stack in the first aspec.

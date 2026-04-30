@@ -67,7 +67,7 @@ export const ATTEMPT_BUDGET = {
 };
 
 /** @type {string} URL of the generator worker, relative to index.html. */
-export const WORKER_URL = './js/worker/generator.worker.js';
+export const WORKER_URL = '/js/worker/generator.worker.js';
 
 /** @type {number} Duration in ms that Check/incorrect highlights are shown. */
 export const CHECK_HIGHLIGHT_MS = 3000;

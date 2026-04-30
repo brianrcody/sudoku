@@ -22,6 +22,9 @@ let queue = [];
 /** Whether the currently-active request has been aborted. */
 let aborted = false;
 
+/** Whether processNext is currently running. */
+let processing = false;
+
 self.onmessage = function (event) {
   const msg = event.data;
 
@@ -40,11 +43,15 @@ self.onmessage = function (event) {
       // Background requests go to the back of the queue.
       queue.push(msg);
     } else {
-      // Foreground request: abort any current work and jump to the front.
-      aborted = true;
-      // Remove any existing foreground request (background stays).
-      queue = queue.filter(r => r.background);
-      queue.unshift(msg);
+      // Foreground: preempt the active request only if it's a background.
+      // Concurrent foregrounds queue behind one another in arrival order.
+      if (queue.length > 0 && queue[0].background) {
+        aborted = true;
+      }
+      // Insert before any background entries (after any pending foregrounds).
+      const firstBgIdx = queue.findIndex(r => r.background);
+      if (firstBgIdx === -1) queue.push(msg);
+      else queue.splice(firstBgIdx, 0, msg);
     }
 
     // If this is the only item, kick off processing immediately.
@@ -58,11 +65,22 @@ self.onmessage = function (event) {
 /**
  * Process the next request in the queue.
  */
-function processNext() {
-  if (queue.length === 0) return;
+async function processNext() {
+  if (processing || queue.length === 0) return;
+  processing = true;
 
   const req = queue[0];
   aborted = false;
+
+  // Yield to the event loop so any pending GEN_ABORT or GEN_REQUEST messages
+  // that arrived between postMessage calls can be processed before we start.
+  await new Promise(r => setTimeout(r, 0));
+
+  if (aborted) {
+    processing = false;
+    processNext();
+    return;
+  }
 
   const rng = mulberry32(req.seed);
 
@@ -100,16 +118,19 @@ function processNext() {
     if (err.name === 'AbortError') {
       // Request was aborted — silently discard, process next in queue.
       queue.shift();
+      processing = false;
       processNext();
       return;
     }
     self.postMessage(makeGenError({ id: req.id, message: err.message }));
     queue.shift();
+    processing = false;
     processNext();
     return;
   }
 
   self.postMessage(makeGenResult({ id: req.id, puzzle, fallback }));
   queue.shift();
+  processing = false;
   processNext();
 }

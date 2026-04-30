@@ -112,17 +112,21 @@ describe('system tests', () => {
     const t0 = performance.now();
     iframe = createIframe();
     await waitForPuzzle(iframe, 15000);
-    const elapsed = performance.now() - t0;
 
     const gs = iframe.contentWindow.gameState;
     if (gs) {
+      // Wait for async puzzle generation to complete.
+      const deadline = Date.now() + 10000;
+      while (gs.getState().puzzle === null && Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 100));
+      }
+
+      const elapsed = performance.now() - t0;
       const state = gs.getState();
-      // If a DM puzzle loaded, verify.
       if (state.puzzle?.difficulty === 'death-march') {
         console.log(`[SYS3] Death March load time: ${elapsed.toFixed(0)} ms`);
         expect(elapsed).to.be.below(5000);
       }
-      // If a different difficulty loaded (fallback), puzzle is still valid.
       expect(state.puzzle).to.not.be.null;
     }
   });

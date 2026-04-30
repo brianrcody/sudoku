@@ -16,7 +16,9 @@ it without making significant design decisions.
 ## Inputs
 - Functional spec: `docs/fspecs/[feature].md`
 - Visual design spec: `docs/vspecs/[feature].md`
-- Existing architectural specs (for consistency): `docs/aspecs/`
+- Existing architectural specs (for consistency): `docs/aspecs/` — load only if this
+  feature extends or modifies an existing feature area. If it is unclear whether the
+  new feature overlaps existing work, stop and ask the Orchestrator before loading.
 
 ## Environment Constraints
 These are fixed constraints the implementation plan must respect:

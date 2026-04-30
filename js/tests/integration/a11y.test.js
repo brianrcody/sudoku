@@ -12,7 +12,10 @@ async function waitForPuzzle(iframe, timeoutMs = 10000) {
       if (Date.now() > deadline) return reject(new Error('Timed out'));
       const doc = iframe.contentDocument;
       if (!doc) return setTimeout(check, 100);
-      if (doc.querySelectorAll('.cell').length === 81) return resolve();
+      const cellsReady = doc.querySelectorAll('.cell').length === 81;
+      const gs = iframe.contentWindow?.gameState;
+      const puzzleLoaded = gs && gs.getState().puzzle !== null;
+      if (cellsReady && puzzleLoaded) return resolve();
       setTimeout(check, 100);
     }
     setTimeout(check, 300);
@@ -38,6 +41,7 @@ describe('integration/a11y', () => {
 
   beforeEach(async function () {
     this.timeout(15000);
+    localStorage.removeItem('sudoku.state.v1');
     iframe = createIframe();
     await waitForPuzzle(iframe);
   });
@@ -67,10 +71,12 @@ describe('integration/a11y', () => {
     const idx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
     gs.dispatch({ type: 'SELECT_CELL', index: idx });
 
-    // Trigger via numpad button click to exercise the UI path (numpad.js announces).
+    // Use the correct solution digit so no conflict announce overrides the
+    // position announce.
+    const correct = state.puzzle.solution[idx];
     const btns = iframe.contentDocument.querySelectorAll('.btn-digit');
-    if (btns.length < 1) return this.skip();
-    btns[0].click(); // digit 1
+    if (btns.length < 9) return this.skip();
+    btns[correct - 1].click();
 
     await waitTwoFrames(iframe);
     const region = srLiveRegion();
@@ -291,21 +297,27 @@ describe('integration/a11y', () => {
     const state = gs.getState();
     if (!state.puzzle) return this.skip();
 
-    // Select a non-given cell and click digit to trigger announce.
+    // Select a non-given cell and click the correct digit (no conflict announce).
     const idx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
     gs.dispatch({ type: 'SELECT_CELL', index: idx });
 
+    const correct = state.puzzle.solution[idx];
     const btns = iframe.contentDocument.querySelectorAll('.btn-digit');
-    if (btns.length < 1) return this.skip();
+    if (btns.length < 9) return this.skip();
+    const btn = btns[correct - 1];
 
-    btns[0].click();
+    btn.click();
     await waitTwoFrames(iframe);
     const firstText = srLiveRegion().textContent;
+    expect(firstText).to.not.equal('');
 
-    // Erase and click same digit again.
+    // Numpad clicks bubble to a "click outside grid" handler that DESELECTs.
+    // Re-select before each subsequent dispatch/click that depends on selected.
+    gs.dispatch({ type: 'SELECT_CELL', index: idx });
     gs.dispatch({ type: 'ERASE' });
     await waitTwoFrames(iframe);
-    btns[0].click();
+    gs.dispatch({ type: 'SELECT_CELL', index: idx });
+    btn.click();
     // After synchronous clear — region should be '' before rAF fires.
     expect(srLiveRegion().textContent).to.equal('');
     await waitTwoFrames(iframe);

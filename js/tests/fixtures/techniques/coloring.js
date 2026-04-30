@@ -403,57 +403,20 @@ export const sc1 = (() => {
   // Also: all 4 cells must have 5 as candidate AND be empty.
 
   // Block 5 from row0 cells except 0 and 2:
-  sc1Board[1] = 5; // r0c1=5 → row0 has 5 at col1 → blocks col1 cells from 5, but
-  // wait: r0c1=5 means 5 is PLACED there → row0 already has 5? That blocks ALL row0 from having 5 as candidate!
-  // NO: once 5 is placed at r0c1, the row0 cells can NOT have 5. That means row0 has no link for coloring.
-  // We need 5 to be a CANDIDATE in cells 0 and 2, not a given.
-  // To confine 5 candidates to cells 0 and 2 in row0: cells 1,3,4,5,6,7,8 must lose 5.
-  // Block 5 from cell1(r0c1) via col1: place 5 in col1 not in row0. sc1Board[10]=5 (r1c1).
-  sc1Board[10] = 5;
-  // Block from cell3(r0c3) via col3: sc1Board[30]=5 (r3c3).
-  sc1Board[30] = 5;
-  // Block from cell4(r0c4) via col4: sc1Board[40]=5 (r4c4).
-  sc1Board[40] = 5;
-  // Block from cell5(r0c5) via col5: sc1Board[50]=5 (r5c5).
-  sc1Board[50] = 5;
-  // Block from cell6(r0c6) via col6: sc1Board[60]=5 (r6c6).
-  sc1Board[60] = 5;
-  // Block from cell7(r0c7) via col7: sc1Board[70]=5 (r7c7).
-  sc1Board[70] = 5;
-  // Block from cell8(r0c8) via col8: sc1Board[80]=5 (r8c8).
-  sc1Board[80] = 5;
-  // Row0 now: cells 1,3-8 blocked via their columns. Cells 0,2 remain for 5.
-  // But col1 now has 5 at row1. Does that block box0 cell1(r0c1)? Yes. ✓
-
-  // Block 5 from col0 cells except rows 0 and 2 (i.e., rows 1,3,4,5,6,7,8):
-  // row1 col0 = cell9: sc1Board[10]=5 (r1c1) blocks 5 from row1 → cell9 loses 5. ✓
-  // row3 col0 = cell27: sc1Board[30]=5 (r3c3) blocks row3 → cell27 loses 5. ✓
-  // row4 col0 = cell36: sc1Board[40]=5 (r4c4) → row4 → cell36. ✓
-  // row5 col0 = cell45: sc1Board[50]=5 → row5 → cell45. ✓
-  // row6 col0 = cell54: sc1Board[60]=5 → row6 → cell54. ✓
-  // row7 col0 = cell63: sc1Board[70]=5 → row7 → cell63. ✓
-  // row8 col0 = cell72: sc1Board[80]=5 → row8 → cell72. ✓
-  // Col0: 5 only at rows 0 and 2 → col0 link: 0—18. ✓
-
-  // Block 5 from row2 cells except cols 0 and 2 (cells 19,21,22,23,24,25,26):
-  // cell19(r2c1): col1 has sc1Board[10]=5 → row1, not col1! sc1Board[10]=r1c1 is in col1. col1 has 5 → cell19 loses 5. ✓
-  // cell21(r2c3): col3 has sc1Board[30]=5 → cell21 loses 5. ✓
-  // cell22(r2c4): col4 has sc1Board[40]=5 → loses 5. ✓
-  // cell23(r2c5): col5 → ✓; cell24 col6 ✓; cell25 col7 ✓; cell26 col8 ✓.
-  // Row2: 5 only at cells 18 and 20. ✓
-
-  // Block 5 from col2 cells except rows 0 and 2 (rows 1,3,4,5,6,7,8):
-  // row1: sc1Board[10]=5 (row1) → cell11(r1c2) loses 5. ✓
-  // rows3-8: sc1Board[30,40,50,60,70,80]=5 (rows3-8) → col2 cells in those rows lose 5. ✓
-  // Col2: 5 only at rows 0 and 2. ✓
-
-  // Now: bilocation links: row0(0—2), col0(0—18), row2(18—20), col2(2—20). Chain: square in box0.
-  // Box0 link: 5 in box0 at all 4 cells? box0 has {0,1,2,9,10,11,18,19,20}.
-  // 5-candidates in box0: cell0, cell2, cell18, cell20 (others blocked). Count=4 > 2. Not a bilocation via box0.
-  // That's fine — bilocation links are only via row0, col0, row2, col2. Box0 link is NOT triggered.
-  // BFS: start cell0=c0. Row0: {0,2} → 0=c0, 2=c1. Col0: {0,18} → 0=c0, 18=c1. Row2: {18,20} → 18=c1, 20=c0. Col2: {2,20} → 2=c1, 20=c0. (consistent)
-  // Color0={0,20}. Color1={2,18}. Rule2: 0(r0c0) and 20(r2c2) same box0 → peers! Fires.
-  // Expected: eliminate 5 from color0 = cells 0 and 20.
+  sc1Board[17] = 5; // r1c8 — blocks row1 (cell9 loses 5) and col8 (cell8 loses 5)
+  sc1Board[28] = 5; // r3c1 — blocks col1 (cell1,19 lose 5) and row3
+  sc1Board[39] = 5; // r4c3 — blocks col3 (cell3,21 lose 5) and row4
+  sc1Board[49] = 5; // r5c4 — blocks col4 (cell4,22 lose 5) and row5
+  sc1Board[59] = 5; // r6c5 — blocks col5 (cell5,23 lose 5) and row6
+  sc1Board[69] = 5; // r7c6 — blocks col6 (cell6,24 lose 5) and row7
+  sc1Board[79] = 5; // r8c7 — blocks col7 (cell7,25 lose 5) and row8
+  // Row0: 5 only at cells 0,2 (cells 1,3–8 blocked via their columns/col8). Bilocation. ✓
+  // Col0: 5 only at cells 0,18 (rows1,3–8 blocked via row placements). Bilocation. ✓
+  // Row2: 5 only at cells 18,20 (cells 19,21–26 blocked via col placements). Bilocation. ✓
+  // Col2: 5 only at cells 2,20 (rows1,3–8 blocked via row placements). Bilocation. ✓
+  // Box0 has 5 in cells {0,2,18,20} — count=4, no bilocation link via box0.
+  // BFS: 0=c0; row0→2=c1; col0→18=c1; row2→20=c0; col2→20=c0 (consistent).
+  // Color0={0,20}: 0(r0c0) and 20(r2c2) both in box0 → peers → Rule2 fires.
 
   return {
     board: sc1Board,

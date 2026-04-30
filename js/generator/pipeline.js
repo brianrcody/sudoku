@@ -90,6 +90,7 @@ export function generateForTier(tier, opts) {
     if (opts.onProgress && now - lastProgressMs >= 100) {
       opts.onProgress({ attempts, budget });
       lastProgressMs = now;
+      opts.abortSignal?.throwIfAborted();
     }
 
     const solution = fillGrid(opts.rng);

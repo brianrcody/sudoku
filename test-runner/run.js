@@ -34,6 +34,15 @@ async function run() {
     const context = await browser.newContext();
     const page = await context.newPage();
 
+    // Relay browser console output to the terminal.
+    page.on('console', msg => {
+      const type = msg.type();
+      if (type === 'error' || type === 'warn') {
+        console.error(`[browser ${type}] ${msg.text()}`);
+      }
+    });
+    page.on('pageerror', err => console.error(`[page error] ${err.message}`));
+
     // Enable V8 JS coverage.
     await page.coverage.startJSCoverage({ resetOnNavigation: false });
 

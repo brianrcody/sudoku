@@ -81,7 +81,7 @@ export function createClientGenProvider() {
     // Reject all pending requests on unrecoverable worker error.
     for (const [id, cb] of pending) {
       pending.delete(id);
-      cb.reject(err);
+      cb.reject(new Error(err.message || 'Worker error'));
     }
   };
 

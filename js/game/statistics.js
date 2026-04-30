@@ -41,13 +41,13 @@ export function createStatistics(provider) {
   async function recordAttemptOnce(difficulty) {
     cache[difficulty].attempted += 1;
     emitter.emit('stats-changed', cache);
-    await provider.save(cache);
+    await provider.save(cache).catch(() => {});
   }
 
   async function recordWin(difficulty) {
     cache[difficulty].won += 1;
     emitter.emit('stats-changed', cache);
-    await provider.save(cache);
+    await provider.save(cache).catch(() => {});
   }
 
   return {

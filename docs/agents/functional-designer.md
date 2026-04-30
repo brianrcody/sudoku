@@ -15,7 +15,9 @@ re-interpret intent.
 
 ## Inputs
 - Requirements spec: `docs/rspecs/[feature].md`
-- Existing functional specs (for consistency): `docs/fspecs/`
+- Existing functional specs (for consistency): `docs/fspecs/` — load only if this
+  feature extends or modifies an existing feature area. If it is unclear whether the
+  new feature overlaps existing work, stop and ask the Orchestrator before loading.
 
 ## Instructions
 

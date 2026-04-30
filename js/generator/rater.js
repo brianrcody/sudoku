@@ -14,6 +14,6 @@ import { solveLogically, tierForRank } from '../solver/logical.js';
 export function rate(givens) {
   const board = givens.slice();
   const { solved, trace, hardestRank } = solveLogically(board);
-  const tier = tierForRank(hardestRank) ?? 'kiddie';
+  const tier = solved ? (tierForRank(hardestRank) ?? 'kiddie') : 'beyond-death-march';
   return { tier, hardestRank, trace, solved };
 }

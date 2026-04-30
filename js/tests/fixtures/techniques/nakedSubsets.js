@@ -333,6 +333,7 @@ export const nakedTriple223 = (() => {
   b[9] = 1; // row1 → cell 17 loses 1. Cell 17 = {2,3}. ✓
   // Cell 26 (r2,c8): block 2 from cell 26 via row2: b[20]=2
   b[20] = 2; // row2 → cell 26 loses 2. Cell 26 = {1,3}. ✓
+  b[7] = 8;  // r0c7 — box2 has 8 → cells 8,17,26 all lose 8
 
   // Now find another empty cell in col 8 with {1,2,3} candidates — but we gave all others.
   // Change one given to empty: b[71]=0.

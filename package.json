@@ -2,6 +2,7 @@
   "name": "sudoku",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Sudoku web application",
   "scripts": {
     "test": "node test-runner/run.js"
