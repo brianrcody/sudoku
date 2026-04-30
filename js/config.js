@@ -66,8 +66,13 @@ export const ATTEMPT_BUDGET = {
   'death-march': 300,
 };
 
-/** @type {string} URL of the generator worker, relative to index.html. */
-export const WORKER_URL = '/js/worker/generator.worker.js';
+/**
+ * URL of the generator worker, resolved relative to this module's own URL so
+ * the path works regardless of whether the site is hosted at the host root
+ * or under a subpath.
+ * @type {URL}
+ */
+export const WORKER_URL = new URL('./worker/generator.worker.js', import.meta.url);
 
 /** @type {number} Duration in ms that Check/incorrect highlights are shown. */
 export const CHECK_HIGHLIGHT_MS = 3000;
