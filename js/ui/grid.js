@@ -74,9 +74,15 @@ function _buildGrid(state) {
     _updateCell(el, i, state);
   }
 
-  // Deselect when clicking outside grid.
+  // Deselect when clicking outside grid (but not when interacting with the
+  // numpad — those clicks must preserve cell selection so successive taps apply
+  // to the same cell).
   document.addEventListener('click', (e) => {
-    if (!_gridEl.contains(e.target) && !e.target.closest('#dialog-root')) {
+    if (
+      !_gridEl.contains(e.target) &&
+      !e.target.closest('#dialog-root') &&
+      !e.target.closest('#numpad-root')
+    ) {
       _gameState.dispatch({ type: 'DESELECT' });
     }
   });

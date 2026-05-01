@@ -120,7 +120,9 @@ Exactly one player cell may be selected at a time. Selection is indicated visual
 selected. A cell becomes selected on first tap/click or first arrow key press.
 
 **Deselection:** Tapping or clicking outside the grid deselects the current cell. There
-is no keyboard deselection shortcut.
+is no keyboard deselection shortcut. Exception: interacting with the number pad (digit
+buttons, Erase, mode toggle, Hint, Check) does not deselect — the cell remains selected
+so the player can enter multiple candidates or digits in sequence without re-selecting.
 
 ### 4.3 Cell State Summary
 

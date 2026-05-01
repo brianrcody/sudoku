@@ -37,7 +37,7 @@ export function mount(root, gameState) {
 
 function _buildNumpad() {
   _root.innerHTML = `
-    <div class="numpad" role="group" aria-label="Number pad">
+    <div class="numpad" role="toolbar" aria-label="Number pad">
       <div class="numpad-digits" id="numpad-digits"></div>
       <div class="numpad-utils">
         <button class="btn" id="btn-erase" aria-label="Erase selected cell">Erase</button>
@@ -116,6 +116,12 @@ function _buildNumpad() {
     } else {
       announce(`${count} cell${count > 1 ? 's' : ''} incorrect.`);
     }
+  });
+
+  // Toolbar pattern: prevent pointer-driven focus transfer so the selected cell
+  // keeps focus across multiple button taps. Tab/Enter/Space are unaffected.
+  _root.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('mousedown', e => e.preventDefault());
   });
 }
 

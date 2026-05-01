@@ -982,9 +982,19 @@ Each `js/ui/*` module owns exactly one DOM subtree. Mount returns nothing; rende
 
 ### 13.3 Number pad
 
+- The numpad container has `role="toolbar"` (was `role="group"`); semantically accurate
+  since the pad acts as a tool group on an external selection (the grid cell).
 - Digit buttons dispatch `PEN_ENTER`/`PENCIL_TOGGLE` based on active mode.
 - Check button has `display: none` via `.hidden-tier` class for Kiddie/Hard/Death March.
 - Mode toggle has `aria-pressed` reflecting current mode.
+- **Toolbar focus pattern:** every button in `#numpad-root` registers
+  `mousedown: e => e.preventDefault()`. This prevents the browser from transferring
+  DOM focus to the button on pointer interaction, so the selected cell keeps its focus
+  ring across successive taps. Tab, Enter, and Space activation are unaffected.
+- **DESELECT guard:** the outside-click handler in `ui/grid.js` excludes
+  `#numpad-root` (alongside `#dialog-root`) so numpad clicks never dispatch `DESELECT`.
+  Without this exclusion, every button tap would clear `state.selected` via event
+  bubbling, making successive digit taps no-op after the first.
 
 ### 13.4 Controls
 
