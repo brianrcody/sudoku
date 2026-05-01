@@ -37,8 +37,11 @@ async function run() {
     // Relay browser console output to the terminal.
     page.on('console', msg => {
       const type = msg.type();
+      const text = msg.text();
       if (type === 'error' || type === 'warn') {
-        console.error(`[browser ${type}] ${msg.text()}`);
+        console.error(`[browser ${type}] ${text}`);
+      } else if (text.startsWith('[PERF]')) {
+        console.log(text);
       }
     });
     page.on('pageerror', err => console.error(`[page error] ${err.message}`));
