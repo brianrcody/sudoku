@@ -1,58 +1,55 @@
-# Next Session — v1 Sign-Off Tasks
+# Next Session — Post-v1 Backlog
 
-Phase 4 is shipped (commits `b1cce29`, `34dfe73`). Deployed site verified
-working after the WORKER_URL fix. Three iteration-exit-criteria items
-remain before v1 can close.
+v1 is **signed off** as of 2026-04-30. All iteration exit criteria
+addressed. Sign-off artifacts in `docs/misc/`:
+- `CodeCoverageV1.md`
+- `PerformanceV1.md`
+- `UXReviewV1.md`
 
-## 1. Branch coverage — verify 100%
+## Open backlog items (not v1 blockers)
 
-Per CLAUDE.md, the bar is **100% branch coverage**.
+These are documented in the v1 sign-off artifacts but were explicitly
+not pursued as v1 work. Pick up if/when v1.x kicks off.
 
-```sh
-npm test                                       # generates coverage/coverage.json
-npx c8 report --reporter=text --reporter=html  # human-readable summary
-```
+### 1. Coverage gate plumbing
 
-The test runner (`test-runner/run.js`) writes V8 coverage to
-`coverage/coverage.json` after each run; `c8 report` consumes it.
+The documented `npm test` → `npx c8 report` flow doesn't work because
+`run.js` writes coverage with HTTP URLs but `c8` expects `file://` URLs
+in `coverage/tmp/`. Also, tspec §3.12 says `run.js` should fail nonzero
+below 100% coverage but doesn't. See `CodeCoverageV1.md` §7.1 for the
+URL-rewrite shim.
 
-**Caveat (from tspec §4.2):** Playwright's `page.coverage` API only
-captures the main frame, so the generator Worker is excluded. Worker
-code is exercised by direct-import unit tests
-(`js/tests/integration/worker.test.js` etc.). When evaluating coverage,
-note any worker-exclusive branches and confirm they're covered by the
-direct-import tests rather than worried about gaps in the V8 report.
+### 2. `js/game/state.js` branch coverage
 
-## 2. Performance — sub-1 s user actions
+At 73.84% branch coverage, this is the highest-priority real gap
+(as opposed to defensible boot/guard branches in `main.js`). The
+reducer's correctness depends on every conditional arm being covered.
+See `CodeCoverageV1.md` §7.2.
 
-CLAUDE.md performance threshold: every user-facing action under 1 s.
+### 3. Other coverage gaps
 
-Spot-check the obvious ones with the existing system tests as a
-starting point, plus manual timing for anything not covered:
+Per-file gap list in `CodeCoverageV1.md` §2. The gap classification
+framework in §5 separates "needs test" from "candidate for `c8 ignore`"
+from "worker-only path needing direct-import test."
 
-- New Puzzle (each tier, including death-march)
-- Reset Puzzle
-- Pen entry → conflict highlight
-- Hint
-- Check
-- Difficulty change
+### 4. Cold-start perf parity tests
 
-Use `performance.now()` around dispatches in the browser console, or
-extend `js/tests/integration/system.test.js` if anything looks
-borderline. SYS3 already exercises death-march cold-start within 5 s
-(noted as the worst case in the aspec).
+`SYS3` gates death-march cold-start at <5 s. There's no equivalent
+gate for kiddie/easy/medium/hard cold-starts (PERF-NEW-* measures
+warm-cache, which is what users typically experience). Low-effort
+addition if useful. See `PerformanceV1.md` §4.1.
 
-## 3. UX milestone approval — user-driven
+### 5. Hard puzzle generation on slow hardware
 
-Per CLAUDE.md "UX Quality": the user reviews and approves UX at each
-milestone boundary. This is the v1 milestone. Tasks for that review
-sit with the Product Director, not the orchestrator.
+Hard puzzle warm-cache time was 560 ms — closest call on the perf
+budget (1.8× headroom vs. >4× for everything else). Worth a sanity
+check on a 5+ year old laptop or throttled mobile CPU. See
+`PerformanceV1.md` §4.2.
 
-## Quick orientation pointers
+### 6. Narrow-window grid clipping (local-dev only)
 
-- Worker URL was the bug behind the "New Puzzle stopped responding"
-  symptom. Fix in `js/config.js:69-75` (commit `34dfe73`). See
-  `feedback_module_relative_urls.md` in memory for the lesson.
-- `coverage/` is now in `.gitignore`.
-- `docs/misc/phase4-fixes.md` is the triage record from the QE Test
-  Runner; useful as historical context but not required reading.
+Below ~220 px viewport width, the bottom of the grid clips on
+`localhost:3001` but not on production. CSS is identical between
+environments so the divergence is a server-delivery quirk. Investigate
+only if it surfaces in production. Proposed fix is a one-liner
+(`line-height: 1` on `.cell` in `css/grid.css`).
