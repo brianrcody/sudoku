@@ -1,3 +1,8 @@
+> **Superseded.** This monolithic v1 spec has been decomposed into feature-scoped specs.
+> See `aspec-overview.md` for the index. This file is retained as a historical record.
+
+---
+
 # Architectural Spec / Implementation Plan — Sudoku v1
 **Status:** Final
 **Date:** 2026-04-18

@@ -14,8 +14,12 @@ At the start of each session, read this file and the following before doing any 
 - `docs/agents/` — role definitions, subagent types, models, and prompt instructions for
   every subagent used in this project. Always consult the relevant role file before
   briefing a subagent.
-- Any existing specs in `docs/rspecs/`, `docs/fspecs/`, `docs/vspecs/`, `docs/aspecs/`,
-  `docs/tspecs/` — to understand what has already been decided and documented.
+- Any existing specs in `docs/rspecs/`, `docs/fspecs/`, `docs/vspecs/`, `docs/tspecs/`
+  — to understand what has already been decided and documented.
+- For architectural specs (`docs/aspecs/`): always start with `aspec-overview.md`, which
+  contains the master directory tree, event flow, and a feature spec index. Load only the
+  feature-scoped specs relevant to the current task. Do **not** load `aspec-001-v1.md`
+  — it is a superseded historical record.
 
 ---
 
