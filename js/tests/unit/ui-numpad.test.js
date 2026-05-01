@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for js/ui/numpad.js (UN1–UN11).
+ * @fileoverview Unit tests for js/ui/numpad.js (UN1–UN12).
  */
 
 import { mount } from '../../ui/numpad.js';
@@ -163,5 +163,20 @@ describe('ui/numpad.js', () => {
     mountNumpad({ hintsRemaining: 2 });
     const btn = root.querySelector('#btn-hint');
     expect(btn.getAttribute('aria-label')).to.include('2');
+  });
+
+  // UN12: Successive digit clicks in pencil mode all dispatch PENCIL_TOGGLE
+  it('UN12: successive digit clicks in pencil mode each dispatch PENCIL_TOGGLE', () => {
+    const fakeGs = mountNumpad({ activeMode: 'pencil', selected: 5 });
+    fakeGs.getState().activeMode = 'pencil';
+    const btns = root.querySelectorAll('.btn-digit');
+    btns[0].click(); // digit 1
+    btns[2].click(); // digit 3
+    btns[6].click(); // digit 7
+    const toggles = fakeGs.dispatch.calls.filter(a => a.type === 'PENCIL_TOGGLE');
+    expect(toggles).to.have.length(3);
+    expect(toggles[0].digit).to.equal(1);
+    expect(toggles[1].digit).to.equal(3);
+    expect(toggles[2].digit).to.equal(7);
   });
 });

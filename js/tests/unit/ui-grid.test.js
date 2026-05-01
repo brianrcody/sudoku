@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for js/ui/grid.js (UG1–UG12).
+ * @fileoverview Unit tests for js/ui/grid.js (UG1–UG13).
  */
 
 import { mount } from '../../ui/grid.js';
@@ -188,5 +188,24 @@ describe('ui/grid.js', () => {
 
     const deselectCall = fakeGs.dispatch.calls.find(a => a.type === 'DESELECT');
     expect(deselectCall).to.exist;
+  });
+
+  // UG13: Clicking inside #numpad-root does NOT dispatch DESELECT
+  it('UG13: clicking inside #numpad-root does not dispatch DESELECT', () => {
+    root = makeGridRoot();
+    fakeGs = makeFakeGameState({ puzzle: makePuzzle() });
+    mount(root, fakeGs);
+
+    const numpadRoot = document.createElement('div');
+    numpadRoot.id = 'numpad-root';
+    const btn = document.createElement('button');
+    numpadRoot.appendChild(btn);
+    document.body.appendChild(numpadRoot);
+
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    numpadRoot.remove();
+
+    const deselectCall = fakeGs.dispatch.calls.find(a => a.type === 'DESELECT');
+    expect(deselectCall).to.not.exist;
   });
 });
