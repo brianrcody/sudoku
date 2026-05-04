@@ -308,7 +308,11 @@ return mapper(step, workingBoard, candidates);
 
 Every per-technique mapper receives:
 
-- `step` — the solver `Step` for the move.
+- `step` — the solver `Step` for the move. For ranks 1–11, only the four base fields are present. For ranks 12–15, `step` additionally carries chain data passed through by `logical.js` (see `aspec-solver.md` §6 for the full shape):
+  - Rank 12 (Simple Coloring): `step.colorChain` — `{ digit, groupA: int[], groupB: int[] }`
+  - Rank 13 (Multi-Coloring): `step.colorChains` — `Array<{ digit, groupA: int[], groupB: int[] }>`
+  - Rank 14 (XY-Chain): `step.chain` — `{ cells: int[], digit: int }`
+  - Rank 15 (Forcing Chain): `step.chain` — `{ nodes: Array<{ cell, digit, strong }> }`
 - `workingBoard` — the `Uint8Array(81)` constructed in §5.
 - `candidates` — `Uint16Array(81)` from `solveLogically`'s return value (the candidates as they were *just before* the technique fired, since the trace is recorded pre-application; see `aspec-solver.md` §7.2).
 
@@ -886,10 +890,24 @@ This module belongs to a new **Phase 8 — Coach Mode**, sequenced after Phase 7
 
 **Phase 8a — Analyzer (this spec)**
 
-1. Confirm/extend technique-module outputs as needed:
-   - Most techniques already return enough information (placements + eliminations) for analyzer mapping.
-   - Simple Coloring (rank 12) and Multi-Coloring (rank 13) require chain output (which cells form the chain, which colour pole) to be exposed by the technique module. If the v1 implementation does not expose this, the analyzer cannot fill `roles.scA` / `roles.scB`. **Action:** before implementing the analyzer, audit `js/solver/techniques/coloring.js` and, if needed, extend its return shape with a `chain` field. The extension is purely additive — `solveLogically` consumers that ignore the field continue to work.
-   - XY-Chain (rank 14) and Forcing Chain (rank 15) similarly require the chain cell list to be exposed by `forcingChains.js`. Same audit-then-extend rule.
+1. Extend the three solver files that the audit (completed 2026-05-04) confirmed require additive changes. All extensions are purely additive — no existing callers break. Complete these before implementing any mapper.
+
+   **`js/solver/techniques/coloring.js`**
+
+   `buildChains` already computes the full chain/pole structure internally but does not return it. Add:
+   - `simpleColoring` return: add `colorChain: { digit: int, groupA: int[], groupB: int[] }` where `groupA` = color-0 cells, `groupB` = color-1 cells.
+   - `multiColoring` return: add `colorChains: Array<{ digit: int, groupA: int[], groupB: int[] }>` — one entry per interacting chain.
+
+   **`js/solver/techniques/forcingChains.js`**
+
+   `xyChainDFS` tracks `path` (ordered `number[]`) and `z` (elimination digit) at return time but drops both. `aicSearch` tracks `path` (`Array<{cell,digit,strong}>`) but drops it too. Add:
+   - `xyChain` return: add `chain: { cells: [...path, next], digit: z }` — ordered cell indices; endpoints are `cells[0]` and `cells[last]`.
+   - `forcingChain` return: add `chain: { nodes: path }` — ordered `{cell, digit, strong}` entries.
+   - **Bug fix (type-1 AIC loop closure):** at the `aicSearch` type-1 (closed-loop) return site, the final closing node (`next`) is not appended to `path` before the function returns. Append it before constructing `chain.nodes`, otherwise the chain is one node short.
+
+   **`js/solver/logical.js`**
+
+   `logical.js` currently projects only the four base `Step` fields. Any `colorChain`, `colorChains`, or `chain` fields on technique results are silently dropped here and never reach the analyzer. Add a pass-through: when assembling a `Step` for a technique result, spread (or explicitly copy) the optional chain fields if present. The `Step` type definition in `aspec-solver.md` §6 documents the full extended shape.
 2. Implement the working-board builder, the per-technique mappers, the auto-reveal builder, and the null-case builder.
 3. Implement the `analyze()` driver.
 4. Write unit tests per §13.
@@ -900,7 +918,7 @@ The phase ordering is significant: the analyzer is implementable and testable in
 
 ### 12.1 Build-Order Risks
 
-- **Solver extension risk.** The Simple Coloring / Multi-Coloring / XY-Chain / Forcing Chain technique modules may need additive extension (chain output). If the audit in step 1 reveals a non-additive change is required, that re-opens `aspec-techniques.md` and likely `aspec-solver.md`. Mitigation: audit before implementation, not during.
+- **Solver extension risk (assessed).** Pre-implementation audit (2026-05-04) confirmed all three required extensions (`coloring.js`, `forcingChains.js`, `logical.js`) are purely additive. No restructuring is needed; no existing callers break. The audit also found a one-node bug in `aicSearch`'s type-1 AIC loop-closure path (see §12 step 1 for the fix). The risk of a spec-reopening non-additive change is resolved.
 - **Test fixture availability.** Per-technique fixture boards must exist for every rank (see §13). The Phase 2 test infrastructure (`js/tests/fixtures/puzzles/`) already contains technique fixtures used by `aspec-techniques.md` testing; the analyzer can reuse those fixtures. New fixtures may be added under `js/tests/fixtures/puzzles/coach/` if a technique fixture for rank N produces a board where rank M < N also applies — the analyzer would prefer rank M (the easier move), and the test would be testing the wrong technique. Coach-specific fixtures avoid this by guaranteeing rank N is the *easiest* applicable technique on the fixture board.
 
 ---
@@ -984,7 +1002,7 @@ The analyzer explicitly does not:
 
 ### Critical Files for Implementation
 - /home/brc/Documents/websites/sudoku/js/coach/analyzer.js (new — the module this spec defines)
-- /home/brc/Documents/websites/sudoku/js/solver/logical.js (consumed via `solveLogically`)
+- /home/brc/Documents/websites/sudoku/js/solver/logical.js (must be extended to pass chain fields through to Step — see §12 step 1)
 - /home/brc/Documents/websites/sudoku/js/solver/candidates.js (consumed via `initialCandidates`)
-- /home/brc/Documents/websites/sudoku/js/solver/techniques/coloring.js (must expose chain output for ranks 12–13 — see §12 step 1)
-- /home/brc/Documents/websites/sudoku/js/solver/techniques/forcingChains.js (must expose chain output for ranks 14–15 — see §12 step 1)
+- /home/brc/Documents/websites/sudoku/js/solver/techniques/coloring.js (must expose `colorChain`/`colorChains` — see §12 step 1)
+- /home/brc/Documents/websites/sudoku/js/solver/techniques/forcingChains.js (must expose `chain`; fix AIC loop-closure bug — see §12 step 1)

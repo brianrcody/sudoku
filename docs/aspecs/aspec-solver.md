@@ -125,7 +125,34 @@ solveLogically(board: Uint8Array(81), { techniqueLimit?: int }) →
 ```
 
 - `techniqueLimit` — optional cap (1-based). Only techniques whose 1-based rank is ≤ `techniqueLimit` are tried. `techniqueLimit=1` allows only the rank-1 technique; defaults to `Infinity` (all techniques). Used by the rater to check "is this puzzle solvable by tier T?"
-- `Step = { cellIndex: int, digit: int | null, technique: string, eliminations: [{ cellIndex: int, digit: int }] }` — `eliminations` is always present (empty array for placement steps, populated for elimination-only steps).
+- `Step` — base shape:
+  ```js
+  Step = {
+    cellIndex: int,
+    digit: int | null,
+    technique: string,
+    eliminations: [{ cellIndex: int, digit: int }],
+    // optional chain fields — present only for ranks 12–15; logical.js passes them through verbatim:
+    colorChain?: {                          // ranks 12–13 (Simple/Multi-Coloring)
+      digit: int,
+      groupA: int[],                        // cell indices, color-0 pole
+      groupB: int[],                        // cell indices, color-1 pole
+    },
+    colorChains?: Array<{                   // rank 13 (Multi-Coloring) — two chains
+      digit: int,
+      groupA: int[],
+      groupB: int[],
+    }>,
+    chain?: {                               // rank 14 (XY-Chain)
+      cells: int[],                         // ordered cell indices; endpoints are [0] and [last]
+      digit: int,                           // shared elimination digit at both endpoints
+    } | {                                   // rank 15 (Forcing Chain / AIC)
+      nodes: Array<{ cell: int, digit: int, strong: bool }>,
+                                            // ordered; strong=true → strong link to next node
+    },
+  }
+  ```
+  `eliminations` is always present (empty array for placement steps). Chain fields are absent for ranks 1–11; all consumers that use only the four base fields are unaffected.
 - `hardestRank` — the highest 1-based rank technique that was required to make progress (0 if no technique was needed).
 
 Exports:
