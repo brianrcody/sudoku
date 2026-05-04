@@ -130,7 +130,9 @@ sudoku/
 │   │   ├── dialog.js                 # Reusable confirmation dialog
 │   │   ├── srLive.js                 # Screen reader live region helper
 │   │   ├── themes.js                 # Theme class swap + cookie persistence
-│   │   └── keyboard.js               # Desktop keyboard shortcuts
+│   │   ├── keyboard.js               # Desktop keyboard shortcuts
+│   │   ├── coach.js                  # Coach button, panel, recap, toast, lifecycle (aspec-coach-ui.md)
+│   │   └── coachOverlay.js           # SVG arrow overlay renderer (aspec-coach-ui.md)
 │   ├── coach/
 │   │   └── analyzer.js               # Pure-function coach analyzer (aspec-coach-analyzer.md)
 │   └── tests/
@@ -173,12 +175,14 @@ sudoku/
 │       │   ├── storage.test.js
 │       │   ├── hintProvider.test.js
 │       │   └── coach/
-│       │       └── analyzer.test.js  # Coach analyzer unit tests (aspec-coach-analyzer.md §13)
+│       │       ├── analyzer.test.js  # Coach analyzer unit tests (aspec-coach-analyzer.md §13)
+│       │       └── session.test.js   # CoachSession reducer unit tests (aspec-coach-ui.md §16.1)
 │       └── integration/
 │           ├── worker.test.js        # Spawns the real Worker, round-trips messages
 │           ├── game-flows.test.js    # Tap→enter→conflict→erase lifecycles
 │           ├── persistence.test.js   # Resume behavior round trip
-│           └── a11y.test.js          # ARIA/live-region assertions
+│           ├── a11y.test.js          # ARIA/live-region assertions
+│           └── coach.test.js         # Full coach flow integration tests (aspec-coach-ui.md §16.2)
 ├── test-runner/
 │   ├── run.js                        # Playwright script: boot browser, open tests/setup.html, harvest results + coverage
 │   └── serve.js                      # Tiny static file server (Node built-in http) for tests only
@@ -376,3 +380,4 @@ All other fspec and vspec requirements map cleanly onto this plan.
 | `aspec-ui.md` | All UI modules, event flow, accessibility, SR announcements, focus management | Implementor (Phase 6), Reviewer, QE |
 | `aspec-themes.md` | Theme system, CSS structure, applyTheme, no-flash script, extensibility | Implementor (Phase 6), Reviewer, QE |
 | `aspec-coach-analyzer.md` | Coach Mode analyzer — pure function returning CoachStep; sealed schema consumed by aspec-coach-ui.md | Implementor (Phase 8a), Reviewer, QE |
+| `aspec-coach-ui.md` | Coach Mode UI — CoachSession state, all COACH_* actions, pencil revert, coach.js, coachOverlay.js, CSS, a11y, tests | Implementor (Phase 8b), Reviewer, QE |
