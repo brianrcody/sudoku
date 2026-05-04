@@ -131,11 +131,14 @@ sudoku/
 │   │   ├── srLive.js                 # Screen reader live region helper
 │   │   ├── themes.js                 # Theme class swap + cookie persistence
 │   │   └── keyboard.js               # Desktop keyboard shortcuts
+│   ├── coach/
+│   │   └── analyzer.js               # Pure-function coach analyzer (aspec-coach-analyzer.md)
 │   └── tests/
 │       ├── setup.html                # Mocha/Chai test runner page
 │       ├── setup.js                  # Global beforeEach/afterEach, fixtures
 │       ├── fixtures/
 │       │   ├── puzzles/              # Hand-curated positions per technique
+│       │   │   └── coach/            # Coach-specific fixtures (rank-is-minimum guaranteed)
 │       │   └── grids/                # Filled solutions for uniqueness tests
 │       ├── unit/
 │       │   ├── prng.test.js
@@ -168,7 +171,9 @@ sudoku/
 │       │   ├── cookieStatsStore.test.js
 │       │   ├── cookies.test.js
 │       │   ├── storage.test.js
-│       │   └── hintProvider.test.js
+│       │   ├── hintProvider.test.js
+│       │   └── coach/
+│       │       └── analyzer.test.js  # Coach analyzer unit tests (aspec-coach-analyzer.md §13)
 │       └── integration/
 │           ├── worker.test.js        # Spawns the real Worker, round-trips messages
 │           ├── game-flows.test.js    # Tap→enter→conflict→erase lifecycles
@@ -370,3 +375,4 @@ All other fspec and vspec requirements map cleanly onto this plan.
 | `aspec-persistence.md` | Statistics, cookies, storage, statsProvider, cookieStatsStore, persistence schemas, stats wiring | Implementor (Phase 5), Reviewer, QE |
 | `aspec-ui.md` | All UI modules, event flow, accessibility, SR announcements, focus management | Implementor (Phase 6), Reviewer, QE |
 | `aspec-themes.md` | Theme system, CSS structure, applyTheme, no-flash script, extensibility | Implementor (Phase 6), Reviewer, QE |
+| `aspec-coach-analyzer.md` | Coach Mode analyzer — pure function returning CoachStep; sealed schema consumed by aspec-coach-ui.md | Implementor (Phase 8a), Reviewer, QE |
