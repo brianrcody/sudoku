@@ -1,7 +1,7 @@
 
 # Architectural Spec — Coach Mode Analyzer
 **ID:** aspec-coach-analyzer
-**Status:** Draft
+**Status:** Final
 **Date:** 2026-05-04
 **Author:** Architect
 **Loaded by:** Implementor (Phase 8 — Coach Mode), Reviewer, QE Test Writer, QE Test Runner. Also load when implementing the Coach UI module (`aspec-coach-ui.md`) — that spec consumes the `CoachStep` schema sealed here verbatim.

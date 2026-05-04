@@ -1,6 +1,6 @@
 # Architectural Spec — Coach Mode UI and State Integration
 **ID:** aspec-coach-ui
-**Status:** Draft
+**Status:** Final
 **Date:** 2026-05-04
 **Author:** Architect
 **Loaded by:** Implementor (Phase 8b — Coach Mode), Reviewer, QE Test Writer, QE Test Runner. This is the second of two Coach Mode specs; load `aspec-coach-analyzer.md` first for the sealed `CoachStep` schema this spec consumes.
