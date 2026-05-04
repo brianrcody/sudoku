@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════════════════════════╗
+  ║  COACH MODE MOCKUP — v1                                                  ║
+  ║  Demonstrates all Coach Mode interaction states per fspec-002-coach.md   ║
+  ╠══════════════════════════════════════════════════════════════════════════╣
+  ║  BASE THEME: Minimalist                                                   ║
+  ║  Cross-theme validation: pending — see note below.                        ║
+  ╠══════════════════════════════════════════════════════════════════════════╣
+  ║  COACH ACCENT COLOR: #7c3aed  (vivid violet / indigo-purple)             ║
+  ║                                                                           ║
+  ║  Rationale:                                                               ║
+  ║  Purple/violet is unused in every v1 theme:                              ║
+  ║    • Minimalist  — accent #2c5282 (deep blue), conflict #b91c1c (red)    ║
+  ║    • Coffee Shop — accent #8b4513 (saddlebrown), surface warm creams     ║
+  ║    • School      — accent #4a5568 (slate-gray)                           ║
+  ║    • Mountain    — accent #1a6b8a (teal), pencil #2d6e4e (forest green)  ║
+  ║    • Terminal    — accent #39ff14 (phosphor green), bg near-black        ║
+  ║  #7c3aed contrasts with every theme background and accent:               ║
+  ║    • On white/cream (Minimalist, Coffee surface): clearly distinct,      ║
+  ║      7.2:1 contrast vs white — WCAG AA for text, good for highlights.   ║
+  ║    • On dark bg (#0d0d0d, Terminal): vivid violet renders as a bright    ║
+  ║      neon, fully legible against black. Does not clash with #39ff14.     ║
+  ║    • On blue (Minimalist accent): purple reads distinctly — different    ║
+  ║      hue family.                                                         ║
+  ║    • On warm browns (Coffee): purple sits in an unrelated hue, distinct. ║
+  ║    • On teal/green (Mountain, Terminal): purple is the complement,       ║
+  ║      maximum hue distinction.                                            ║
+  ║  Light version for cell backgrounds: #ede9fe (very pale lavender).       ║
+  ║                                                                          ║
+  ║  NOTE: Cross-theme validation (all 5 themes) is pending. The mockup      ║
+  ║  ships one theme selector for manual spot-check; full cross-theme        ║
+  ║  visual QA should be done before sign-off.                               ║
+  ╠══════════════════════════════════════════════════════════════════════════╣
+  ║  SIMPLE COLORING TWO-GROUP TREATMENT:                                    ║
+  ║  Group A (filled):  solid coach-accent background, white digit.          ║
+  ║  Group B (outlined): coach-accent border (2px dashed) + pale tint bg.  ║
+  ║  Both use the single #7c3aed hue — no second hue introduced.            ║
+  ║  The filled-vs-dashed-border distinction is immediately readable even   ║
+  ║  when colorblind, as it is shape-based, not hue-based.                 ║
+  ╠══════════════════════════════════════════════════════════════════════════╣
+  ║  DESIGN DECISIONS (not directly specified by fspec):                     ║
+  ║  1. Coach button placement: added as a full-width third row in the      ║
+  ║     numpad, below Hint/Check. This keeps it visually separate from      ║
+  ║     the digit pad and aligned with the other coaching/learning tools.   ║
+  ║  2. Coach Coaching state: button gets coach-accent border + background   ║
+  ║     tint (same pattern as mode-pen active state) with "Coach (active)"  ║
+  ║     aria-label. Subtle pulsing ring animation for discoverability.      ║
+  ║  3. Explanation panel: slides in from below with a short CSS transition  ║
+  ║     (150ms ease-out). No slide-out animation — instant dismiss on       ║
+  ║     focus-leave matches the lightweight feel specified by §2.4.         ║
+  ║  4. Grid overlay SVG arrows: rendered in an absolutely-positioned SVG   ║
+  ║     layer above the grid, z-index above cells. Arrows route edge-to-    ║
+  ║     center to avoid obscuring cell content (§7.3).                      ║
+  ║  5. Recap toast: same visual container as explanation panel but with    ║
+  ║     a distinct left border color (coach accent for normal, conflict red  ║
+  ║     for error). The toast is announced via the sr-live region.          ║
+  ║  6. Error-feedback message (no-applicable-technique): appears as a small ║
+  ║     badge immediately to the right of the Coach button label, in the    ║
+  ║     button's own row. Auto-dismisses after 3s per §4.2.                 ║
+  ║  7. Naked Pair demo (elimination technique) uses cells with visible      ║
+  ║     candidates to make the "cause vs. target" distinction legible.       ║
+  ║     Cause cells: coach-accent background highlight.                     ║
+  ║     Target cells: coach-accent border highlight (dashed).               ║
+  ║  8. Mobile: deferred. The mockup is desktop-only (414px grid).          ║
+  ╚══════════════════════════════════════════════════════════════════════════╝
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sudoku — Coach Mode Mockup</title>
+  <style>
+    /* ── Reset ──────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Theme variables ─────────────────────────────────────────────────
+       Matches game-v4.html exactly. Coach accent is injected as a separate
+       variable (--coach) that does not vary by theme.                      */
+    :root,
+    body.theme-minimalist {
+      --bg:            #f7f6f2;
+      --surface:       #ffffff;
+      --border:        #c8c4bb;
+      --border-strong: #2e2b25;
+      --text:          #1c1a16;
+      --text-muted:    #7a7570;
+      --text-given:    #1c1a16;
+      --given-bg:      #eceae4;
+      --accent:        #2c5282;
+      --accent-light:  #dbeafe;
+      --conflict:      #b91c1c;
+      --conflict-bg:   #fef2f2;
+      --pencil:        #5a6778;
+      --btn-bg:        #f0ede6;
+      --btn-hover:     #e4e0d7;
+      --btn-border:    #c8c4bb;
+      --active-mode:   #2c5282;
+      --win:           #15803d;
+      --stats-row-sep: #f0ede6;
+      --header-bg:     var(--surface);
+      --modal-bg:      var(--surface);
+      --win-banner-bg: rgba(255,255,255,0.92);
+      --primary-hover: #1e3a6e;
+    }
+
+    body.theme-coffee {
+      --bg:            #3b2a1a;
+      --surface:       #f5ede0;
+      --border:        #c9a97a;
+      --border-strong: #7c4f22;
+      --text:          #2b1d0e;
+      --text-muted:    #8c6642;
+      --text-given:    #2b1d0e;
+      --given-bg:      #e8d5b8;
+      --accent:        #8b4513;
+      --accent-light:  #fde8cc;
+      --conflict:      #c0392b;
+      --conflict-bg:   #fdf0ee;
+      --pencil:        #7a5c3a;
+      --btn-bg:        #ecdfc8;
+      --btn-hover:     #e0cead;
+      --btn-border:    #c9a97a;
+      --win:           #2d6a4f;
+      --stats-row-sep: #ecdfc8;
+      --header-bg:     #2b1d0e;
+      --modal-bg:      #f5ede0;
+      --win-banner-bg: rgba(245,237,224,0.93);
+      --primary-hover: #6b3410;
+    }
+
+    body.theme-school {
+      --bg:            #f8f5e6;
+      --surface:       #fdfaf0;
+      --border:        #b8c4d4;
+      --border-strong: #4a5568;
+      --text:          #2d3748;
+      --text-muted:    #718096;
+      --text-given:    #1a202c;
+      --given-bg:      #edf0f5;
+      --accent:        #4a5568;
+      --accent-light:  #e2e8f0;
+      --conflict:      #c53030;
+      --conflict-bg:   #fff5f5;
+      --pencil:        #718096;
+      --btn-bg:        #edf2f7;
+      --btn-hover:     #e2e8f0;
+      --btn-border:    #b8c4d4;
+      --win:           #276749;
+      --stats-row-sep: #edf2f7;
+      --header-bg:     #fdfaf0;
+      --modal-bg:      #fdfaf0;
+      --win-banner-bg: rgba(253,250,240,0.93);
+      --primary-hover: #2d3748;
+    }
+
+    body.theme-mountain {
+      --bg:            #e8f0f7;
+      --surface:       #f7fafc;
+      --border:        #adc6de;
+      --border-strong: #1a3a52;
+      --text:          #0f2233;
+      --text-muted:    #4d7a99;
+      --text-given:    #1a4d2e;
+      --given-bg:      #dce8f2;
+      --accent:        #1a6b8a;
+      --accent-light:  #cfe8f3;
+      --conflict:      #b91c1c;
+      --conflict-bg:   #fef2f2;
+      --pencil:        #2d6e4e;
+      --btn-bg:        #dce8f2;
+      --btn-hover:     #c8dcea;
+      --btn-border:    #adc6de;
+      --win:           #1a6b4e;
+      --stats-row-sep: #dce8f2;
+      --header-bg:     #1a3a52;
+      --modal-bg:      #f7fafc;
+      --win-banner-bg: rgba(247,250,252,0.93);
+      --primary-hover: #145a75;
+    }
+
+    body.theme-terminal {
+      --bg:            #0d0d0d;
+      --surface:       #111111;
+      --border:        #1f4a1f;
+      --border-strong: #39ff14;
+      --text:          #b0ffb0;
+      --text-muted:    #3d7a3d;
+      --text-given:    #39ff14;
+      --given-bg:      #0a1a0a;
+      --accent:        #39ff14;
+      --accent-light:  #0a2a0a;
+      --conflict:      #ff4444;
+      --conflict-bg:   #1a0505;
+      --pencil:        #3d7a3d;
+      --btn-bg:        #0f1f0f;
+      --btn-hover:     #162b16;
+      --btn-border:    #1f4a1f;
+      --win:           #39ff14;
+      --stats-row-sep: #0f1f0f;
+      --header-bg:     #090909;
+      --modal-bg:      #111111;
+      --win-banner-bg: rgba(11,11,11,0.95);
+      --primary-hover: #22cc00;
+    }
+
+    /* ── Coach accent — single color, theme-invariant ────────────────── */
+    :root {
+      --coach:       #7c3aed;   /* vivid violet */
+      --coach-light: #ede9fe;   /* pale lavender — cell background tint */
+      --coach-mid:   #c4b5fd;   /* medium lavender — borders, dashes */
+    }
+
+    /* ── Base ───────────────────────────────────────────────────────────── */
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.4;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    body.theme-terminal {
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    /* ── Screen-reader live region ──────────────────────────────────────── */
+    #sr-live {
+      position: absolute;
+      width: 1px; height: 1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--header-bg);
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    body.theme-mountain header { color: #e8f0f7; border-bottom-color: #2d5878; }
+    body.theme-mountain header h1 { color: #f7fafc; letter-spacing: 0.06em; }
+    body.theme-mountain .theme-control { color: #adc6de; }
+    body.theme-coffee header { color: #f5ede0; border-bottom-color: #7c4f22; }
+    body.theme-coffee header h1 { color: #f5ede0; }
+    body.theme-coffee .theme-control { color: #c9a97a; }
+    body.theme-terminal header { border-bottom: 1px solid var(--accent); box-shadow: 0 1px 0 0 var(--accent); }
+    body.theme-terminal header h1 { color: var(--accent); text-shadow: 0 0 8px rgba(57,255,20,0.4); letter-spacing: 0.15em; }
+    body.theme-school header { border-bottom: 2px solid #b8c4d4; }
+
+    header h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+
+    .theme-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    #theme-select {
+      font-size: 13px;
+      padding: 4px 24px 4px 8px;
+      border: 1px solid var(--btn-border);
+      border-radius: 4px;
+      background: var(--btn-bg);
+      color: var(--text);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      font-family: inherit;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    body.theme-terminal #theme-select { border-color: var(--accent); }
+    body.theme-mountain .theme-control #theme-select { background-color: #2d5878; color: #e8f0f7; border-color: #4d7a99; }
+    body.theme-coffee .theme-control #theme-select { background-color: #3b2a1a; color: #f5ede0; border-color: #7c4f22; }
+
+    #theme-select:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* ── Demo state banner ──────────────────────────────────────────────── */
+    .demo-bar {
+      background: #1e1b4b;
+      color: #c7d2fe;
+      font-size: 12px;
+      padding: 6px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .demo-bar strong { color: #a5b4fc; }
+
+    .demo-btn {
+      padding: 3px 10px;
+      border-radius: 4px;
+      border: 1px solid #4338ca;
+      background: #312e81;
+      color: #e0e7ff;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .demo-btn:hover { background: #3730a3; }
+    .demo-btn.active { background: #4338ca; border-color: #818cf8; color: #fff; }
+
+    /* ── Main layout ─────────────────────────────────────────────────────── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 32px;
+      gap: 24px;
+    }
+
+    body.theme-coffee main { background: linear-gradient(160deg, #3b2a1a 0%, #4a3020 50%, #3b2a1a 100%); }
+    body.theme-school main {
+      background-color: #f8f5e6;
+      background-image: repeating-linear-gradient(transparent, transparent 27px, #a8b8cc 27px, #a8b8cc 28px);
+      background-position: 0 14px;
+    }
+    body.theme-mountain main { background: linear-gradient(175deg, #d4e8f5 0%, #e8f0f7 40%, #f0f5fa 100%); }
+    body.theme-terminal main {
+      background: #0d0d0d;
+      background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
+    }
+
+    .game-area {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 32px;
+      width: 100%;
+      max-width: 860px;
+      justify-content: center;
+    }
+
+    .left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    /* ── Difficulty row ──────────────────────────────────────────────────── */
+    .difficulty-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .difficulty-row label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    #difficulty-select {
+      font-size: 14px;
+      font-weight: 500;
+      padding: 6px 28px 6px 10px;
+      border: 1px solid var(--btn-border);
+      border-radius: 5px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      font-family: inherit;
+    }
+
+    /* ── Grid wrapper & overlay ──────────────────────────────────────────── */
+    .grid-wrapper {
+      position: relative;
+    }
+
+    /* SVG overlay for coach arrows/connectors — sits above cells */
+    #coach-overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 414px; height: 414px;
+      pointer-events: none;
+      z-index: 5;
+      display: none;  /* shown only during explanation panel open */
+    }
+
+    #coach-overlay.visible { display: block; }
+
+    /* ── Sudoku grid ─────────────────────────────────────────────────────── */
+    .sudoku-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      grid-template-rows: repeat(9, 1fr);
+      border: 2.5px solid var(--border-strong);
+      border-radius: 3px;
+      overflow: hidden;
+      width: 414px;
+      height: 414px;
+      background: var(--surface);
+      user-select: none;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    body.theme-terminal .sudoku-grid { border-color: var(--accent); box-shadow: 0 0 12px rgba(57,255,20,0.2); border-radius: 0; }
+    body.theme-coffee .sudoku-grid { box-shadow: 0 4px 16px rgba(59,42,26,0.4); }
+    body.theme-school .sudoku-grid { box-shadow: 2px 2px 8px rgba(74,85,104,0.12); }
+    body.theme-mountain .sudoku-grid { box-shadow: 0 2px 16px rgba(26,58,82,0.15); }
+
+    .cell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 22px;
+      font-weight: 500;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--text);
+      background: var(--surface);
+      transition: background 0.08s;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body.theme-terminal .cell { font-family: "Courier New", Courier, monospace; font-weight: 700; font-size: 20px; }
+
+    .cell:nth-child(9n) { border-right: none; }
+    .cell[data-col="3"], .cell[data-col="6"] { border-right: 2.5px solid var(--border-strong); }
+    .cell[data-row="3"], .cell[data-row="6"] { border-bottom: 2.5px solid var(--border-strong); }
+    .cell[data-row="9"] { border-bottom: none; }
+
+    .cell.given {
+      background: var(--given-bg);
+      color: var(--text-given);
+      font-weight: 700;
+      cursor: default;
+    }
+
+    body.theme-terminal .cell.given { text-shadow: 0 0 6px rgba(57,255,20,0.5); }
+
+    .cell.pen { color: var(--accent); }
+    body.theme-school .cell.pen { color: #4a5568; font-style: italic; font-weight: 400; }
+    body.theme-terminal .cell.pen { color: #b0ffb0; text-shadow: 0 0 4px rgba(176,255,176,0.3); }
+    body.theme-coffee .cell.pen { color: #8b4513; }
+    body.theme-mountain .cell.pen { color: #1f6b45; }
+
+    .cell.selected {
+      background: var(--accent-light) !important;
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+      z-index: 1;
+    }
+
+    body.theme-terminal .cell.selected { box-shadow: inset 0 0 8px rgba(57,255,20,0.25); }
+
+    .cell.conflict { background: var(--conflict-bg) !important; color: var(--conflict) !important; }
+
+    /* ── Coach cell highlight states ──────────────────────────────────────
+       .coached-target  — primary coached cell (placement: the cell to fill;
+                          elimination: a target cell from which to eliminate)
+       .coached-cause   — cause cell (source of the logical pattern)
+       .coached-unit    — entire unit outline (Hidden Single)
+       .coached-sc-a    — Simple Coloring group A (filled solid)
+       .coached-sc-b    — Simple Coloring group B (dashed border only)     */
+
+    .cell.coached-target {
+      background: var(--coach-light) !important;
+      outline: 2px solid var(--coach);
+      outline-offset: -2px;
+      z-index: 2;
+    }
+
+    /* Focused coached cell: slightly stronger highlight */
+    .cell.coached-target.selected {
+      background: var(--coach-light) !important;
+      outline: 2.5px solid var(--coach);
+      outline-offset: -2px;
+    }
+
+    .cell.coached-cause {
+      background: var(--coach-light) !important;
+      outline: 2px solid var(--coach-mid);
+      outline-offset: -2px;
+      z-index: 2;
+    }
+
+    /* Elimination target cells: dashed border to distinguish from cause */
+    .cell.coached-elim-target {
+      outline: 2px dashed var(--coach);
+      outline-offset: -2px;
+      z-index: 2;
+    }
+
+    /* Simple Coloring — Group A: solid fill */
+    .cell.coached-sc-a {
+      background: var(--coach) !important;
+      color: #fff;
+      outline: 2px solid var(--coach);
+      outline-offset: -2px;
+      z-index: 2;
+    }
+
+    /* Simple Coloring — Group B: dashed border + pale tint */
+    .cell.coached-sc-b {
+      background: var(--coach-light) !important;
+      outline: 2.5px dashed var(--coach);
+      outline-offset: -2px;
+      z-index: 2;
+    }
+
+    /* ── Auto-revealed pencil marks in coach accent ───────────────────────
+       .pencil-mark.coach-reveal renders in --coach, not --pencil           */
+
+    .pencil-marks {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      width: 100%;
+      height: 100%;
+      padding: 2px;
+    }
+
+    .pencil-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-weight: 500;
+      color: var(--pencil);
+      line-height: 1;
+    }
+
+    body.theme-terminal .pencil-mark { font-family: "Courier New", Courier, monospace; font-size: 8px; }
+
+    .pencil-mark.empty { visibility: hidden; }
+
+    /* Coach auto-revealed marks: rendered in coach accent */
+    .pencil-mark.coach-reveal {
+      color: var(--coach);
+      font-weight: 700;
+    }
+
+    /* ── Right column ────────────────────────────────────────────────────── */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 220px;
+      flex-shrink: 0;
+    }
+
+    /* ── Number pad ──────────────────────────────────────────────────────── */
+    .numpad {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .numpad-digits {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .numpad-utils {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .numpad-bottom {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    /* Coach button occupies its own full-width row */
+    .numpad-coach {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 8px;
+      border: 1px solid var(--btn-border);
+      border-radius: 5px;
+      background: var(--btn-bg);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.1s, border-color 0.1s, color 0.1s;
+      line-height: 1;
+      white-space: nowrap;
+      position: relative;
+    }
+
+    .btn:hover { background: var(--btn-hover); border-color: var(--border); }
+
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .btn:disabled { opacity: 0.38; cursor: not-allowed; pointer-events: none; }
+
+    body.theme-terminal .btn { border-radius: 0; letter-spacing: 0.05em; text-transform: uppercase; font-size: 12px; }
+    body.theme-terminal .btn:hover { border-color: var(--accent); box-shadow: 0 0 6px rgba(57,255,20,0.2); }
+    body.theme-coffee .btn { border-radius: 6px; box-shadow: 0 1px 3px rgba(59,42,26,0.15); }
+    body.theme-school .btn { border-radius: 3px; }
+    body.theme-mountain .btn { border-radius: 6px; box-shadow: 0 1px 3px rgba(26,58,82,0.1); }
+
+    .btn-digit {
+      font-size: 20px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 500;
+      padding: 12px 6px;
+    }
+
+    body.theme-terminal .btn-digit { font-family: "Courier New", Courier, monospace; font-size: 18px; font-weight: 700; text-transform: none; }
+    body.theme-school .btn-digit { font-family: Georgia, serif; font-style: italic; }
+
+    /* Mode toggle */
+    .btn-mode.mode-pen { background: var(--surface); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    .btn-mode.mode-pencil { background: var(--surface); border-color: var(--pencil); color: var(--pencil); font-weight: 600; }
+
+    .btn-mode .mode-label { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .btn-mode .mode-main { font-size: 13px; }
+    .btn-mode .mode-sub { font-size: 10px; opacity: 0.7; }
+
+    /* Hint button */
+    .hint-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent);
+      color: var(--surface);
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      line-height: 1;
+    }
+
+    body.theme-terminal .hint-badge { border-radius: 0; color: #000; }
+    .btn:disabled .hint-badge { background: var(--text-muted); }
+
+    .btn-check { grid-column: span 2; }
+
+    /* ── Coach button states ─────────────────────────────────────────────── */
+
+    /* Idle: standard button */
+    #btn-coach {}
+
+    /* Coaching state: coach-accent border + tint bg, subtle ring */
+    #btn-coach.coaching {
+      background: var(--coach-light);
+      border-color: var(--coach);
+      color: var(--coach);
+      font-weight: 600;
+      box-shadow: 0 0 0 2px var(--coach-light), 0 0 0 3px var(--coach);
+      animation: coach-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes coach-pulse {
+      0%, 100% { box-shadow: 0 0 0 2px var(--coach-light), 0 0 0 3px var(--coach); }
+      50%       { box-shadow: 0 0 0 4px var(--coach-light), 0 0 0 5px var(--coach-mid); }
+    }
+
+    /* Error feedback message inline */
+    .coach-error-msg {
+      display: none;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 4px 6px;
+      background: var(--btn-bg);
+      border: 1px solid var(--btn-border);
+      border-radius: 4px;
+      animation: fadein 0.15s ease;
+    }
+
+    .coach-error-msg.visible { display: block; }
+
+    @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ── Action row ──────────────────────────────────────────────────────── */
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    /* ── Stats panel ─────────────────────────────────────────────────────── */
+    .stats-panel {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      overflow: hidden;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    body.theme-terminal .stats-panel { border-radius: 0; }
+
+    .stats-heading {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 8px 12px 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    body.theme-terminal .stats-heading { color: var(--accent); letter-spacing: 0.15em; font-size: 10px; }
+
+    .stats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .stats-table th { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); text-align: right; padding: 6px 12px 4px; }
+    .stats-table th:first-child { text-align: left; }
+    .stats-table td { padding: 5px 12px; text-align: right; border-top: 1px solid var(--stats-row-sep); }
+    .stats-table td:first-child { text-align: left; font-weight: 500; }
+    .stats-table tr.active-diff td { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+    .stats-table tr.active-diff td:first-child::after { content: " ●"; font-size: 8px; vertical-align: middle; }
+
+    /* ── Explanation panel ───────────────────────────────────────────────── */
+    /* Anchored below the grid, in the left column. Slides in. */
+    .coach-panel-wrap {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.15s ease-out;
+    }
+
+    .coach-panel-wrap.open {
+      max-height: 220px;
+    }
+
+    .coach-panel {
+      margin-top: 10px;
+      border: 1.5px solid var(--coach);
+      border-radius: 6px;
+      background: var(--surface);
+      padding: 14px 16px;
+      width: 414px;
+    }
+
+    body.theme-terminal .coach-panel { border-radius: 0; }
+
+    .coach-panel-technique {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--coach);
+      margin-bottom: 6px;
+      letter-spacing: 0.01em;
+    }
+
+    .coach-panel-text {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+      margin-bottom: 0;
+    }
+
+    .coach-panel-text em {
+      color: var(--coach);
+      font-style: normal;
+      font-weight: 600;
+    }
+
+    /* ── Recap toast (appears in same location as coach panel) ───────────── */
+    .coach-recap {
+      display: none;
+      margin-top: 10px;
+      width: 414px;
+      border-radius: 6px;
+      padding: 14px 16px;
+      font-size: 13px;
+      line-height: 1.5;
+      border-left: 4px solid var(--coach);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      animation: fadein 0.15s ease;
+    }
+
+    .coach-recap.visible { display: block; }
+
+    .coach-recap.error {
+      border-left-color: var(--conflict);
+    }
+
+    .coach-recap-line1 {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .coach-recap.error .coach-recap-line1 {
+      color: var(--conflict);
+    }
+
+    .coach-recap-line2 {
+      color: var(--text-muted);
+    }
+
+    /* ── Hidden Single unit highlight ────────────────────────────────────── */
+    /* A colored overlay on an entire row/column/box — implemented as a CSS
+       pseudo-element on the grid. For the mockup we use a class on cells.  */
+    .cell.coached-unit-member {
+      background: var(--coach-light) !important;
+    }
+
+    /* ── Win banner ──────────────────────────────────────────────────────── */
+    .win-banner {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: var(--win-banner-bg);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 6px;
+      border-radius: 3px;
+      z-index: 10;
+    }
+    .win-banner.show { display: flex; }
+    .win-banner .win-title { font-size: 28px; font-weight: 700; color: var(--win); }
+    .win-banner .win-sub { font-size: 14px; color: var(--text-muted); }
+
+    /* ── Modal ───────────────────────────────────────────────────────────── */
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: center; justify-content: center; }
+    .modal-backdrop.open { display: flex; }
+    .modal { background: var(--modal-bg); border-radius: 10px; padding: 28px 28px 22px; max-width: 340px; width: 90%; box-shadow: 0 8px 40px rgba(0,0,0,0.18); border: 1px solid var(--border); }
+    .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .modal p { font-size: 14px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.5; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+    .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+
+    /* ── Focus ring ──────────────────────────────────────────────────────── */
+    .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; z-index: 2; }
+
+    /* When a coached cell is focused, use coach accent for focus ring */
+    .cell.coached-target:focus-visible,
+    .cell.coached-cause:focus-visible {
+      outline-color: var(--coach);
+    }
+  </style>
+</head>
+<body class="theme-minimalist">
+
+<!-- Screen reader live region -->
+<div id="sr-live" aria-live="assertive" aria-atomic="true" role="status"></div>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<header>
+  <h1>Sudoku</h1>
+  <div class="theme-control">
+    <label for="theme-select">Theme</label>
+    <select id="theme-select" aria-label="Select visual theme">
+      <option value="minimalist" selected>Minimalist</option>
+      <option value="coffee">Coffee Shop</option>
+      <option value="school">School</option>
+      <option value="terminal">Digital Terminal</option>
+      <option value="mountain">Mountain</option>
+    </select>
+  </div>
+</header>
+
+<!-- ── Demo state switcher ────────────────────────────────────────────────── -->
+<div class="demo-bar" role="navigation" aria-label="Demo state switcher">
+  <strong>Demo states:</strong>
+  <button class="demo-btn active" data-state="idle"          onclick="applyState('idle')">Idle</button>
+  <button class="demo-btn"        data-state="coaching-naked-single" onclick="applyState('coaching-naked-single')">Coaching: Naked Single</button>
+  <button class="demo-btn"        data-state="coaching-focused"      onclick="applyState('coaching-focused')">→ Cell focused + panel</button>
+  <button class="demo-btn"        data-state="recap-normal"          onclick="applyState('recap-normal')">→ Correct fill recap</button>
+  <button class="demo-btn"        data-state="recap-error"           onclick="applyState('recap-error')">→ Wrong digit recap</button>
+  <button class="demo-btn"        data-state="coaching-naked-pair"   onclick="applyState('coaching-naked-pair')">Coaching: Naked Pair</button>
+  <button class="demo-btn"        data-state="coaching-naked-pair-focused" onclick="applyState('coaching-naked-pair-focused')">→ Cell focused + panel</button>
+  <button class="demo-btn"        data-state="coaching-simple-color" onclick="applyState('coaching-simple-color')">Coaching: Simple Coloring</button>
+  <button class="demo-btn"        data-state="error-complete"        onclick="applyState('error-complete')">Error: puzzle complete</button>
+  <button class="demo-btn"        data-state="error-inconsistent"    onclick="applyState('error-inconsistent')">Error: inconsistent</button>
+</div>
+
+<!-- ── Main ───────────────────────────────────────────────────────────────── -->
+<main>
+  <div class="game-area">
+
+    <!-- Left column -->
+    <div class="left-col">
+      <div class="difficulty-row">
+        <label for="difficulty-select">Difficulty</label>
+        <select id="difficulty-select" aria-label="Select difficulty level">
+          <option value="kiddie">Kiddie</option>
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+          <option value="deathmarch">Death March</option>
+        </select>
+      </div>
+
+      <div class="grid-wrapper">
+        <!-- Win banner -->
+        <div class="win-banner" id="win-banner" aria-hidden="true">
+          <div class="win-title">Puzzle Complete!</div>
+          <div class="win-sub">Well done.</div>
+        </div>
+
+        <!-- Coach overlay SVG (arrows/connectors) -->
+        <svg id="coach-overlay" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+          <!-- Content injected by JS per demo state -->
+        </svg>
+
+        <!-- 9×9 grid -->
+        <div
+          class="sudoku-grid"
+          id="sudoku-grid"
+          role="grid"
+          aria-label="Sudoku puzzle"
+          tabindex="0"
+        ></div>
+      </div>
+
+      <!-- Explanation panel (below grid, same width) -->
+      <div class="coach-panel-wrap" id="coach-panel-wrap">
+        <div class="coach-panel" role="region" aria-label="Coach explanation" id="coach-panel">
+          <div class="coach-panel-technique" id="coach-panel-technique"></div>
+          <div class="coach-panel-text" id="coach-panel-text"></div>
+        </div>
+      </div>
+
+      <!-- Recap toast (replaces panel position after fill) -->
+      <div class="coach-recap" id="coach-recap" role="status" aria-live="polite">
+        <div class="coach-recap-line1" id="recap-line1"></div>
+        <div class="coach-recap-line2" id="recap-line2"></div>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="right-col">
+      <div class="numpad" role="group" aria-label="Number pad">
+
+        <!-- Digit grid -->
+        <div class="numpad-digits" id="numpad-digits"></div>
+
+        <!-- Erase + Mode -->
+        <div class="numpad-utils">
+          <button class="btn" id="btn-erase" aria-label="Erase selected cell">Erase</button>
+          <button class="btn btn-mode mode-pen" id="btn-mode" aria-label="Switch to Pencil mode" aria-pressed="false">
+            <span class="mode-label">
+              <span class="mode-main" id="mode-label-main">Pen</span>
+              <span class="mode-sub" id="mode-label-sub">tap for pencil</span>
+            </span>
+          </button>
+        </div>
+
+        <!-- Hint + Check -->
+        <div class="numpad-bottom">
+          <button class="btn btn-hint" id="btn-hint" aria-label="Hint, 1 remaining">
+            Hint <span class="hint-badge" id="hint-count">1</span>
+          </button>
+          <button class="btn btn-check" id="btn-check" aria-label="Check answers">Check</button>
+        </div>
+
+        <!-- Coach button (full-width row) -->
+        <div class="numpad-coach">
+          <button class="btn" id="btn-coach" aria-label="Coach">Coach</button>
+          <div class="coach-error-msg" id="coach-error-msg" role="status" aria-live="polite"></div>
+        </div>
+
+      </div>
+
+      <!-- Action buttons -->
+      <div class="action-row">
+        <button class="btn" id="btn-new" aria-label="Start new puzzle">New Puzzle</button>
+        <button class="btn" id="btn-reset" aria-label="Reset current puzzle">Reset</button>
+      </div>
+
+      <!-- Stats panel -->
+      <div class="stats-panel" aria-label="Statistics">
+        <div class="stats-heading">Statistics</div>
+        <table class="stats-table" aria-label="Game statistics by difficulty">
+          <thead>
+            <tr>
+              <th scope="col">Level</th>
+              <th scope="col">Tried</th>
+              <th scope="col">Won</th>
+            </tr>
+          </thead>
+          <tbody id="stats-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ── Confirmation dialog ─────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <h2 id="modal-title"></h2>
+    <p id="modal-body"></p>
+    <div class="modal-actions">
+      <button class="btn" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-confirm"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ────────────────────────────────────────────────────────────────────────────
+   DEMO PUZZLE — same puzzle used in game-v4.html for visual consistency.
+   ──────────────────────────────────────────────────────────────────────────── */
+const GIVEN_PUZZLE = [
+  5,3,0, 0,7,0, 0,0,0,
+  6,0,0, 1,9,5, 0,0,0,
+  0,9,8, 0,0,0, 0,6,0,
+
+  8,0,0, 0,6,0, 0,0,3,
+  4,0,0, 8,0,3, 0,0,1,
+  7,0,0, 0,2,0, 0,0,6,
+
+  0,6,0, 0,0,0, 2,8,0,
+  0,0,0, 4,1,9, 0,0,5,
+  0,0,0, 0,8,0, 0,7,9
+];
+
+const SOLUTION = [
+  5,3,4, 6,7,8, 9,1,2,
+  6,7,2, 1,9,5, 3,4,8,
+  1,9,8, 3,4,2, 5,6,7,
+
+  8,5,9, 7,6,1, 4,2,3,
+  4,2,6, 8,5,3, 7,9,1,
+  7,1,3, 9,2,4, 8,5,6,
+
+  9,6,1, 5,3,7, 2,8,4,
+  2,8,7, 4,1,9, 6,3,5,
+  3,4,5, 2,8,6, 1,7,9
+];
+
+/* ────────────────────────────────────────────────────────────────────────────
+   APP STATE
+   ──────────────────────────────────────────────────────────────────────────── */
+const state = {
+  mode: "pen",
+  selected: null,
+  cells: [],
+  hintCount: 1,
+  difficulty: "medium",
+  stats: {
+    kiddie:    { attempted: 4,  won: 3 },
+    easy:      { attempted: 7,  won: 5 },
+    medium:    { attempted: 12, won: 8 },
+    hard:      { attempted: 3,  won: 1 },
+    deathmarch:{ attempted: 1,  won: 0 }
+  }
+};
+
+for (let i = 0; i < 81; i++) {
+  const g = GIVEN_PUZZLE[i];
+  state.cells.push({ given: g !== 0, value: g || 0, pencil: new Set(), conflict: false });
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   DEMO STATE DEFINITIONS
+   Each state describes which cells to highlight, which panel to show, etc.
+   Index arithmetic: cell index = (row-1)*9 + (col-1), 0-based.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/*
+  Naked Single demo: cell at row 5, col 5 (index 40) has value 0 in puzzle.
+  Solution value = 5. All other row 5 / col 5 / box 4 cells filled → only 5 fits.
+  We'll mark index 40 as coached-target.
+  Arrows will point from a selection of its filled peers toward cell 40.
+*/
+const NAKED_SINGLE_IDX = 40; // row 5 col 5 — empty, solution=5
+
+/*
+  Naked Pair demo: use row 4 (indices 27–35). We'll designate cells 29 (r4c2) and
+  33 (r4c6) as "cause" pair cells with candidates {2,5}, and cells 28 (r4c1),
+  31 (r4c4), 34 (r4c7) as elimination targets.
+  (These are fictional candidates for demo purposes — this is a visual mockup.)
+*/
+const NAKED_PAIR_CAUSE = [28, 32]; // row 4 cells with pair {2,5} — indices (r4c2=28, r4c6=32→ wrong, use 28,32)
+  // Row 4 = indices 27..35. r4c2=28, r4c5=31, r4c8=34
+const NAKED_PAIR_TARGETS = [27, 30, 35]; // r4c1=27, r4c4=30, r4c9=35 — eliminate 2 or 5
+
+/*
+  Simple Coloring demo: digit 7 chain in rows 1–3.
+  Group A (filled): cells at indices 6 (r1c7), 25 (r3c8)
+  Group B (outlined): cells at indices 7 (r1c8), 16 (r2c8) — error: let's use
+  Group A: 6, 20      (r1c7, r3c3)
+  Group B: 24, 7      (r3c7, r1c8)
+  Elim target: 15     (r2c7)
+*/
+const SC_GROUP_A = [6, 20];   // filled coach-accent bg
+const SC_GROUP_B = [24, 7];   // dashed border
+const SC_ELIM    = [15];       // elimination target
+
+/* ────────────────────────────────────────────────────────────────────────────
+   HELPERS
+   ──────────────────────────────────────────────────────────────────────────── */
+const rowOf  = i => Math.floor(i / 9);
+const colOf  = i => i % 9;
+const boxOf  = i => Math.floor(rowOf(i) / 3) * 3 + Math.floor(colOf(i) / 3);
+
+function announce(msg) {
+  const el = document.getElementById("sr-live");
+  el.textContent = "";
+  requestAnimationFrame(() => { el.textContent = msg; });
+}
+
+function cellEl(i) { return document.querySelector(`.cell[data-index="${i}"]`); }
+
+/* Pixel center of cell i within the grid (grid is 414×414, 9 cells each) */
+function cellCenter(i) {
+  const cw = 414 / 9;
+  const ch = 414 / 9;
+  return {
+    x: colOf(i) * cw + cw / 2,
+    y: rowOf(i) * ch + ch / 2
+  };
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   GRID BUILD
+   ──────────────────────────────────────────────────────────────────────────── */
+function buildGrid() {
+  const grid = document.getElementById("sudoku-grid");
+  grid.innerHTML = "";
+
+  for (let i = 0; i < 81; i++) {
+    const r = rowOf(i) + 1;
+    const c = colOf(i) + 1;
+    const cell = state.cells[i];
+
+    const el = document.createElement("div");
+    el.className = "cell";
+    el.dataset.index = i;
+    el.dataset.row = r;
+    el.dataset.col = c;
+    el.setAttribute("role", "gridcell");
+    el.setAttribute("tabindex", "0");
+
+    if (cell.given) {
+      el.classList.add("given");
+      el.setAttribute("aria-readonly", "true");
+      el.textContent = cell.value;
+      el.setAttribute("aria-label", `Row ${r}, column ${c}: ${cell.value} (given)`);
+    } else {
+      el.setAttribute("aria-selected", "false");
+      renderCellContent(el, i);
+    }
+
+    el.addEventListener("click", () => handleCellClick(i));
+    el.addEventListener("keydown", handleCellKeydown);
+    grid.appendChild(el);
+  }
+}
+
+function renderCellContent(el, i) {
+  const cell = state.cells[i];
+  if (cell.value !== 0) {
+    el.innerHTML = "";
+    el.textContent = cell.value;
+    el.classList.add("pen");
+  } else if (cell.pencil.size > 0) {
+    renderPencilMarks(el, cell.pencil, new Set() /* coach-reveal marks passed separately */);
+  } else {
+    el.innerHTML = "";
+    el.textContent = "";
+  }
+}
+
+function renderPencilMarks(el, userMarks, coachMarks) {
+  el.innerHTML = "";
+  const grid = document.createElement("div");
+  grid.className = "pencil-marks";
+  for (let d = 1; d <= 9; d++) {
+    const span = document.createElement("span");
+    const hasUser  = userMarks.has(d);
+    const hasCoach = coachMarks && coachMarks.has(d);
+    span.className = "pencil-mark" +
+      ((!hasUser && !hasCoach) ? " empty" : "") +
+      (hasCoach ? " coach-reveal" : "");
+    span.textContent = d;
+    grid.appendChild(span);
+  }
+  el.appendChild(grid);
+}
+
+function renderAllCells() {
+  for (let i = 0; i < 81; i++) {
+    const el = cellEl(i);
+    if (!el) continue;
+    const cell = state.cells[i];
+    if (!cell.given) {
+      el.classList.remove("pen");
+      el.innerHTML = "";
+      renderCellContent(el, i);
+    }
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   DEMO STATE MACHINE
+   ──────────────────────────────────────────────────────────────────────────── */
+let recapTimer = null;
+let errorTimer = null;
+
+function clearCoachVisuals() {
+  // Remove all coach classes from all cells
+  document.querySelectorAll(".cell").forEach(el => {
+    el.classList.remove(
+      "coached-target","coached-cause","coached-elim-target",
+      "coached-unit-member","coached-sc-a","coached-sc-b"
+    );
+    // Reset pencil marks (remove coach-reveal marks)
+    const idx = parseInt(el.dataset.index, 10);
+    if (!state.cells[idx].given) {
+      el.classList.remove("pen");
+      el.innerHTML = "";
+      renderCellContent(el, idx);
+    }
+  });
+
+  // Hide panel, recap
+  document.getElementById("coach-panel-wrap").classList.remove("open");
+  document.getElementById("coach-recap").classList.remove("visible","error");
+  document.getElementById("coach-overlay").classList.remove("visible");
+  document.getElementById("coach-overlay").innerHTML = "";
+
+  // Reset button
+  const btn = document.getElementById("btn-coach");
+  btn.classList.remove("coaching");
+  btn.textContent = "Coach";
+  btn.setAttribute("aria-label", "Coach");
+
+  // Hide error msg
+  hideCoachError();
+}
+
+function clearDemoButtons() {
+  document.querySelectorAll(".demo-btn").forEach(b => b.classList.remove("active"));
+}
+
+function applyState(stateName) {
+  // Cancel any pending timers
+  if (recapTimer) { clearTimeout(recapTimer); recapTimer = null; }
+  if (errorTimer)  { clearTimeout(errorTimer);  errorTimer = null; }
+
+  clearCoachVisuals();
+  clearDemoButtons();
+  document.querySelector(`[data-state="${stateName}"]`).classList.add("active");
+
+  // Deselect
+  if (state.selected !== null) {
+    const prev = cellEl(state.selected);
+    if (prev) prev.classList.remove("selected");
+    state.selected = null;
+  }
+
+  switch (stateName) {
+    case "idle":
+      // Default board, nothing special
+      break;
+
+    case "coaching-naked-single":
+      activateCoachingButton();
+      markCoachedTarget(NAKED_SINGLE_IDX);
+      announce("Coach: Naked Single identified. 1 cell highlighted.");
+      break;
+
+    case "coaching-focused":
+      activateCoachingButton();
+      markCoachedTarget(NAKED_SINGLE_IDX);
+      selectCell(NAKED_SINGLE_IDX);
+      openExplanationPanel(
+        "Naked Single",
+        "Only <em>5</em> can go here — all other digits appear in this cell's row, column, or box."
+      );
+      drawArrows_NakedSingle(NAKED_SINGLE_IDX);
+      announce("Coached cell. Naked Single. Only 5 can go here — all other digits appear in this cell's row, column, or box.");
+      break;
+
+    case "recap-normal":
+      // Show recap after a correct fill — no highlights, button idle
+      showRecap(false,
+        "You used Naked Single.",
+        "Naked Single in row 5, column 5: only 5 could go here."
+      );
+      announce("You used Naked Single. Naked Single in row 5, column 5: only 5 could go here.");
+      break;
+
+    case "recap-error":
+      showRecap(true,
+        "That's not the right digit — the Naked Single suggestion still stands.",
+        "Press Coach to try again."
+      );
+      announce("That's not the right digit — the Naked Single suggestion still stands. Press Coach to try again.");
+      break;
+
+    case "coaching-naked-pair":
+      activateCoachingButton();
+      markNakedPair();
+      // Show auto-revealed candidates in coached cells
+      showAutoRevealedCandidates();
+      announce("Coach: Naked Pair identified. 5 cells highlighted.");
+      break;
+
+    case "coaching-naked-pair-focused":
+      activateCoachingButton();
+      markNakedPair();
+      showAutoRevealedCandidates();
+      selectCell(NAKED_PAIR_TARGETS[0]);
+      openExplanationPanel(
+        "Naked Pair",
+        "These two cells must contain <em>2</em> and <em>5</em> — eliminate both from the rest of this row."
+      );
+      drawConnector_NakedPair();
+      announce("Coached cell. Naked Pair. These two cells must contain 2 and 5 — eliminate both from the rest of this row.");
+      break;
+
+    case "coaching-simple-color":
+      activateCoachingButton();
+      markSimpleColoring();
+      announce("Coach: Simple Coloring identified. 5 cells highlighted.");
+      break;
+
+    case "error-complete":
+      showCoachError("The puzzle is already solved.");
+      announce("Coach: The puzzle is already solved.");
+      break;
+
+    case "error-inconsistent":
+      showCoachError("The board has a contradiction. Use Erase to fix it.");
+      announce("Coach: The board has a contradiction. Use Erase to fix it.");
+      break;
+  }
+}
+
+/* ── Coach button active state ──────────────────────────────────────────── */
+function activateCoachingButton() {
+  const btn = document.getElementById("btn-coach");
+  btn.classList.add("coaching");
+  btn.textContent = "Coach";
+  btn.setAttribute("aria-label", "Coach (active)");
+}
+
+/* ── Error message (no-applicable-technique) ────────────────────────────── */
+function showCoachError(msg) {
+  const el = document.getElementById("coach-error-msg");
+  el.textContent = msg;
+  el.classList.add("visible");
+  errorTimer = setTimeout(() => hideCoachError(), 3000);
+}
+
+function hideCoachError() {
+  const el = document.getElementById("coach-error-msg");
+  el.classList.remove("visible");
+  el.textContent = "";
+}
+
+/* ── Cell highlight helpers ─────────────────────────────────────────────── */
+function markCoachedTarget(idx) {
+  const el = cellEl(idx);
+  if (el) el.classList.add("coached-target");
+  el.setAttribute("aria-describedby", "sr-coached-desc");
+}
+
+function markNakedPair() {
+  NAKED_PAIR_CAUSE.forEach(idx => {
+    const el = cellEl(idx);
+    if (el) el.classList.add("coached-cause");
+    el.setAttribute("aria-describedby", "sr-coached-desc");
+  });
+  NAKED_PAIR_TARGETS.forEach(idx => {
+    const el = cellEl(idx);
+    if (el) el.classList.add("coached-elim-target");
+    el.setAttribute("aria-describedby", "sr-coached-desc");
+  });
+}
+
+function markSimpleColoring() {
+  SC_GROUP_A.forEach(idx => {
+    const el = cellEl(idx);
+    if (el) el.classList.add("coached-sc-a");
+  });
+  SC_GROUP_B.forEach(idx => {
+    const el = cellEl(idx);
+    if (el) el.classList.add("coached-sc-b");
+  });
+  SC_ELIM.forEach(idx => {
+    const el = cellEl(idx);
+    if (el) el.classList.add("coached-elim-target");
+  });
+}
+
+/* ── Auto-revealed candidates (Naked Pair demo) ─────────────────────────── */
+function showAutoRevealedCandidates() {
+  // Cause cells: show candidates {2,5} in coach accent color
+  NAKED_PAIR_CAUSE.forEach(idx => {
+    const el = cellEl(idx);
+    if (!el) return;
+    el.innerHTML = "";
+    renderPencilMarks(el, new Set(), new Set([2, 5]));
+  });
+
+  // Elimination target cells: show candidate that will be eliminated, in user pencil color
+  // For demo: show {2} in one target, {5} in another, {2,5} in third
+  const targetMarks = [new Set([2]), new Set([5]), new Set([2, 5])];
+  NAKED_PAIR_TARGETS.forEach((idx, i) => {
+    const el = cellEl(idx);
+    if (!el) return;
+    el.innerHTML = "";
+    // User's own marks in pencil color, no coach-reveal
+    renderPencilMarks(el, targetMarks[i] || new Set(), new Set());
+  });
+}
+
+/* ── Explanation panel ──────────────────────────────────────────────────── */
+function openExplanationPanel(technique, htmlText) {
+  document.getElementById("coach-panel-technique").textContent = technique;
+  document.getElementById("coach-panel-text").innerHTML = htmlText;
+  document.getElementById("coach-panel-wrap").classList.add("open");
+}
+
+/* ── Recap toast ─────────────────────────────────────────────────────────── */
+function showRecap(isError, line1, line2) {
+  const recap = document.getElementById("coach-recap");
+  document.getElementById("recap-line1").textContent = line1;
+  document.getElementById("recap-line2").textContent = line2 || "";
+  recap.classList.toggle("error", isError);
+  recap.classList.add("visible");
+  recapTimer = setTimeout(() => {
+    recap.classList.remove("visible");
+  }, 2500);
+}
+
+/* ── SVG overlay: Naked Single arrows ──────────────────────────────────────
+   Draw arrows from each filled peer in row/col/box pointing toward the
+   target cell. We select a representative subset (not all 20 peers).       */
+function drawArrows_NakedSingle(targetIdx) {
+  const overlay = document.getElementById("coach-overlay");
+  overlay.innerHTML = "";
+  overlay.classList.add("visible");
+
+  const tc = cellCenter(targetIdx);
+  const COACH_COLOR = "#7c3aed";
+
+  // Representative filled peers: row 5 peers (r5c1=36,r5c2=37,r5c4=39,r5c6=41,r5c8=43,r5c9=44)
+  // col 5 peers (r1c5=4, r2c5=13, r3c5=22, r6c5=49, r7c5=58, r8c5=67)
+  // box 4 peers (r4c4=30, r4c6=32, r6c4=48, r6c6=50) — only show filled ones in puzzle
+  const peers = [36, 37, 39, 41, 43, 44, 4, 13, 22, 30, 32];
+  const filledPeers = peers.filter(idx => state.cells[idx].given || state.cells[idx].value !== 0);
+
+  // Add arrowhead marker
+  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  defs.innerHTML = `
+    <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+      <polygon points="0 0, 6 2, 0 4" fill="${COACH_COLOR}" opacity="0.7"/>
+    </marker>
+  `;
+  overlay.appendChild(defs);
+
+  filledPeers.forEach(peerIdx => {
+    const pc = cellCenter(peerIdx);
+    const dx = tc.x - pc.x;
+    const dy = tc.y - pc.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len;
+    const uy = dy / len;
+
+    // Start arrow from 16px inside source cell, end 20px away from target center
+    const startX = pc.x + ux * 16;
+    const startY = pc.y + uy * 16;
+    const endX   = tc.x - ux * 20;
+    const endY   = tc.y - uy * 20;
+
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", startX);
+    line.setAttribute("y1", startY);
+    line.setAttribute("x2", endX);
+    line.setAttribute("y2", endY);
+    line.setAttribute("stroke", COACH_COLOR);
+    line.setAttribute("stroke-width", "1.5");
+    line.setAttribute("stroke-opacity", "0.6");
+    line.setAttribute("marker-end", "url(#arrowhead)");
+    overlay.appendChild(line);
+  });
+}
+
+/* ── SVG overlay: Naked Pair connector ──────────────────────────────────────
+   Draw a bracket or line connecting the two cause cells.                    */
+function drawConnector_NakedPair() {
+  const overlay = document.getElementById("coach-overlay");
+  overlay.innerHTML = "";
+  overlay.classList.add("visible");
+
+  const COACH_COLOR = "#7c3aed";
+  const c1 = cellCenter(NAKED_PAIR_CAUSE[0]);
+  const c2 = cellCenter(NAKED_PAIR_CAUSE[1]);
+
+  // Arrowhead marker (reused)
+  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  defs.innerHTML = `
+    <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+      <polygon points="0 0, 6 2, 0 4" fill="${COACH_COLOR}" opacity="0.85"/>
+    </marker>
+  `;
+  overlay.appendChild(defs);
+
+  // Curved connector between the two cause cells
+  const midX = (c1.x + c2.x) / 2;
+  const midY = (c1.y + c2.y) / 2 - 18; // arc upward
+
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", `M ${c1.x} ${c1.y} Q ${midX} ${midY} ${c2.x} ${c2.y}`);
+  path.setAttribute("stroke", COACH_COLOR);
+  path.setAttribute("stroke-width", "2");
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke-opacity", "0.8");
+  path.setAttribute("marker-end", "url(#arrowhead)");
+  overlay.appendChild(path);
+
+  // Arrows from the pair cells toward each elimination target
+  NAKED_PAIR_TARGETS.forEach(targetIdx => {
+    const tc = cellCenter(targetIdx);
+    // Emanate from the nearer cause cell
+    const d1 = Math.hypot(c1.x - tc.x, c1.y - tc.y);
+    const d2 = Math.hypot(c2.x - tc.x, c2.y - tc.y);
+    const src = d1 < d2 ? c1 : c2;
+
+    const dx = tc.x - src.x;
+    const dy = tc.y - src.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len; const uy = dy / len;
+
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", src.x + ux * 18);
+    line.setAttribute("y1", src.y + uy * 18);
+    line.setAttribute("x2", tc.x - ux * 18);
+    line.setAttribute("y2", tc.y - uy * 18);
+    line.setAttribute("stroke", COACH_COLOR);
+    line.setAttribute("stroke-width", "1.5");
+    line.setAttribute("stroke-opacity", "0.5");
+    line.setAttribute("stroke-dasharray", "4 3");
+    line.setAttribute("marker-end", "url(#arrowhead)");
+    overlay.appendChild(line);
+  });
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   CORE INTERACTIONS (kept from game-v4, coach-aware)
+   ──────────────────────────────────────────────────────────────────────────── */
+function selectCell(i) {
+  const prev = state.selected;
+  state.selected = i;
+  if (prev !== null && prev !== i) {
+    const pEl = cellEl(prev);
+    if (pEl) pEl.classList.remove("selected");
+  }
+  if (i !== null) {
+    const el = cellEl(i);
+    if (el) {
+      el.classList.add("selected");
+      if (!state.cells[i].given) el.setAttribute("aria-selected", "true");
+    }
+  }
+}
+
+function handleCellClick(i) {
+  if (state.cells[i].given) return;
+  selectCell(i);
+}
+
+function handleCellKeydown(e) {
+  const i = parseInt(e.currentTarget.dataset.index, 10);
+  const arrowMap = {
+    ArrowLeft:  (r,c) => [r, (c-1+9)%9],
+    ArrowRight: (r,c) => [r, (c+1)%9],
+    ArrowUp:    (r,c) => [(r-1+9)%9, c],
+    ArrowDown:  (r,c) => [(r+1)%9, c],
+  };
+  if (arrowMap[e.key]) {
+    e.preventDefault();
+    let r = rowOf(i), c = colOf(i), attempts = 0;
+    do { [r,c] = arrowMap[e.key](r,c); attempts++; }
+    while (state.cells[r*9+c].given && attempts < 81);
+    const next = r*9+c;
+    selectCell(next);
+    cellEl(next)?.focus();
+  }
+  if (e.key >= "1" && e.key <= "9") { e.preventDefault(); }
+  if (e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); }
+  if (e.key === "p" || e.key === "P") { e.preventDefault(); toggleMode(); }
+}
+
+function toggleMode() {
+  state.mode = state.mode === "pen" ? "pencil" : "pen";
+  updateModeButton();
+}
+
+function updateModeButton() {
+  const btn = document.getElementById("btn-mode");
+  const mainLbl = document.getElementById("mode-label-main");
+  const subLbl  = document.getElementById("mode-label-sub");
+  if (state.mode === "pen") {
+    btn.className = "btn btn-mode mode-pen";
+    mainLbl.textContent = "Pen";
+    subLbl.textContent  = "tap for pencil";
+    btn.setAttribute("aria-label", "Switch to Pencil mode");
+    btn.setAttribute("aria-pressed", "false");
+  } else {
+    btn.className = "btn btn-mode mode-pencil";
+    mainLbl.textContent = "Pencil";
+    subLbl.textContent  = "tap for pen";
+    btn.setAttribute("aria-label", "Switch to Pen mode");
+    btn.setAttribute("aria-pressed", "true");
+  }
+}
+
+/* ── Coach button click (demo-aware: pressing it enters coaching-focused) ── */
+document.getElementById("btn-coach").addEventListener("click", () => {
+  const currentlyCoaching = document.getElementById("btn-coach").classList.contains("coaching");
+  if (currentlyCoaching) {
+    applyState("coaching-naked-single");
+  } else {
+    applyState("coaching-naked-single");
+  }
+});
+
+/* ── Numpad ──────────────────────────────────────────────────────────────── */
+function buildNumpad() {
+  const container = document.getElementById("numpad-digits");
+  for (let d = 1; d <= 9; d++) {
+    const btn = document.createElement("button");
+    btn.className = "btn btn-digit";
+    btn.textContent = d;
+    btn.setAttribute("aria-label", `Enter ${d}`);
+    btn.addEventListener("click", () => {
+      announce(`Digit ${d} entered.`);
+    });
+    container.appendChild(btn);
+  }
+}
+
+/* ── Stats ───────────────────────────────────────────────────────────────── */
+function buildStats() {
+  const tbody = document.getElementById("stats-tbody");
+  const levels = [
+    { key: "kiddie",     label: "Kiddie"      },
+    { key: "easy",       label: "Easy"        },
+    { key: "medium",     label: "Medium"      },
+    { key: "hard",       label: "Hard"        },
+    { key: "deathmarch", label: "Death March" },
+  ];
+  tbody.innerHTML = "";
+  levels.forEach(({ key, label }) => {
+    const s = state.stats[key];
+    const tr = document.createElement("tr");
+    if (key === state.difficulty) tr.classList.add("active-diff");
+    tr.setAttribute("aria-label", `${label}: ${s.attempted} attempted, ${s.won} won`);
+    tr.innerHTML = `<td>${label}</td><td>${s.attempted}</td><td>${s.won}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ── Theme selector ──────────────────────────────────────────────────────── */
+const THEME_CLASSES = ["theme-minimalist","theme-coffee","theme-school","theme-terminal","theme-mountain"];
+document.getElementById("theme-select").addEventListener("change", function() {
+  document.body.classList.remove(...THEME_CLASSES);
+  document.body.classList.add(`theme-${this.value}`);
+  announce(`Theme changed to ${this.options[this.selectedIndex].text}.`);
+});
+
+/* ── Modal ───────────────────────────────────────────────────────────────── */
+document.getElementById("modal-cancel").addEventListener("click", () => {
+  document.getElementById("modal-backdrop").classList.remove("open");
+});
+document.getElementById("modal-backdrop").addEventListener("keydown", e => {
+  if (e.key === "Escape") document.getElementById("modal-backdrop").classList.remove("open");
+});
+
+/* ── Erase / Mode / Hint buttons (stub behavior for mockup) ─────────────── */
+document.getElementById("btn-erase").addEventListener("click", () => {
+  if (state.selected !== null) announce("Cell erased.");
+});
+
+document.getElementById("btn-mode").addEventListener("click", toggleMode);
+
+document.getElementById("btn-hint").addEventListener("click", () => {
+  announce("Hint used.");
+});
+
+document.getElementById("btn-check").addEventListener("click", () => {
+  announce("Checking answers.");
+});
+
+document.getElementById("btn-new").addEventListener("click", () => {
+  announce("New puzzle started.");
+});
+
+document.getElementById("btn-reset").addEventListener("click", () => {
+  announce("Puzzle reset.");
+});
+
+/* ── Click outside grid to deselect ─────────────────────────────────────── */
+document.addEventListener("click", e => {
+  const grid = document.getElementById("sudoku-grid");
+  if (!grid.contains(e.target) && e.target.id !== "btn-coach") {
+    if (state.selected !== null) {
+      const prev = cellEl(state.selected);
+      if (prev) prev.classList.remove("selected");
+      state.selected = null;
+    }
+  }
+});
+
+/* ── Hidden ARIA description for coached cells ───────────────────────────── */
+const srDesc = document.createElement("span");
+srDesc.id = "sr-coached-desc";
+srDesc.style.cssText = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap";
+srDesc.textContent = "Coached cell — focus for explanation.";
+document.body.appendChild(srDesc);
+
+/* ── Init ────────────────────────────────────────────────────────────────── */
+buildGrid();
+buildNumpad();
+buildStats();
+updateModeButton();
+</script>
+</body>
+</html>
