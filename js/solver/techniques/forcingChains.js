@@ -96,7 +96,12 @@ function xyChainDFS(board, candidates, bivalue, current, exitDigit, path, z) {
           }
         }
         if (elims.length > 0) {
-          return { placements: [], eliminations: elims, technique: 'XY-Chain' };
+          return {
+            placements: [],
+            eliminations: elims,
+            technique: 'XY-Chain',
+            chain: { cells: [...path, next], digit: z },
+          };
         }
       }
     }
@@ -178,12 +183,8 @@ function aicSearch(board, candidates, startCell, startDigit, depth, path) {
 
       // Check if this completes a nice loop with the start.
       if (path.length >= 3 && next === startCell && last.digit === startDigit) {
-        // Closed AIC: cells seeing the start can have startDigit eliminated if
-        // the chain alternates consistently. For simplicity here, report as
-        // a loop — any cell seeing both the cell before start and the start
-        // via the same digit can be eliminated.
-        // Actually for a type-1 nice loop (start/end same cell, same digit),
-        // all other candidates in startCell can be eliminated.
+        // Closed AIC (type-1 nice loop): all other candidates in startCell can
+        // be eliminated because the loop proves startDigit must be true there.
         const elims = [];
         const keepBit = 1 << (startDigit - 1);
         const extra = candidates[startCell] & ~keepBit;
@@ -193,7 +194,15 @@ function aicSearch(board, candidates, startCell, startDigit, depth, path) {
           }
         }
         if (elims.length > 0) {
-          return { placements: [], eliminations: elims, technique: 'Forcing Chain' };
+          // Append the closing node before building chain data (bug fix: the closing
+          // node was previously omitted, leaving chain one step short).
+          const closingNode = { cell: next, digit: last.digit, strong: true };
+          return {
+            placements: [],
+            eliminations: elims,
+            technique: 'Forcing Chain',
+            chain: { nodes: [...path, closingNode] },
+          };
         }
       }
 
@@ -224,9 +233,8 @@ function aicSearch(board, candidates, startCell, startDigit, depth, path) {
 
       // Check if this closes a loop: the peer sees the start cell with startDigit.
       if (peer === startCell && last.digit === startDigit && path.length >= 3) {
-        // Type-2 nice loop: cells seeing both the discontinuity endpoints
-        // can have the digit eliminated.
-        const firstNode = path[0];
+        // Type-2 nice loop: cells seeing both discontinuity endpoints can have
+        // the digit eliminated.
         const elims = [];
         const elimBit = 1 << (last.digit - 1);
         for (let i = 0; i < 81; i++) {
@@ -237,7 +245,14 @@ function aicSearch(board, candidates, startCell, startDigit, depth, path) {
           }
         }
         if (elims.length > 0) {
-          return { placements: [], eliminations: elims, technique: 'Forcing Chain' };
+          // Append the closing (weak) node before building chain data.
+          const closingNode = { cell: peer, digit: last.digit, strong: false };
+          return {
+            placements: [],
+            eliminations: elims,
+            technique: 'Forcing Chain',
+            chain: { nodes: [...path, closingNode] },
+          };
         }
       }
 

@@ -45,7 +45,12 @@ export function simpleColoring(state) {
             .filter(i => candidates[i] & bit)
             .map(i => ({ cellIndex: i, digit: d }));
           if (elims.length > 0) {
-            return { placements: [], eliminations: elims, technique: 'Simple Coloring' };
+            return {
+              placements: [],
+              eliminations: elims,
+              technique: 'Simple Coloring',
+              colorChain: buildColorChain(chain, d),
+            };
           }
         }
       }
@@ -65,7 +70,12 @@ export function simpleColoring(state) {
         }
       }
       if (elims.length > 0) {
-        return { placements: [], eliminations: elims, technique: 'Simple Coloring' };
+        return {
+          placements: [],
+          eliminations: elims,
+          technique: 'Simple Coloring',
+          colorChain: buildColorChain(chain, d),
+        };
       }
     }
   }
@@ -125,7 +135,17 @@ export function multiColoring(state) {
               }
             }
             if (elims.length > 0) {
-              return { placements: [], eliminations: elims, technique: 'Multi-Coloring' };
+              return {
+                placements: [],
+                eliminations: elims,
+                technique: 'Multi-Coloring',
+                // colorChains[0]: chainA cells as groupA, chainB cells as groupB.
+                colorChains: [{
+                  digit: d,
+                  groupA: chainA.map(c => c.cell),
+                  groupB: chainB.map(c => c.cell),
+                }],
+              };
             }
           }
         }
@@ -134,6 +154,27 @@ export function multiColoring(state) {
   }
 
   return null;
+}
+
+/**
+ * Build a normalised colorChain descriptor for Simple Coloring coach output.
+ * groupA always contains the lowest-indexed cell so the result is deterministic.
+ *
+ * @param {Array<{cell:number, color:number}>} chain
+ * @param {number} d
+ * @returns {{ digit: number, groupA: number[], groupB: number[] }}
+ */
+function buildColorChain(chain, d) {
+  const c0 = chain.filter(c => c.color === 0).map(c => c.cell);
+  const c1 = chain.filter(c => c.color === 1).map(c => c.cell);
+
+  // groupA must contain the lowest-indexed cell in the whole chain.
+  const minC0 = c0.length > 0 ? Math.min(...c0) : Infinity;
+  const minC1 = c1.length > 0 ? Math.min(...c1) : Infinity;
+  if (minC1 < minC0) {
+    return { digit: d, groupA: c1, groupB: c0 };
+  }
+  return { digit: d, groupA: c0, groupB: c1 };
 }
 
 /**

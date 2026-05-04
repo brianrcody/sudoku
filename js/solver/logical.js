@@ -47,12 +47,17 @@ export function solveLogically(board, { techniqueLimit = Infinity } = {}) {
 
       // Record elimination-only steps (no placement) with digit: null.
       if (result.placements.length === 0 && result.eliminations.length > 0) {
-        trace.push({
+        const step = {
           cellIndex: result.eliminations[0].cellIndex,
           digit: null,
           technique: result.technique,
           eliminations: result.eliminations,
-        });
+        };
+        // Pass chain fields through for coach analyzer consumption.
+        if (result.colorChain  !== undefined) step.colorChain  = result.colorChain;
+        if (result.colorChains !== undefined) step.colorChains = result.colorChains;
+        if (result.chain       !== undefined) step.chain       = result.chain;
+        trace.push(step);
       }
 
       // Rank is 1-based in the spec; array index is 0-based.
