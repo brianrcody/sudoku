@@ -812,13 +812,13 @@ Per the task brief, two return-shape options exist: bare `null` (caller infers f
 ```js
 NoTechniqueResult = {
   type: 'no-technique',
-  reason: 'complete' | 'inconsistent',
+  reason: 'complete' | 'error' | 'inconsistent',
 }
 ```
 
 The choice resolves the open option in favour of clarity at the seam. Rationale:
 
-- The UI spec needs the reason to choose between fspec §4.2's two error messages ("The puzzle is already solved." vs. "The board has a contradiction. Use Erase to fix it."). Re-deriving this from `GameState` would force the UI module to duplicate the analyzer's logic ("did the board fill? did the solver fail?"). Keeping it in the analyzer is single-source.
+- The UI spec needs the reason to choose between fspec §4.2's three status messages ("The puzzle is already solved.", "The board has an error. Use Check or Erase to fix it before coaching.", "The board has a contradiction. Use Erase to fix it."). Re-deriving this from `GameState` would force the UI module to duplicate the analyzer's logic. Keeping it in the analyzer is single-source.
 - The structured return is trivially distinguishable from a `CoachStep` (`step.type === 'no-technique'` vs. `'placement' | 'elimination'`), so callers do not need to type-test multiple shapes.
 - Returning `null` would have been simpler but punts a load-bearing decision to the UI layer.
 
@@ -832,8 +832,30 @@ The function never returns bare `null`. The "or null" in §2 is replaced by "or 
 
 ### 9.1 `reason` Determination
 
+`'error'` is checked **before** the solver runs, as a pre-flight guard. `'complete'` and `'inconsistent'` are determined afterward from the solver result.
+
+**Pre-solver error check:**
+
 ```js
-function buildNullStep(workingBoard, solverResult, puzzle) {
+// Before buildWorkingBoard / solveLogically:
+for (let i = 0; i < 81; i++) {
+  if (puzzle.givens[i] !== 0) continue;         // given cell — not the player's entry
+  if (playerState.pen[i] === 0) continue;        // no pen entry
+  if (playerState.conflicts.has(i)) continue;    // visible conflict — excluded from working board anyway
+  if (playerState.pen[i] !== puzzle.solution[i]) {
+    return { type: 'no-technique', reason: 'error' };
+  }
+}
+```
+
+A wrong digit that does not share a unit with the same digit elsewhere is not flagged by conflict detection. If `buildWorkingBoard` were allowed to include it, the solver would operate on a corrupted board and could return misleading technique suggestions. The pre-solver check catches this case early — the player is told there is an error, and the coach does not proceed.
+
+Conflicted entries (`playerState.conflicts.has(i)`) are excluded from the check because `buildWorkingBoard` already omits them from the working board, so they cannot mislead the solver.
+
+**Post-solver reason determination** (unchanged):
+
+```js
+function buildNullStep(workingBoard) {
   const allFilled = workingBoard.every(v => v !== 0);
   if (allFilled) {
     return { type: 'no-technique', reason: 'complete' };
@@ -842,7 +864,7 @@ function buildNullStep(workingBoard, solverResult, puzzle) {
 }
 ```
 
-A fully-filled working board is treated as `'complete'` regardless of correctness. If the player has filled the whole grid with wrong digits but no two cells in the same unit duplicate, conflict detection wouldn't flag any cells, the working board would be fully filled (no givens overridden, no entries elided), and `solveLogically` would have nothing to do (or would succeed trivially). This is the same assumption made by fspec §4.2 ("the puzzle is already complete") — completeness is a board-fullness check, not a correctness check. The win-detection path elsewhere in the system handles incorrect-but-full boards via `ON_COMPLETION_EVALUATE` (`aspec-game-state.md` §5).
+A fully-filled working board is treated as `'complete'` regardless of correctness. The win-detection path elsewhere in the system handles incorrect-but-full boards via `ON_COMPLETION_EVALUATE` (`aspec-game-state.md` §5).
 
 If `allFilled` is false and the solver returned an empty trace, the board is genuinely stuck (no technique applies) — `'inconsistent'`.
 
@@ -1002,6 +1024,8 @@ For each rank 1–15:
 
 1. **No-technique — complete.** Fixture: a fully-solved board. Assert `analyze` returns `{ type: 'no-technique', reason: 'complete' }`.
 2. **No-technique — inconsistent.** Fixture: a board with empty cells where no technique applies (use a board that requires beyond-rank-15 logic). Assert `{ type: 'no-technique', reason: 'inconsistent' }`.
+2b. **No-technique — error (non-conflicting wrong digit).** Construct a minimal puzzle where `solution[i] = X` and `playerState.pen[i] = Y` (Y ≠ X, not in conflicts). Assert `{ type: 'no-technique', reason: 'error' }`.
+2c. **No-technique — error excluded when conflicted.** Same setup as 2b but add cell `i` to `playerState.conflicts`. Assert the result is `'complete'` or `'inconsistent'`, not `'error'` (the conflicted entry is skipped by the pre-solver check).
 3. **Purity.** Call `analyze` twice on the same input. Assert deep equality of the two return values, and assert neither input was mutated (compare `Uint8Array` byte-by-byte).
 4. **Schema completeness.** For every fixture, assert every field listed in §3 is present on the returned `CoachStep` (no `undefined`s).
 5. **Long-chain elision (rank 14).** Provide a fixture whose XY-Chain length exceeds `COMPLEXITY_THRESHOLD`. Assert `complexity.acknowledged === true`, `roles.cause.length === 2`, `arrows.length === 1`, and `arrows[0].style === 'dashed-arrow'`.

@@ -59,13 +59,21 @@ chosen for each.
 **Resolution:** The Coach button shows an inline status message and takes no other action.
 
 When the Coach button is pressed and no technique is applicable — because the puzzle is
-already complete or because the board is in an inconsistent state (no logical solution
-reachable from the current position) — the button does not enter an active coaching state.
-Instead, a brief status message appears near the Coach button:
+already complete, because the board contains an error, or because the board is in an
+inconsistent state (no logical solution reachable from the current position) — the button
+does not enter an active coaching state. Instead, a brief status message appears near the
+Coach button:
 
 - Puzzle complete: "The puzzle is already solved."
+- Board error (a non-conflicting wrong digit detected): "The board has an error. Use
+  Check or Erase to fix it before coaching."
 - Inconsistent state (solver cannot progress): "The board has a contradiction. Use Erase
   to fix it."
+
+The error case is distinct from the inconsistent case: an error means the player has
+entered a digit that contradicts the solution but does not yet create a visible conflict
+with another placed digit. The coach detects this before running the solver, so it cannot
+be misled by the corrupted board state.
 
 The message appears for 3 seconds then dismisses automatically. No highlights are drawn.
 No coach session begins. The Coach button remains enabled (the user can press it again
@@ -74,8 +82,9 @@ after correcting the board).
 **Rationale:** A silent no-op on the Coach button would be confusing — the user expects
 something to happen. A 3-second inline message matches the pattern already established by
 the Check button's correctness feedback (fspec-001-v1 §7.2.2) and keeps the interaction
-non-intrusive. Separate messages for complete vs. inconsistent states give the user
-actionable information.
+non-intrusive. Separate messages for all three states give the user actionable information.
+The error message specifically directs the user to Check (which will locate the wrong
+cell) rather than requiring them to find the mistake manually.
 
 ### 2.2 Non-Coached Cell Interaction (rspec Q2)
 
@@ -248,10 +257,13 @@ When the user presses the Coach button:
 
 ### 4.2 No Applicable Technique
 
-When the Coach button is pressed and the solver finds no applicable technique:
+When the Coach button is pressed and no technique can be offered:
 
 - If the puzzle is complete: the status message "The puzzle is already solved." appears
   adjacent to the Coach button for 3 seconds, then auto-dismisses.
+- If a non-conflicting wrong digit is detected: the status message "The board has an
+  error. Use Check or Erase to fix it before coaching." appears for 3 seconds, then
+  auto-dismisses. (The coach detects this before running the solver — see §2.1.)
 - If the board is inconsistent (no logical progress possible): the status message "The
   board has a contradiction. Use Erase to fix it." appears for 3 seconds, then
   auto-dismisses.
@@ -1006,6 +1018,7 @@ Coach events are announced via the existing screen reader live region (fspec-001
 |---|---|
 | Coach highlights drawn | "Coach: [Technique Name] identified. [N] cell(s) highlighted." |
 | No applicable technique — complete | "Coach: The puzzle is already solved." |
+| No applicable technique — error | "Coach: The board has an error. Use Check or Erase to fix it before coaching." |
 | No applicable technique — inconsistent | "Coach: The board has a contradiction. Use Erase to fix it." |
 | User focuses coached cell | "Coached cell. [Technique Name]. [Supporting text]." |
 | Post-fill recap (normal variant) | "You used [Technique Name]. [Move description]." |

@@ -58,6 +58,18 @@ const COMPLEXITY_THRESHOLD = 6;
  * @returns {CoachStep|NoTechniqueResult}
  */
 export function analyze(puzzle, playerState) {
+  // Detect non-conflicted pen entries that contradict the solution before
+  // running the solver — a wrong digit that doesn't share a unit with the same
+  // digit would otherwise corrupt the working board and produce misleading advice.
+  for (let i = 0; i < 81; i++) {
+    if (puzzle.givens[i] !== 0) continue;
+    if (playerState.pen[i] === 0) continue;
+    if (playerState.conflicts.has(i)) continue;
+    if (playerState.pen[i] !== puzzle.solution[i]) {
+      return { type: 'no-technique', reason: 'error' };
+    }
+  }
+
   const workingBoard = buildWorkingBoard(puzzle, playerState);
 
   // Compute the initial logical candidate set.

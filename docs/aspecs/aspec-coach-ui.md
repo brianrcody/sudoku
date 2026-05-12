@@ -325,7 +325,7 @@ The recap auto-dismiss timer (2.5s) is started by `coach.js` on observing `coach
 - `state.coachSession.focusedCoachedCell = null`.
 - Emits: `'coachSession'`.
 
-### 3.6 `COACH_NO_TECHNIQUE` — `{ reason: 'complete' | 'inconsistent' }`
+### 3.6 `COACH_NO_TECHNIQUE` — `{ reason: 'complete' | 'error' | 'inconsistent' }`
 
 **Dispatched by:** `coach.js` after `analyze()` returns a `NoTechniqueResult`.
 
@@ -823,7 +823,9 @@ The error toast does not flow through `coachSession.recap`; it is `coach.js`-int
 function _showErrorToast(reason) {
   const text = reason === 'complete'
     ? 'The puzzle is already solved.'
-    : 'The board has a contradiction. Use Erase to fix it.';
+    : reason === 'error'
+      ? 'The board has an error. Use Check or Erase to fix it before coaching.'
+      : 'The board has a contradiction. Use Erase to fix it.';
 
   _recap.classList.add('error', 'visible');
   _recap.innerHTML = `
@@ -967,7 +969,9 @@ The `aria-describedby` attribute on coached cells points to `#sr-coached-desc`. 
 | Trigger in `coach.js` | Announcement |
 |---|---|
 | After `COACH_START` dispatch (technique found) | `"Coach: ${technique} identified. ${N} cells highlighted."` |
-| After `COACH_NO_TECHNIQUE` dispatch | `"Coach: ${error message text}"` |
+| After `COACH_NO_TECHNIQUE` dispatch (`'complete'`) | `"Coach: The puzzle is already solved."` |
+| After `COACH_NO_TECHNIQUE` dispatch (`'error'`) | `"Coach: The board has an error. Use Check or Erase to fix it before coaching."` |
+| After `COACH_NO_TECHNIQUE` dispatch (`'inconsistent'`) | `"Coach: The board has a contradiction. Use Erase to fix it."` |
 | In `_trackFocus`, on `COACH_FOCUS_COACHED_CELL` dispatch | `"Coached cell. ${technique}. ${supporting text plain}."` |
 | In `_showRecap`, normal variant | `"You used ${technique}. ${detail}"` |
 | In `_showRecap`, error variant | `"That's not the right digit — ${technique} suggestion still stands. Press Coach to try again."` |

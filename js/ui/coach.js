@@ -230,12 +230,14 @@ function _renderRecap(state) {
 /**
  * Show the no-technique error toast.
  *
- * @param {'complete'|'inconsistent'} reason
+ * @param {'complete'|'inconsistent'|'error'} reason
  */
 function _showErrorToast(reason) {
   const text = reason === 'complete'
     ? 'The puzzle is already solved.'
-    : 'The board has a contradiction. Use Erase to fix it.';
+    : reason === 'error'
+      ? 'The board has an error. Use Check or Erase to fix it before coaching.'
+      : 'The board has a contradiction. Use Erase to fix it.';
 
   _recap.classList.add('error', 'visible');
   _recap.innerHTML = `

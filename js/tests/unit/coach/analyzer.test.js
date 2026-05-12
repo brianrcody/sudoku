@@ -453,6 +453,35 @@ describe('coach/analyzer — cross-cutting', function () {
     expect(result.reason).to.equal('inconsistent');
   });
 
+  // 13.4.2b No-technique: wrong pen entry (non-conflicting) detected before solver runs
+  it('no-technique: non-conflicting wrong pen entry returns { type: "no-technique", reason: "error" }', function () {
+    // Minimal board: cell 0 is empty in givens; solution says it must be 5.
+    // Player pens 3 — not present in any peer, so no visual conflict.
+    const givens = new Uint8Array(81);
+    const solution = new Uint8Array(81);
+    solution[0] = 5;
+    const pen = new Uint8Array(81);
+    pen[0] = 3;
+    const result = analyze({ givens, solution }, { pen, conflicts: new Set() });
+    expect(result.type).to.equal('no-technique');
+    expect(result.reason).to.equal('error');
+  });
+
+  // 13.4.2c No-technique: conflicted pen entry is excluded — wrong digit in conflicts does not fire 'error'
+  it('no-technique: conflicted wrong pen entry does not return "error" (excluded from working board)', function () {
+    // Same setup as 13.4.2b but the wrong cell is in the conflicts set.
+    // The check skips conflicted cells, so the board reaches the solver instead.
+    const givens = new Uint8Array(81);
+    const solution = new Uint8Array(81);
+    solution[0] = 5;
+    const pen = new Uint8Array(81);
+    pen[0] = 3;
+    const result = analyze({ givens, solution }, { pen, conflicts: new Set([0]) });
+    // The conflicted entry is excluded; the board is nearly empty → inconsistent (no technique).
+    expect(result.type).to.equal('no-technique');
+    expect(result.reason).not.to.equal('error');
+  });
+
   // 13.4.3 Purity: two calls on same input → deep-equal, no mutation
   it('purity: two calls on same input return deeply equal results and do not mutate inputs', function () {
     const puzzle = puzzleOf(rank01);

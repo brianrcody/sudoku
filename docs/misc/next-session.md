@@ -68,7 +68,20 @@ run was 471 ms, so the machine isn't slow overall — hard generation is just
 non-deterministic and this budget has tight headroom (item 5 above noted this risk).
 Fix: raise the hard budget to 2000 ms, or run 3 samples and assert on the median.
 
-### 6. Narrow-window grid clipping (local-dev only)
+### 6. Integration test gap — CT-NT3: coach 'error' toast
+
+The no-technique integration tests (CT-NT1, CT-NT2) cover the `'complete'` path only.
+The `'error'` path (non-conflicting wrong digit detected before solver runs) is covered
+by unit tests but has no integration test counterpart.
+
+**CT-NT3 (to add):** Load a puzzle, pen a wrong non-conflicting digit into an empty cell
+(digit differs from `solution[i]` and does not appear in any given peer of that cell),
+press Coach, assert the recap element is visible with `.error` class and text includes
+"board has an error". The toast mechanism is already validated by CT-NT1; the primary
+value of CT-NT3 is confirming the end-to-end wiring of the new `reason === 'error'`
+branch through the live DOM.
+
+### 7. Narrow-window grid clipping (local-dev only)
 
 Below ~220 px viewport width, the bottom of the grid clips on
 `localhost:3001` but not on production. CSS is identical between
