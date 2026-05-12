@@ -39,10 +39,19 @@ function puzzleOf(fixture) {
 }
 
 /**
- * Build an empty player state (no pen entries, no conflicts).
+ * Build an empty player state (no pen entries, no conflicts, no pencil).
  */
 function emptyPlayerState() {
   return { pen: new Uint8Array(81), conflicts: new Set() };
+}
+
+/**
+ * Build a player state from a fixture's pencil field (if any).
+ * Fixtures that require pencil marks to suppress lower-rank techniques set
+ * fixture.pencil to a Uint16Array; others leave it absent/null.
+ */
+function playerStateOf(fixture) {
+  return { pen: new Uint8Array(81), conflicts: new Set(), pencil: fixture.pencil ?? null };
 }
 
 /**
@@ -96,12 +105,9 @@ function conflictedPlayerState(conflictCell, conflictDigit) {
 }
 
 /**
- * Build a player state with non-empty pencil marks.
- * The analyzer must not use these; autoReveal.cells must come from initialCandidates.
- *
- * `pencil` is a Uint16Array(81) where each element is a 9-bit bitmask of pencilled digits.
- * The analyzer ignores playerState.pencil entirely (it reads pen+conflicts only).
- * We include a pencil field here to confirm the analyzer doesn't crash if it's present.
+ * Build a player state with specific pencil overrides (used in test 3).
+ * `pencilOverrides` is a plain object mapping cell index → 9-bit bitmask.
+ * Cells not listed default to 0 (full logical candidates used).
  */
 function pencilPlayerState(pencilOverrides) {
   const pencil = new Uint16Array(81);
@@ -121,7 +127,7 @@ function pencilPlayerState(pencilOverrides) {
  * @param {string} techniqueName   canonical name
  * @param {number} rank
  * @param {string} type            'placement' | 'elimination'
- * @param {object} fixture         { givens, playerPen, expected }
+ * @param {object} fixture         { givens, playerPen, pencil?, expected }
  * @param {object} extraAssertions optional callback `(step) => void`
  */
 function techniqueTests(techniqueName, rank, type, fixture, extraAssertions) {
@@ -130,7 +136,7 @@ function techniqueTests(techniqueName, rank, type, fixture, extraAssertions) {
 
   // 1. Happy path
   it(`${techniqueName}: happy path returns correct CoachStep`, function () {
-    const step = analyze(puzzle, emptyPlayerState());
+    const step = analyze(puzzle, playerStateOf(fixture));
     expect(step.technique).to.equal(expected.technique);
     expect(step.rank).to.equal(expected.rank);
     expect(step.type).to.equal(expected.type);
@@ -160,34 +166,37 @@ function techniqueTests(techniqueName, rank, type, fixture, extraAssertions) {
     }
     if (emptyCell < 0) {
       // Fully given board — nothing to test here; just verify no crash.
-      const step = analyze(puzzle, emptyPlayerState());
+      const step = analyze(puzzle, playerStateOf(fixture));
       expect(step).to.be.an('object');
       return;
     }
     const conflictDigit = 1; // any digit; it will be ignored
-    const playerState = conflictedPlayerState(emptyCell, conflictDigit);
-    const baseline = analyze(puzzle, emptyPlayerState());
-    const withConflict = analyze(puzzle, playerState);
+    const base = playerStateOf(fixture);
+    base.pen[emptyCell] = conflictDigit;
+    base.conflicts.add(emptyCell);
+    const baseline = analyze(puzzle, playerStateOf(fixture));
+    const withConflict = analyze(puzzle, base);
     // Technique should be the same since the conflicted entry is excluded.
     expect(withConflict.technique).to.equal(baseline.technique);
     expect(withConflict.rank).to.equal(baseline.rank);
   });
 
-  // 3. Pencil-mark independence: autoReveal.cells use initialCandidates, not pencil marks
-  it(`${techniqueName}: autoReveal.cells come from initialCandidates, not player pencil marks`, function () {
-    // Compute expected autoReveal.cells from a clean board.
+  // 3. autoReveal.cells candidates match pencil-intersected initialCandidates
+  it(`${techniqueName}: autoReveal.cells candidates match pencil-intersected initialCandidates`, function () {
     const workingBoard = new Uint8Array(81);
     for (let i = 0; i < 81; i++) workingBoard[i] = fixture.givens[i];
     const freshCandidates = initialCandidates(workingBoard);
 
-    // Give the player fake pencil marks (all 9 digits in cell 0).
-    const playerState = pencilPlayerState({ 0: 0b111111111 });
-    const step = analyze(puzzle, playerState);
+    // Use the fixture's own pencil marks (if any) so the technique still fires.
+    const step = analyze(puzzle, playerStateOf(fixture));
 
-    // Every cell in autoReveal.cells must have candidates from initialCandidates.
+    // autoReveal.cells[i].candidates = initialCandidates[i] intersected with pencil[i].
+    // When pencil[i] === 0 the analyzer skips the intersection, so freshCandidates applies.
     for (const { cellIndex, candidates } of step.autoReveal.cells) {
-      expect(candidates).to.equal(freshCandidates[cellIndex],
-        `autoReveal.cells[${cellIndex}].candidates mismatch — expected ${freshCandidates[cellIndex]}, got ${candidates}`);
+      const fp = fixture.pencil;
+      const expected = (fp && fp[cellIndex]) ? (freshCandidates[cellIndex] & fp[cellIndex]) : freshCandidates[cellIndex];
+      expect(candidates).to.equal(expected,
+        `autoReveal.cells[${cellIndex}].candidates mismatch — expected ${expected}, got ${candidates}`);
     }
   });
 }
@@ -381,7 +390,6 @@ describe('coach/analyzer — rank 12: Simple Coloring', function () {
 
 /* rank13 fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
 describe('coach/analyzer — rank 13: Multi-Coloring', function () {
-  // Multi-Coloring fixture is approximate; test verifies key structural properties.
   techniqueTests('Multi-Coloring', 13, 'elimination', rank13, function (step) {
     expect(step.digits).to.have.length(1);
     expect(step.roles.cause).to.deep.equal([]);

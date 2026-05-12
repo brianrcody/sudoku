@@ -14,13 +14,19 @@ Paste in the browser console when the coach fires the target technique:
 (function() {
   const s = window.gameState.getState();
   const cells = Array.from(s.pen).map((v, i) => s.conflicts.has(i) ? 0 : v);
-  console.log(Array.from({length: 9}, (_, r) =>
+  const grid = Array.from({length: 9}, (_, r) =>
     cells.slice(r*9, r*9+9).map(v => v || '.').join('')
-  ).join('\n'));
+  ).join('\n');
+  const p = Array.from(s.pencil || new Uint16Array(81));
+  const pencilStr = Array.from({length: 9}, (_, r) =>
+    p.slice(r*9, r*9+9).join(',') + ',  // r' + r
+  ).join('\n    ');
+  console.log('Board:\n' + grid + '\n\nPencil:\n    ' + pencilStr);
 })();
 ```
 
-Copy the 9-line output, note the technique the coach displayed, then run `/add-coach-fixture`.
+Copy the full output (board grid + pencil rows), note the technique the coach displayed,
+then run `/add-coach-fixture`.
 
 ---
 

@@ -5,8 +5,10 @@ Add a new rank-clean board fixture to the coach analyzer test suite.
 The user will provide (either as arguments or in the conversation):
 - **Technique name** — the technique the coach displayed (e.g. "XY-Wing")
 - **Board state** — 9 lines of 9 characters, digits 1–9 and `.` for empty
+- **Pencil state** — 9 lines of 9 comma-separated integers (from the capture snippet), or omitted if none
 
-If either is missing, ask for it before proceeding.
+If technique name or board state are missing, ask for them before proceeding.
+Pencil state is optional — if not provided, `pencil: null` is used.
 
 For XY-Chain, also ask: was this a **short** chain (≤ 6 cells) or a **long** chain (> 6)?
 The coach UI displays chain length in the supporting text; the user can check there.
@@ -81,7 +83,7 @@ for this technique (e.g. `export const rank04 = { ... }`) and replace it entirel
 the new fixture. If no placeholder exists, append the new export at the end of the file
 before the final blank line.
 
-Fixture template:
+Fixture template **without** pencil (ranks 1–12 or any board that is rank-clean on raw candidates):
 ```javascript
 // ===========================================================================
 // Rank N: Technique Name
@@ -92,6 +94,29 @@ export const EXPORT_NAME = {
     /* paste the 81-element array here, 9 per row with // rN comments */
   ]),
   playerPen: null,
+  expected: {
+    technique: 'TECHNIQUE_NAME',
+    rank: N,
+    type: 'TYPE',
+    complexityAcknowledged: BOOL,
+  },
+};
+```
+
+Fixture template **with** pencil (rank 13+ or any board where pencil marks suppress lower techniques):
+```javascript
+// ===========================================================================
+// Rank N: Technique Name
+// Captured from live play — rank-clean with pencil marks.
+// ===========================================================================
+export const EXPORT_NAME = {
+  givens: board([
+    /* 81-element array, 9 per row with // rN comments */
+  ]),
+  playerPen: null,
+  pencil: pencil([
+    /* 81-element array from capture snippet, 9 per row with // rN comments */
+  ]),
   expected: {
     technique: 'TECHNIQUE_NAME',
     rank: N,
@@ -113,5 +138,6 @@ Tell the user:
 - That the tracker row is now marked Complete
 - That they should run the test suite to confirm the board is rank-clean
   (`open js/tests/setup.html` or however they normally run tests)
-- If any test for this technique fails, it means a lower-rank technique fires first on
-  this board — discard it and wait for another board from live play
+- If the technique test fails (wrong technique returned), two causes are possible:
+  1. A lower-rank technique fires first even with pencil marks — discard and recapture
+  2. Pencil state was omitted or stale — re-run the capture snippet and include the pencil output

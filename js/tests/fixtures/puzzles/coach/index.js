@@ -2,25 +2,36 @@
  * @fileoverview Coach analyzer test fixtures — one per rank (1–15) plus no-technique cases.
  *
  * Each fixture has:
- *   givens     {Uint8Array}  81 cells; 0 = empty.
+ *   givens     {Uint8Array}        81 cells; 0 = empty.
  *   playerPen  {Uint8Array|null}
+ *   pencil     {Uint16Array|null}  81 cells; each a 9-bit candidate bitmask (bit N = digit N+1).
+ *                                  null means no pencil marks — analyzer uses full logical candidates.
+ *                                  Required for fixtures captured from live play where the player's
+ *                                  pencil marks suppress lower-rank techniques.
  *   expected   {object}  key fields the test will assert against.
  *
- * Critical property: rank N is the LOWEST-ranked technique applicable on the
- * working board. If a lower-rank technique fires first the fixture is invalid.
+ * Critical property: rank N is the LOWEST-ranked technique applicable given the
+ * working board AND pencil marks. If a lower-rank technique fires first the fixture is invalid.
  *
- * Boards for ranks 4–15 are adapted from the verified technique-level fixture
- * files in js/tests/fixtures/techniques/, with additional givens where needed
- * to suppress lower-rank techniques.
+ * Boards for ranks 1–12 are adapted from the verified technique-level fixture files in
+ * js/tests/fixtures/techniques/, with additional givens where needed to suppress lower-rank
+ * techniques (pencil: null). Boards for rank 13+ are captured from live play and include
+ * pencil state so the analyzer reproduces the exact candidate set that triggered the technique.
  */
 
 // ---------------------------------------------------------------------------
-// Helper
+// Helpers
 // ---------------------------------------------------------------------------
 function board(arr) {
   const b = new Uint8Array(81);
   for (let i = 0; i < arr.length; i++) b[i] = arr[i];
   return b;
+}
+
+function pencil(arr) {
+  const p = new Uint16Array(81);
+  for (let i = 0; i < arr.length; i++) p[i] = arr[i];
+  return p;
 }
 
 // ===========================================================================
