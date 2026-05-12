@@ -228,6 +228,7 @@ function _handleCellKeydown(e, i) {
 
   if (arrowDir) {
     e.preventDefault();
+    e.stopPropagation();
     _gameState.dispatch({ type: 'ARROW_NAV', direction: arrowDir });
     // Sync DOM focus with new selection.
     requestAnimationFrame(() => {
