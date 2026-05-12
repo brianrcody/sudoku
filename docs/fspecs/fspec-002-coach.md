@@ -65,15 +65,16 @@ does not enter an active coaching state. Instead, a brief status message appears
 Coach button:
 
 - Puzzle complete: "The puzzle is already solved."
-- Board error (a non-conflicting wrong digit detected): "The board has an error. Use
-  Check or Erase to fix it before coaching."
+- Board error (any visible conflict, or a non-conflicting wrong digit detected): "The
+  board has an error. Use Check or Erase to fix it before coaching."
 - Inconsistent state (solver cannot progress): "The board has a contradiction. Use Erase
   to fix it."
 
 The error case is distinct from the inconsistent case: an error means the player has
-entered a digit that contradicts the solution but does not yet create a visible conflict
-with another placed digit. The coach detects this before running the solver, so it cannot
-be misled by the corrupted board state.
+entered one or more incorrect digits. This covers two sub-cases — a visible conflict
+(two cells in the same unit hold the same digit, shown in red) and a silent wrong digit
+(contradicts the solution but shares no unit with the same digit elsewhere). The coach
+detects both before running the solver.
 
 The message appears for 3 seconds then dismisses automatically. No highlights are drawn.
 No coach session begins. The Coach button remains enabled (the user can press it again

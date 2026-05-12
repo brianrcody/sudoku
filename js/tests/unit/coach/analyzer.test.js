@@ -91,20 +91,6 @@ function assertSchemaComplete(step) {
 }
 
 /**
- * Build a player state whose pen entries include a specific conflicted entry.
- * `conflictCell` will have `conflictDigit` in pen and be in the conflicts Set,
- * so the analyzer must ignore it.
- *
- * @param {number} conflictCell
- * @param {number} conflictDigit
- */
-function conflictedPlayerState(conflictCell, conflictDigit) {
-  const pen = new Uint8Array(81);
-  pen[conflictCell] = conflictDigit;
-  return { pen, conflicts: new Set([conflictCell]) };
-}
-
-/**
  * Build a player state with specific pencil overrides (used in test 3).
  * `pencilOverrides` is a plain object mapping cell index → 9-bit bitmask.
  * Cells not listed default to 0 (full logical candidates used).
@@ -155,30 +141,25 @@ function techniqueTests(techniqueName, rank, type, fixture, extraAssertions) {
     assertSchemaComplete(step);
   });
 
-  // 2. Working-board rule: conflict-flagged pen entry is ignored
-  it(`${techniqueName}: conflict-flagged pen entry is ignored`, function () {
-    // Place a wrong pen digit in a cell that doesn't appear in givens,
-    // flagged as conflicted — the analyzer must ignore it.
-    // Find the first empty cell in givens.
+  // 2. Working-board rule: any conflict blocks coaching immediately
+  it(`${techniqueName}: conflict-flagged pen entry blocks coaching (returns error)`, function () {
+    // Place any pen digit in an empty cell and add it to conflicts.
+    // analyze() must return { type: 'no-technique', reason: 'error' } immediately
+    // without running the solver, regardless of whether the digit is wrong.
     let emptyCell = -1;
     for (let i = 0; i < 81; i++) {
       if (fixture.givens[i] === 0) { emptyCell = i; break; }
     }
     if (emptyCell < 0) {
-      // Fully given board — nothing to test here; just verify no crash.
-      const step = analyze(puzzle, playerStateOf(fixture));
-      expect(step).to.be.an('object');
+      // Fully given board — skip (no empty cell to conflict).
       return;
     }
-    const conflictDigit = 1; // any digit; it will be ignored
     const base = playerStateOf(fixture);
-    base.pen[emptyCell] = conflictDigit;
+    base.pen[emptyCell] = 1; // any digit
     base.conflicts.add(emptyCell);
-    const baseline = analyze(puzzle, playerStateOf(fixture));
     const withConflict = analyze(puzzle, base);
-    // Technique should be the same since the conflicted entry is excluded.
-    expect(withConflict.technique).to.equal(baseline.technique);
-    expect(withConflict.rank).to.equal(baseline.rank);
+    expect(withConflict.type).to.equal('no-technique');
+    expect(withConflict.reason).to.equal('error');
   });
 
   // 3. autoReveal.cells candidates match pencil-intersected initialCandidates
@@ -467,19 +448,19 @@ describe('coach/analyzer — cross-cutting', function () {
     expect(result.reason).to.equal('error');
   });
 
-  // 13.4.2c No-technique: conflicted pen entry is excluded — wrong digit in conflicts does not fire 'error'
-  it('no-technique: conflicted wrong pen entry does not return "error" (excluded from working board)', function () {
-    // Same setup as 13.4.2b but the wrong cell is in the conflicts set.
-    // The check skips conflicted cells, so the board reaches the solver instead.
+  // 13.4.2c No-technique: any conflict blocks coaching — conflicts.size > 0 → reason: 'error'
+  it('no-technique: any conflicted pen entry returns { type: "no-technique", reason: "error" }', function () {
+    // Any non-empty conflicts set must block coaching immediately, before the solver runs.
+    // This covers both wrong-conflicted cells and the case where a correct cell is dragged
+    // into conflicts by a wrong peer carrying the same digit.
     const givens = new Uint8Array(81);
     const solution = new Uint8Array(81);
     solution[0] = 5;
     const pen = new Uint8Array(81);
     pen[0] = 3;
     const result = analyze({ givens, solution }, { pen, conflicts: new Set([0]) });
-    // The conflicted entry is excluded; the board is nearly empty → inconsistent (no technique).
     expect(result.type).to.equal('no-technique');
-    expect(result.reason).not.to.equal('error');
+    expect(result.reason).to.equal('error');
   });
 
   // 13.4.3 Purity: two calls on same input → deep-equal, no mutation

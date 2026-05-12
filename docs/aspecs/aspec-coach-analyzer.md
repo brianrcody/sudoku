@@ -293,7 +293,7 @@ for (let i = 0; i < 81; i++) {
 }
 ```
 
-Conflict-flagged entries are omitted because they are known to be wrong (two cells in the same unit hold the same digit). Including them would feed the solver an inconsistent board and trigger the "inconsistent" branch of the null case (§9), which is the wrong outcome — the player should still be coached on the cells they have not yet broken.
+Conflict-flagged entries are omitted as a defence-in-depth measure. In practice, the pre-solver error check (§9.1) refuses to coach whenever `playerState.conflicts` is non-empty, so `buildWorkingBoard` is only ever called on a conflict-free player state. The exclusion rule is retained to keep the hint provider and analyzer working-board construction identical — they share the same rule verbatim so that Hint and Coach can never disagree about which cells are "filled" for purposes of candidate computation.
 
 This rule is explicitly shared between hint provider and analyzer to keep "what the helper sees" identical across both features. Diverging would create a class of bug where Hint and Coach disagree about the next move.
 
@@ -350,6 +350,17 @@ Per-technique mappers fill the remaining fields: `roles`, `digits`, `unit`, `arr
 
 ```js
 function analyze(puzzle, playerState) {
+  // Pre-flight error checks — see §9.1.
+  if (playerState.conflicts.size > 0) {
+    return { type: 'no-technique', reason: 'error' };
+  }
+  for (let i = 0; i < 81; i++) {
+    if (puzzle.givens[i] !== 0 || playerState.pen[i] === 0) continue;
+    if (playerState.pen[i] !== puzzle.solution[i]) {
+      return { type: 'no-technique', reason: 'error' };
+    }
+  }
+
   const workingBoard = buildWorkingBoard(puzzle, playerState);
   const candidates = initialCandidates(workingBoard);
 
@@ -838,19 +849,27 @@ The function never returns bare `null`. The "or null" in §2 is replaced by "or 
 
 ```js
 // Before buildWorkingBoard / solveLogically:
+
+// 1. Any visible conflict blocks coaching immediately.
+if (playerState.conflicts.size > 0) {
+  return { type: 'no-technique', reason: 'error' };
+}
+
+// 2. Detect non-conflicting wrong pen entries (invisible to the player as conflicts).
 for (let i = 0; i < 81; i++) {
   if (puzzle.givens[i] !== 0) continue;         // given cell — not the player's entry
   if (playerState.pen[i] === 0) continue;        // no pen entry
-  if (playerState.conflicts.has(i)) continue;    // visible conflict — excluded from working board anyway
   if (playerState.pen[i] !== puzzle.solution[i]) {
     return { type: 'no-technique', reason: 'error' };
   }
 }
 ```
 
-A wrong digit that does not share a unit with the same digit elsewhere is not flagged by conflict detection. If `buildWorkingBoard` were allowed to include it, the solver would operate on a corrupted board and could return misleading technique suggestions. The pre-solver check catches this case early — the player is told there is an error, and the coach does not proceed.
+Two categories of board error must be caught before the solver runs:
 
-Conflicted entries (`playerState.conflicts.has(i)`) are excluded from the check because `buildWorkingBoard` already omits them from the working board, so they cannot mislead the solver.
+**Conflicting entries** (`playerState.conflicts.size > 0`) — two cells in the same unit hold the same digit. `buildWorkingBoard` excludes conflicted cells by design, but this creates a subtler hazard: a *correct* cell that happens to share a digit with a wrong cell in the same unit is also dragged into the conflict set and excluded from the working board. The solver would then reason about a board with correct values missing, and can produce misleading advice. The simplest and most correct response is to refuse coaching entirely whenever any conflict exists. The player is told there is an error, and coaching does not proceed.
+
+**Non-conflicting wrong entries** — a wrong digit that does not share a unit with the same digit elsewhere is not flagged by conflict detection and is therefore not visible to the player as an error highlight. If `buildWorkingBoard` were allowed to include it, the solver would operate on a corrupted board and could return misleading technique suggestions. This check catches that case before the solver runs.
 
 **Post-solver reason determination** (unchanged):
 
@@ -1014,7 +1033,7 @@ A fixture board must satisfy the property that **rank N is the lowest-ranked tec
 For each rank 1–15:
 
 1. **Happy path.** Load fixture, call `analyze`, assert every field of the returned `CoachStep` matches expectations.
-2. **Working-board rule.** Construct a fixture where the player has placed a *conflict-flagged* digit. Assert the analyzer ignores it (returns the same `CoachStep` as the conflict-free version of the fixture).
+2. **Conflict blocks coaching.** Construct a fixture where the player has placed any digit in an empty cell and added that cell to `playerState.conflicts`. Assert the analyzer returns `{ type: 'no-technique', reason: 'error' }` immediately, without proceeding to the solver.
 3. **Pencil-mark independence (no pencil provided).** Call `analyze` without a `pencil` argument. Assert the returned `autoReveal.cells[*].candidates` matches what `initialCandidates(workingBoard)` produces.
 4. **Pencil intersection — technique suppressed.** For a rank-3 (Locked Candidates) fixture, clear all elimination-target bits from `playerState.pencil` for the relevant cells, then call `analyze` with `pencil`. Assert the result is either a higher-rank technique or `NoTechniqueResult` — the Locked Candidates step does not fire.
 5. **Pencil intersection — partial marks.** For the same fixture, clear only some (not all) elimination-target bits. Assert that Locked Candidates still fires (remaining candidates are still present).
@@ -1025,7 +1044,7 @@ For each rank 1–15:
 1. **No-technique — complete.** Fixture: a fully-solved board. Assert `analyze` returns `{ type: 'no-technique', reason: 'complete' }`.
 2. **No-technique — inconsistent.** Fixture: a board with empty cells where no technique applies (use a board that requires beyond-rank-15 logic). Assert `{ type: 'no-technique', reason: 'inconsistent' }`.
 2b. **No-technique — error (non-conflicting wrong digit).** Construct a minimal puzzle where `solution[i] = X` and `playerState.pen[i] = Y` (Y ≠ X, not in conflicts). Assert `{ type: 'no-technique', reason: 'error' }`.
-2c. **No-technique — error excluded when conflicted.** Same setup as 2b but add cell `i` to `playerState.conflicts`. Assert the result is `'complete'` or `'inconsistent'`, not `'error'` (the conflicted entry is skipped by the pre-solver check).
+2c. **No-technique — error when conflicted.** Same setup as 2b but add cell `i` to `playerState.conflicts`. Assert the result is `{ type: 'no-technique', reason: 'error' }` — any non-empty conflicts set blocks coaching before the solver runs.
 3. **Purity.** Call `analyze` twice on the same input. Assert deep equality of the two return values, and assert neither input was mutated (compare `Uint8Array` byte-by-byte).
 4. **Schema completeness.** For every fixture, assert every field listed in §3 is present on the returned `CoachStep` (no `undefined`s).
 5. **Long-chain elision (rank 14).** Provide a fixture whose XY-Chain length exceeds `COMPLEXITY_THRESHOLD`. Assert `complexity.acknowledged === true`, `roles.cause.length === 2`, `arrows.length === 1`, and `arrows[0].style === 'dashed-arrow'`.

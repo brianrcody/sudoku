@@ -58,13 +58,20 @@ const COMPLEXITY_THRESHOLD = 6;
  * @returns {CoachStep|NoTechniqueResult}
  */
 export function analyze(puzzle, playerState) {
-  // Detect non-conflicted pen entries that contradict the solution before
-  // running the solver — a wrong digit that doesn't share a unit with the same
-  // digit would otherwise corrupt the working board and produce misleading advice.
+  // Any visible conflict means the board is in an invalid state: refuse to coach.
+  // This also covers the case where a correct cell is dragged into the conflict
+  // set by a wrong cell carrying the same digit in the same unit, which would
+  // cause buildWorkingBoard to exclude the correct value and mislead the solver.
+  if (playerState.conflicts.size > 0) {
+    return { type: 'no-technique', reason: 'error' };
+  }
+
+  // Detect pen entries that contradict the solution but aren't visible as
+  // conflicts (no peer has the same digit) — they would corrupt the working
+  // board and produce misleading advice if not caught here.
   for (let i = 0; i < 81; i++) {
     if (puzzle.givens[i] !== 0) continue;
     if (playerState.pen[i] === 0) continue;
-    if (playerState.conflicts.has(i)) continue;
     if (playerState.pen[i] !== puzzle.solution[i]) {
       return { type: 'no-technique', reason: 'error' };
     }
