@@ -46,6 +46,28 @@ budget (1.8× headroom vs. >4× for everything else). Worth a sanity
 check on a 5+ year old laptop or throttled mobile CPU. See
 `PerformanceV1.md` §4.2.
 
+### 7. Persistent test failures (3 open)
+
+Identified 2026-05-11 after Phase 8b coach work. None are coach-related.
+
+**W5 — flaky test** (`js/tests/integration/worker.test.js`).
+Posts a background and foreground kiddie request back-to-back and asserts foreground
+resolves first. Both finish in milliseconds; ordering is a scheduling property that
+can't be proven reliably with identically-fast requests. Fix: use a slow background
+tier (e.g. hard/death-march) so the foreground genuinely wins by a margin.
+
+**GF6 — investigate: product bug or test isolation** (`js/tests/integration/game-flows.test.js`).
+Enters digit 5 in two cells in the same row, then erases one; expects 0 conflicts.
+Gets `conflicts.size === 3`. Could be: (a) a 3-way conflict because the loaded puzzle
+has digit 5 as a given elsewhere in the same unit, so erasing A still leaves B + given
+in conflict, or (b) ERASE didn't clear A from pen. Determine which before fixing.
+
+**PERF-NEW-hard — environment/budget issue** (`js/tests/integration/perf.test.js`).
+Hard puzzle generation took 1289 ms against a 1000 ms budget. Death-march on the same
+run was 471 ms, so the machine isn't slow overall — hard generation is just
+non-deterministic and this budget has tight headroom (item 5 above noted this risk).
+Fix: raise the hard budget to 2000 ms, or run 3 samples and assert on the median.
+
 ### 6. Narrow-window grid clipping (local-dev only)
 
 Below ~220 px viewport width, the bottom of the grid clips on
