@@ -50,17 +50,38 @@ const COMPLEXITY_THRESHOLD = 6;
  * Analyze the current puzzle state and return the next coachable move.
  *
  * @param {{ givens: Uint8Array, solution: Uint8Array }} puzzle
- * @param {{ pen: Uint8Array, conflicts: Set<number> }} playerState
+ * @param {{ pen: Uint8Array, conflicts: Set<number>, pencil?: Uint16Array|null }} playerState
+ *   Optional `pencil` field: when provided (and non-null), the logical candidate set is
+ *   intersected with the user's current pencil marks before the technique ladder runs.
+ *   Cells with no pencil marks (pencil[i] === 0) use the full logical set unchanged.
+ *   When omitted, null, or undefined, behavior is identical to the pre-pencil form.
  * @returns {CoachStep|NoTechniqueResult}
  */
 export function analyze(puzzle, playerState) {
   const workingBoard = buildWorkingBoard(puzzle, playerState);
-  const result = solveLogically(workingBoard.slice()); // pass a copy; solver mutates
+
+  // Compute the initial logical candidate set.
+  const candidates = initialCandidates(workingBoard);
+
+  // Intersect logical candidates with user pencil marks where available.
+  // Cells with no pencil marks (pencil[i] === 0) use the full logical set.
+  if (playerState.pencil != null) {
+    for (let i = 0; i < 81; i++) {
+      if (playerState.pen[i] !== 0) continue;          // filled cell — pencil irrelevant
+      if (playerState.pencil[i] !== 0) {
+        candidates[i] &= playerState.pencil[i];        // restrict to what user has noted
+      }
+    }
+  }
+
+  // Run the technique ladder against the (possibly intersected) candidates.
+  // solveLogically accepts pre-computed candidates so techniques that require
+  // candidates the user has already cleared will not fire.
+  const result = solveLogically(workingBoard.slice(), { candidates: candidates.slice() });
   if (result.trace.length === 0) {
     return buildNullStep(workingBoard);
   }
   const step = result.trace[0];
-  const candidates = initialCandidates(workingBoard);
   const techniqueName = canonicalise(step.technique);
   const mapper = MAPPERS[techniqueName];
   const partial = mapper(step, workingBoard, candidates);

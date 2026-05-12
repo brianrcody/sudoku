@@ -106,16 +106,24 @@ recap), filling a non-coached cell (silent dismiss), or any other session-ending
 the board's pencil mark state reverts to exactly what it was before the coach pressed any
 candidates into view.
 
-Exception: if the user manually adds or removes pencil marks during the coach session
-(by switching to Pencil mode), those manual changes persist normally. Only the marks that
-the coach auto-revealed are reverted.
+Exception — manual edits: if the user manually adds or removes pencil marks during the
+coach session (by switching to Pencil mode), those manual changes persist normally. Only
+the marks that the coach auto-revealed are reverted.
+
+Exception — elimination completion: when an elimination-technique session ends via the
+completion-detection path (the user cleared all indicated candidates from their pencil
+marks; see §9.1), any remaining auto-revealed pencil marks are **adopted** rather than
+reverted. They become the user's marks permanently. The rationale: the user engaged with
+the technique and completed the indicated action, so the coach-revealed context is useful
+for their ongoing work. For all other session-end reasons the revert behavior is unchanged.
 
 **Rationale:** Auto-revealed candidates are a coaching aid, not a permanent board edit.
 Leaving them behind would silently modify the user's pencil mark state without their
 consent, which is particularly disruptive if the user has been carefully maintaining their
-own candidate sets. Reverting preserves the user's prior work. The exception for manual
-edits during the session respects user agency: anything the user explicitly types is
-theirs to keep.
+own candidate sets. Reverting preserves the user's prior work. The two exceptions respect
+user agency: anything the user explicitly types is theirs to keep, and a user who
+successfully completes an elimination step has implicitly accepted the coach's candidate
+context.
 
 ### 2.4 Explanation UI Surface (rspec Q4)
 
@@ -144,13 +152,14 @@ dismissal gesture from the user, keeping the interaction lightweight.
 **Resolution:** A brief toast notification appearing below the grid (at the explanation
 panel's position) for 2.5 seconds, then auto-dismissing. There is no close button.
 
-The recap's content depends on the technique type and the correctness of the user's fill;
-see §9 for the full two-variant definition (normal and error). In all cases the recap
+The recap's content depends on the technique type and the circumstances of session end;
+see §9 for the full variant definitions (normal, error, and elim). In all cases the recap
 auto-dismisses after 2.5 seconds, after which the coach session is fully concluded,
-highlights are gone, and auto-revealed candidates have been reverted (§2.3).
+highlights are gone, and auto-revealed candidates have been reverted or adopted per §2.3.
 
 For elimination-technique sessions, filling a coached cell with a digit ends the session
-silently with no recap — see §9.1.
+silently with no recap. Successful candidate elimination (PENCIL_TOGGLE) triggers the
+`elim` recap variant — see §9.1 and §9.2.
 
 **Rationale:** A toast in a familiar location (where the panel just was) is the least
 disruptive option — it doesn't interrupt the grid, doesn't require a tap to dismiss, and
@@ -193,7 +202,8 @@ It is not shown before a puzzle is loaded (same rule as the Hint button).
 See §2.6 for the three-state model. The Coaching state persists from the moment the
 coach highlights are drawn until:
 
-- The user fills the coached cell and the recap concludes, or
+- The user fills the coached cell (placement technique) and the recap concludes, or
+- Elimination completion is detected (all indicated candidates cleared) and the elim recap concludes, or
 - The user fills or erases a non-coached cell (silent dismiss), or
 - The user presses Coach again (session resets).
 
@@ -221,7 +231,13 @@ R28). The Functional Designer makes no color recommendation.
 When the user presses the Coach button:
 
 1. The app runs the logical solver on the current board state, identifying the lowest-ranked
-   technique in the technique ladder that can make progress (R6, R7).
+   technique in the technique ladder that can make progress (R6, R7). The solver is
+   pencil-aware: for each empty cell where the user has entered pencil marks, the solver
+   intersects its logical candidate set with the user's marks. For empty cells with no
+   pencil marks the full logical candidate set is used (the user simply hasn't noted
+   anything yet). This means if the user has already applied an elimination technique (e.g.,
+   cleared all targeted candidates in pencil), the solver will not return that technique —
+   it will advance to the next applicable technique instead.
 2. If a technique is found:
    a. All cells relevant to that technique are highlighted simultaneously in the coach
       accent color (R8). The exact set of highlighted cells varies by technique (see §8).
@@ -315,7 +331,9 @@ the relevant candidates are not already showing.
 When auto-reveal runs:
 
 1. The app computes the candidate set for each coached cell based on elimination logic
-   (digits not yet placed in the same row, column, or box).
+   (digits not yet placed in the same row, column, or box). This computation uses the
+   same pencil-aware logic described in §4.1: where the user has pencil marks, only
+   candidates that appear in both the logical set and the user's marks are considered.
 2. For each coached cell (and any related cells the explanation refers to), the computed
    candidates are surfaced as visible pencil marks if they are not already showing.
 3. Auto-revealed marks are rendered in the coach accent color to distinguish them
@@ -786,18 +804,31 @@ depends on the technique type (§8) and the correctness of the fill.
   (§9.2, error variant). The application already has the solution at fill time (conflict
   detection uses it per §11.4), so no new capability is required.
 
-**Elimination techniques (ranks 3–15):**
+**Elimination techniques (ranks 3–15) — digit fill:**
 
 If the user fills a coached cell with any digit while an elimination-technique coaching
 session is active, the coach session ends silently — no recap of any kind appears. Filling
 a digit was not the coached move; the user is playing past the coaching suggestion. The
 conflict indicator handles correctness feedback as normal (§11.4). The session ends as if
-a non-coached cell had been filled (§2.2).
+a non-coached cell had been filled (§2.2). Auto-revealed candidates revert (standard path
+per §2.3).
 
-*Note for future consideration: a recap triggered by a successful candidate elimination
-(the actual coached move for elimination techniques) is not specified here. If that
-learning reinforcement is desired in a future revision, it should be defined as a new
-§9.x with its own trigger, content, and placement rules.*
+**Elimination techniques (ranks 3–15) — completion detection:**
+
+During an active elimination-technique session, every `PENCIL_TOGGLE` action triggers a
+completion check. The completion condition is: all digits in `step.digits` have been
+cleared from all `step.roles.elimTarget` cells in the user's current pencil state.
+
+When the completion condition is met:
+
+1. The session transitions to the `elim` recap (§9.2, elim variant).
+2. The recap auto-dismisses after 2.5 seconds.
+3. On dismissal, auto-revealed pencil marks are adopted (not reverted) per the elimination
+   completion exception in §2.3. All coach highlights clear and the button returns to Idle.
+
+The completion check fires only on PENCIL_TOGGLE events, not on pen digit entry. If the
+user clears the indicated candidates across multiple `PENCIL_TOGGLE` actions the check
+passes on the action that removes the last indicated candidate.
 
 ### 9.2 Content
 
@@ -821,6 +852,20 @@ The recap contains:
 The error variant uses the same placement (below the grid), the same auto-dismiss duration
 (2.5 seconds), and the same no-close-button behavior as the normal variant.
 
+**Elim variant (elimination technique, completion detection):**
+
+The recap contains:
+
+1. **Completion line:** "Candidates eliminated."
+2. **Detail line:** One sentence describing the specific elimination, referencing the
+   technique, unit, digit, and cell count. Examples:
+   - "Locked Candidates in row 4: digit 7 removed from 2 cells."
+   - "Naked Pair in the top-right box: digits 3 and 8 removed from 3 cells."
+   - "X-Wing on digit 5: removed from 4 cells across columns 2 and 6."
+
+The elim variant uses the same placement (below the grid), the same auto-dismiss duration
+(2.5 seconds), and the same no-close-button behavior as the other variants.
+
 ### 9.3 Placement and Dismissal
 
 The recap appears in the same location as the explanation panel (below the grid). It
@@ -833,7 +878,8 @@ with the grid normally during the recap.
 After the recap dismisses:
 - The coach session is fully concluded.
 - The Coach button returns to the Idle state.
-- Auto-revealed candidates have been reverted (§2.3, §6.4).
+- Auto-revealed candidates have been reverted or adopted per §2.3 (reverted for normal/error
+  variants; adopted for the elim variant).
 - All coach highlights are gone.
 - The user may press Coach again for a fresh coaching session.
 
@@ -852,10 +898,12 @@ The following table summarizes all coach session state transitions:
 | Coaching | User fills coached cell (placement technique, correct digit) | Recap | Panel closes; normal recap opens; highlights clear |
 | Coaching | User fills coached cell (placement technique, incorrect digit) | Recap | Panel closes; error-variant recap opens; highlights clear |
 | Coaching | User fills coached cell (elimination technique, any digit) | Idle | Panel closes; session ends silently; auto-revealed candidates revert; no recap |
+| Coaching | PENCIL_TOGGLE; completion condition met (all `step.digits` cleared from all `step.roles.elimTarget` cells) | Recap (elim) | Panel closes; elim recap opens; highlights clear |
 | Coaching | Hint fills coached cell | Idle | All highlights clear; panel closes; auto-revealed candidates revert; no recap |
 | Coaching | User fills or erases non-coached cell | Idle | All highlights clear; panel closes; auto-revealed candidates revert |
 | Coaching | Coach button pressed again | Coaching | Fresh analysis; previous session state fully reset before new highlights drawn |
-| Recap | 2.5 seconds elapsed | Idle | Recap dismisses; auto-revealed candidates revert |
+| Recap (normal/error) | 2.5 seconds elapsed | Idle | Recap dismisses; auto-revealed candidates revert |
+| Recap (elim) | 2.5 seconds elapsed | Idle | Recap dismisses; auto-revealed candidates adopted (§2.3) |
 | Recap | User fills a cell during recap | Recap | Normal cell entry; recap continues its countdown |
 
 ---
@@ -960,7 +1008,8 @@ Coach events are announced via the existing screen reader live region (fspec-001
 | No applicable technique — complete | "Coach: The puzzle is already solved." |
 | No applicable technique — inconsistent | "Coach: The board has a contradiction. Use Erase to fix it." |
 | User focuses coached cell | "Coached cell. [Technique Name]. [Supporting text]." |
-| Post-fill recap | "You used [Technique Name]. [Move description]." |
+| Post-fill recap (normal variant) | "You used [Technique Name]. [Move description]." |
+| Post-fill recap (elim variant) | "Candidates eliminated. [Detail line from §9.2 elim variant]." |
 | Coach session dismissed (silent) | No announcement — this is a consequence of a cell fill, which is already announced. |
 
 ### 12.6 Keyboard Navigation of Coached Cells

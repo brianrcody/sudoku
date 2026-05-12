@@ -17,10 +17,18 @@
   gap: 6px;
 }
 
-.numpad-bottom {
+.numpad-bottom-row1 {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
+}
+
+.numpad-bottom-row2 {
+  width: 100%;
+}
+
+.numpad-bottom-row2 .btn-check {
+  width: 100%;
 }
 
 /* ── Base button ──────────────────────────────────────────────────────── */
@@ -187,9 +195,120 @@ body.theme-terminal .hint-badge {
   background: var(--text-muted);
 }
 
-/* ── Check button ─────────────────────────────────────────────────────── */
-.btn-check {
-  grid-column: span 2;
+/* ── Coach button ─────────────────────────────────────────────────────── */
+.btn-coach {
+  /* No additional rules — inherits .btn appearance in idle state */
+}
+
+.btn-coach.coaching {
+  background: var(--coach-light);
+  border-color: var(--coach);
+  color: var(--coach);
+  font-weight: 600;
+  box-shadow: 0 0 0 2px var(--coach-light), 0 0 0 3px var(--coach);
+  animation: coach-pulse 2s ease-in-out infinite;
+}
+
+@keyframes coach-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--coach-light), 0 0 0 3px var(--coach); }
+  50%       { box-shadow: 0 0 0 4px var(--coach-light), 0 0 0 5px var(--coach-mid); }
+}
+
+/* ── Explanation panel ────────────────────────────────────────────────── */
+.coach-panel-wrap {
+  overflow: hidden;
+  max-height: 0;
+  transition: none;
+}
+
+.coach-panel-wrap.open {
+  max-height: 220px;
+  transition: max-height 0.15s ease-out;
+}
+
+.coach-panel {
+  margin-top: 10px;
+  border: 1.5px solid var(--coach);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 14px 16px;
+  width: 414px;
+}
+
+body.theme-terminal .coach-panel {
+  border-radius: 0;
+}
+
+.coach-panel-technique {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--coach);
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+}
+
+.coach-panel-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+.coach-panel-text em {
+  color: var(--coach);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.coach-panel-text.coach-panel-note {
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
+/* ── Recap / error toast ──────────────────────────────────────────────── */
+.coach-recap {
+  display: none;
+  margin-top: 10px;
+  width: 414px;
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--coach);
+  background: var(--surface);
+  animation: fadein 0.15s ease;
+}
+
+.coach-recap.visible {
+  display: block;
+}
+
+.coach-recap.error {
+  border-left-color: var(--conflict);
+}
+
+.coach-recap.error .coach-recap-line1 {
+  color: var(--conflict);
+}
+
+.coach-recap-line1 {
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.coach-recap-line2 {
+  color: var(--text-muted);
+}
+
+@keyframes fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+body.theme-terminal .coach-recap {
+  border-radius: 0;
 }
 
 /* ── Action row ───────────────────────────────────────────────────────── */

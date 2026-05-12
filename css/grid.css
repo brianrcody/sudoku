@@ -265,6 +265,81 @@ body.theme-mountain .pencil-mark {
   visibility: hidden;
 }
 
+/* ── Coach-revealed pencil marks ─────────────────────────────────────── */
+.pencil-mark.coach-reveal {
+  color: var(--coach);
+  font-weight: 700;
+}
+
+/* ── Coached cell states ──────────────────────────────────────────────── */
+.cell.coached-cause {
+  background: var(--coach-light) !important;
+  outline: 2px solid var(--coach-mid);
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+.cell.coached-target {
+  background: var(--coach-light) !important;
+  outline: 2px solid var(--coach);
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+.cell.coached-target.selected {
+  outline: 2.5px solid var(--coach);
+  outline-offset: -2px;
+}
+
+.cell.coached-elim-target {
+  outline: 2px dashed var(--coach);
+  outline-offset: -2px;
+  z-index: 2;
+  /* No background override */
+}
+
+.cell.coached-unit-member {
+  background: var(--coach-light) !important;
+  /* No outline override */
+}
+
+.cell.coached-sc-a {
+  background: var(--coach) !important;
+  color: #ffffff;
+  outline: 2px solid var(--coach);
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+.cell.coached-sc-b {
+  background: var(--coach-light) !important;
+  outline: 2.5px dashed var(--coach);
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+/* Focus ring overrides — coached cells use the coach accent color */
+.cell.coached-target:focus-visible,
+.cell.coached-cause:focus-visible {
+  outline-color: var(--coach);
+}
+
+/* ── Coach SVG overlay ────────────────────────────────────────────────── */
+#coach-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 414px;
+  height: 414px;
+  pointer-events: none;
+  z-index: 5;
+  display: none;
+}
+
+#coach-overlay.visible {
+  display: block;
+}
+
 /* ── Win banner ───────────────────────────────────────────────────────── */
 .win-banner {
   display: none;

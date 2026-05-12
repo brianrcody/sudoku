@@ -10,6 +10,19 @@ import { HINT_LIMITS, CHECK_VISIBLE, CORRECTNESS_MODE, CHECK_HIGHLIGHT_MS } from
 import { rowOf, colOf } from '../util/grid.js';
 
 /**
+ * @typedef {Object} CoachSession
+ * @property {object} step - The CoachStep returned by analyze(); never mutated.
+ * @property {Set<number>} coachedCells - Union of all role-cell indices (derived once).
+ * @property {number|null} focusedCoachedCell - Currently selected coached cell, or null.
+ * @property {Uint16Array} pencilSnapshot - Copy of pencil[] at COACH_START time.
+ * @property {Uint16Array} coachRevealedBits - Bits the coach auto-reveal added per cell.
+ * @property {Map<number, number>|null} eliminationTargets - For elimination techniques:
+ *   maps each elimTarget cell index to the bitmask of digits that must be cleared from
+ *   pencil. null for placement techniques (ranks 1–2). Never mutated after COACH_START.
+ * @property {'normal'|'error'|'elim'|null} recap - Active recap variant; null during highlights.
+ */
+
+/**
  * @typedef {Object} GameState
  * @property {object|null} puzzle
  * @property {Uint8Array} pen
@@ -25,7 +38,28 @@ import { rowOf, colOf } from '../util/grid.js';
  * @property {boolean} winHandled
  * @property {boolean} generating
  * @property {string} generatingMessage
+ * @property {CoachSession|null} coachSession
  */
+
+/**
+ * Derive the set of coached cell indices from a CoachStep's roles.
+ *
+ * This is the canonical union used for highlight tracking and panel logic. It
+ * is computed once on COACH_START and never recomputed during the session.
+ *
+ * @param {object} step - A CoachStep object.
+ * @returns {Set<number>}
+ */
+export function deriveCoachedCells(step) {
+  const set = new Set();
+  if (step.roles.target !== null) set.add(step.roles.target);
+  for (const c of step.roles.cause)       set.add(c);
+  for (const c of step.roles.elimTarget)  set.add(c);
+  for (const c of step.roles.unitMember)  set.add(c);
+  for (const c of step.roles.scA)         set.add(c);
+  for (const c of step.roles.scB)         set.add(c);
+  return set;
+}
 
 /**
  * @param {{ stats: object, hintProvider: object }} deps
@@ -51,6 +85,7 @@ export function createGameState({ stats, hintProvider }) {
     generating: false,
     generatingMessage: '',
     completionMessage: '',
+    coachSession: null,
   };
 
   // Timer handle for auto-clearing incorrect highlights.
@@ -90,6 +125,17 @@ export function createGameState({ stats, hintProvider }) {
         const peer = (boxRow + dr) * 9 + (boxCol + dc);
         if (peer !== cellIndex) state.pencil[peer] &= ~bitMask;
       }
+    }
+  }
+
+  /** Reverts coach-auto-revealed pencil bits while preserving user changes. */
+  function _revertPencil(session) {
+    for (let i = 0; i < 81; i++) {
+      const revealed = session.coachRevealedBits[i];
+      if (revealed === 0) continue;
+      const snapshot = session.pencilSnapshot[i];
+      const current = state.pencil[i];
+      state.pencil[i] = (snapshot & ~revealed) | (current & ~revealed);
     }
   }
 
@@ -160,10 +206,12 @@ export function createGameState({ stats, hintProvider }) {
         state.generating = false;
         state.generatingMessage = '';
         state.completionMessage = '';
+        state.coachSession = null;
         if (clearIncorrectTimer !== null) { clearTimeout(clearIncorrectTimer); clearIncorrectTimer = null; }
         _emit(action, 'puzzle', 'pen', 'pencil', 'selected', 'activeMode', 'conflicts',
               'incorrect', 'incorrectShownUntil', 'hintsRemaining', 'attemptRecorded',
-              'won', 'winHandled', 'generating', 'generatingMessage', 'completionMessage');
+              'won', 'winHandled', 'generating', 'generatingMessage', 'completionMessage',
+              'coachSession');
         break;
       }
 
@@ -237,6 +285,27 @@ export function createGameState({ stats, hintProvider }) {
       case 'PEN_ENTER': {
         if (state.selected === null) break;
         _applyPenEnter(state.selected, action.digit, action.fromHint ?? false);
+
+        // Coach block — runs before _emit so coachSession changes emit separately.
+        if (state.coachSession !== null && !(action.fromHint ?? false)) {
+          const session = state.coachSession;
+          const filledCell = state.selected;
+          const isCoached = session.coachedCells.has(filledCell);
+          const techType = session.step.type;
+
+          if (!isCoached) {
+            dispatch({ type: 'COACH_END', reason: 'fill-non-coached' });
+          } else if (techType === 'elimination') {
+            dispatch({ type: 'COACH_END', reason: 'fill-coached-elim' });
+          } else {
+            const correct = state.puzzle.solution[filledCell] === action.digit;
+            dispatch({
+              type: 'COACH_FILL_RECAP',
+              variant: correct ? 'normal' : 'error',
+            });
+          }
+        }
+
         _emit(action, 'pen', 'pencil', 'conflicts', 'incorrect', 'hintsRemaining',
               'attemptRecorded', 'won', 'winHandled');
         break;
@@ -255,6 +324,21 @@ export function createGameState({ stats, hintProvider }) {
         } else {
           state.pencil[state.selected] |= bit;
         }
+
+        // Elimination-completion check: if all elimination targets have had their
+        // indicated candidates cleared from pencil, trigger the elim recap.
+        if (state.coachSession !== null
+            && state.coachSession.eliminationTargets !== null
+            && state.coachSession.recap === null) {
+          const targets = state.coachSession.eliminationTargets;
+          const allCleared = [...targets.entries()].every(
+            ([cellIndex, bits]) => (state.pencil[cellIndex] & bits) === 0
+          );
+          if (allCleared) {
+            dispatch({ type: 'COACH_FILL_RECAP', variant: 'elim' });
+          }
+        }
+
         _emit(action, 'pencil');
         break;
       }
@@ -275,6 +359,10 @@ export function createGameState({ stats, hintProvider }) {
         } else if (state.pencil[cellIdx] !== 0) {
           state.pencil[cellIdx] = 0;
           _emit(action, 'pencil');
+        }
+
+        if (state.coachSession !== null) {
+          dispatch({ type: 'COACH_END', reason: 'erase' });
         }
         break;
       }
@@ -314,6 +402,10 @@ export function createGameState({ stats, hintProvider }) {
         // Realtime correctness.
         if (CORRECTNESS_MODE[state.puzzle.difficulty] === 'realtime') {
           state.incorrect.delete(hint.cellIndex);
+        }
+
+        if (state.coachSession !== null) {
+          dispatch({ type: 'COACH_END', reason: 'hint' });
         }
 
         _emit(action, 'pen', 'pencil', 'conflicts', 'incorrect', 'hintsRemaining');
@@ -378,6 +470,11 @@ export function createGameState({ stats, hintProvider }) {
             _emit(action, 'completionMessage', 'incorrectShownUntil');
           }
         }
+
+        // Win takes precedence over any active coach session.
+        if (state.won && state.winHandled && state.coachSession !== null) {
+          dispatch({ type: 'COACH_END', reason: 'won' });
+        }
         break;
       }
 
@@ -409,10 +506,12 @@ export function createGameState({ stats, hintProvider }) {
         state.generating = false;
         state.generatingMessage = '';
         state.completionMessage = '';
+        state.coachSession = null;
         if (clearIncorrectTimer !== null) { clearTimeout(clearIncorrectTimer); clearIncorrectTimer = null; }
         _emit(action, 'puzzle', 'pen', 'pencil', 'selected', 'activeMode', 'conflicts',
               'incorrect', 'incorrectShownUntil', 'hintsRemaining', 'attemptRecorded',
-              'won', 'winHandled', 'generating', 'generatingMessage', 'completionMessage');
+              'won', 'winHandled', 'generating', 'generatingMessage', 'completionMessage',
+              'coachSession');
         break;
       }
 
@@ -433,15 +532,19 @@ export function createGameState({ stats, hintProvider }) {
         state.winHandled = false;
         // attemptRecorded is intentionally not reset (fspec §10.3).
         state.completionMessage = '';
+        state.coachSession = null;
         if (clearIncorrectTimer !== null) { clearTimeout(clearIncorrectTimer); clearIncorrectTimer = null; }
         _emit(action, 'pen', 'pencil', 'selected', 'activeMode', 'conflicts',
               'incorrect', 'incorrectShownUntil', 'hintsRemaining', 'won', 'winHandled',
-              'completionMessage');
+              'completionMessage', 'coachSession');
         break;
       }
 
       case 'CHANGE_DIFFICULTY': {
         const { difficulty } = action;
+        if (state.coachSession !== null) {
+          dispatch({ type: 'COACH_END', reason: 'puzzle-replaced' });
+        }
         if (state.puzzle) {
           state.puzzle = { ...state.puzzle, difficulty };
         }
@@ -464,6 +567,130 @@ export function createGameState({ stats, hintProvider }) {
         state.generating = action.flag;
         state.generatingMessage = action.message ?? '';
         _emit(action, 'generating', 'generatingMessage');
+        break;
+      }
+
+      // ── Coach actions ────────────────────────────────────────────────────
+
+      case 'COACH_START': {
+        if (state.puzzle === null) break;
+        if (state.won === true) break;
+
+        const result = action.result;
+
+        if (result.type === 'no-technique') {
+          // Informational emit only; coachSession stays null.
+          _emit(action, 'coachSession');
+          break;
+        }
+
+        // Defensive: if a previous session is active, revert it first.
+        if (state.coachSession !== null) {
+          _revertPencil(state.coachSession);
+          state.coachSession = null;
+        }
+
+        // 1. Snapshot pencil before auto-reveal.
+        const snapshot = new Uint16Array(state.pencil);
+
+        // 2. Apply auto-reveal.
+        const coachRevealedBits = new Uint16Array(81);
+        if (result.autoReveal.required) {
+          for (const { cellIndex, candidates } of result.autoReveal.cells) {
+            const before = state.pencil[cellIndex];
+            const after = before | candidates;
+            coachRevealedBits[cellIndex] = after & ~before;
+            state.pencil[cellIndex] = after;
+          }
+        }
+
+        // 3. Compute eliminationTargets for elimination techniques.
+        const eliminationTargets = (result.type === 'elimination')
+          ? (() => {
+              const m = new Map();
+              const digitBits = result.digits.reduce((b, d) => b | (1 << (d - 1)), 0);
+              for (const c of result.roles.elimTarget) m.set(c, digitBits);
+              return m;
+            })()
+          : null;
+
+        // 4. Build the session slice.
+        const coachedCells = deriveCoachedCells(result);
+        state.coachSession = {
+          step: result,
+          coachedCells,
+          focusedCoachedCell:
+            state.selected !== null && coachedCells.has(state.selected)
+              ? state.selected
+              : null,
+          pencilSnapshot: snapshot,
+          coachRevealedBits,
+          eliminationTargets,
+          recap: null,
+        };
+
+        _emit(action, 'coachSession', 'pencil');
+        break;
+      }
+
+      case 'COACH_END': {
+        if (state.coachSession === null) break;
+
+        _revertPencil(state.coachSession);
+        state.coachSession = null;
+        _emit(action, 'coachSession', 'pencil');
+        break;
+      }
+
+      case 'COACH_FILL_RECAP': {
+        if (state.coachSession === null) break;
+        if (state.coachSession.recap !== null) break;
+
+        if (action.variant === 'elim') {
+          // Elimination recap: adopt coach-revealed marks (no revert).
+          // Zeroing coachRevealedBits makes subsequent COACH_END revert a no-op.
+          state.coachSession.coachRevealedBits = new Uint16Array(81);
+          state.coachSession.coachedCells = new Set();
+          state.coachSession.recap = 'elim';
+          state.coachSession.focusedCoachedCell = null;
+          _emit(action, 'coachSession');
+        } else {
+          // Placement recap (normal/error): revert pencil marks.
+          _revertPencil(state.coachSession);
+
+          // Clear coachedCells so grid.js removes all coached-* classes.
+          state.coachSession.coachedCells = new Set();
+          state.coachSession.recap = action.variant;
+          state.coachSession.focusedCoachedCell = null;
+          state.coachSession.coachRevealedBits = new Uint16Array(81);
+
+          _emit(action, 'coachSession', 'pencil');
+        }
+        break;
+      }
+
+      case 'COACH_FOCUS_COACHED_CELL': {
+        if (state.coachSession === null) break;
+        if (state.coachSession.recap !== null) break;
+        if (!state.coachSession.coachedCells.has(action.index)) break;
+
+        state.coachSession.focusedCoachedCell = action.index;
+        _emit(action, 'coachSession');
+        break;
+      }
+
+      case 'COACH_FOCUS_OFF': {
+        if (state.coachSession === null) break;
+        if (state.coachSession.focusedCoachedCell === null) break;
+
+        state.coachSession.focusedCoachedCell = null;
+        _emit(action, 'coachSession');
+        break;
+      }
+
+      case 'COACH_NO_TECHNIQUE': {
+        // Informational only; coachSession stays null.
+        _emit(action, 'coachSession');
         break;
       }
     }

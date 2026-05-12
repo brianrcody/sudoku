@@ -1,3 +1,10 @@
+/* ── Coach accent colors (theme-invariant) ────────────────────────────── */
+:root {
+  --coach: #7c3aed;
+  --coach-light: #ede9fe;
+  --coach-mid: #c4b5fd;
+}
+
 /* ── Default / Minimalist theme values ───────────────────────────────── */
 :root,
 body.theme-minimalist {

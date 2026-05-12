@@ -10,6 +10,7 @@ import { iterate } from '../util/bitset.js';
 
 const RELEVANT_KEYS = new Set([
   'puzzle', 'pen', 'pencil', 'selected', 'conflicts', 'incorrect', 'won',
+  'coachSession',
 ]);
 
 let _root = null;
@@ -89,7 +90,7 @@ function _buildGrid(state) {
 }
 
 function _updateCell(el, i, state) {
-  const { puzzle, pen, pencil, selected, conflicts, incorrect, won } = state;
+  const { puzzle, pen, pencil, selected, conflicts, incorrect, won, coachSession } = state;
 
   const isGiven = puzzle && puzzle.givens[i] !== 0;
   const penVal = pen[i];
@@ -115,25 +116,54 @@ function _updateCell(el, i, state) {
   if (won && !isGiven) el.style.pointerEvents = 'none';
   if (!won) el.style.pointerEvents = '';
 
+  // Coached cell classes and aria-describedby.
+  if (coachSession && coachSession.recap === null) {
+    const roles = coachSession.step.roles;
+    if (roles.target === i)              el.classList.add('coached-target');
+    if (roles.cause.includes(i))         el.classList.add('coached-cause');
+    if (roles.elimTarget.includes(i))    el.classList.add('coached-elim-target');
+    if (roles.unitMember.includes(i))    el.classList.add('coached-unit-member');
+    if (roles.scA.includes(i))           el.classList.add('coached-sc-a');
+    if (roles.scB.includes(i))           el.classList.add('coached-sc-b');
+  }
+
+  const isCoached = coachSession?.coachedCells.has(i) === true;
+  if (isCoached) {
+    el.setAttribute('aria-describedby', 'sr-coached-desc');
+  } else {
+    el.removeAttribute('aria-describedby');
+  }
+
   el.setAttribute('aria-label', _cellLabel(i, state));
 
   // Content.
   if (penVal !== 0) {
     el.textContent = penVal;
   } else if (pencil[i] !== 0) {
-    _renderPencilMarks(el, pencil[i]);
+    _renderPencilMarks(el, i, state);
   } else {
     el.textContent = '';
   }
 }
 
-function _renderPencilMarks(el, bitset) {
+function _renderPencilMarks(el, cellIndex, state) {
+  const bitset = state.pencil[cellIndex];
   const marks = new Set(iterate(bitset));
+  const revealedBits = state.coachSession?.coachRevealedBits[cellIndex] ?? 0;
+
   const frag = document.createElement('div');
   frag.className = 'pencil-marks';
   for (let d = 1; d <= 9; d++) {
     const span = document.createElement('span');
-    span.className = marks.has(d) ? 'pencil-mark' : 'pencil-mark empty';
+    const isSet = marks.has(d);
+    const isRevealed = isSet && (revealedBits & (1 << (d - 1))) !== 0;
+    if (!isSet) {
+      span.className = 'pencil-mark empty';
+    } else if (isRevealed) {
+      span.className = 'pencil-mark coach-reveal';
+    } else {
+      span.className = 'pencil-mark';
+    }
     span.textContent = d;
     frag.appendChild(span);
   }
@@ -144,7 +174,7 @@ function _renderPencilMarks(el, bitset) {
 function _cellLabel(i, state) {
   const r = rowOf(i) + 1;
   const c = colOf(i) + 1;
-  const { puzzle, pen, pencil, selected, conflicts, incorrect } = state;
+  const { puzzle, pen, pencil, selected, conflicts, incorrect, coachSession } = state;
   const isGiven = puzzle && puzzle.givens[i] !== 0;
   const penVal = pen[i];
 
@@ -156,8 +186,18 @@ function _cellLabel(i, state) {
     if (conflicts.has(i)) label += ' — conflict';
     else if (incorrect.has(i)) label += ' — incorrect';
   } else if (pencil[i] !== 0) {
-    const marks = iterate(pencil[i]);
-    label += `: pencil marks ${marks.join(', ')}`;
+    const revealed = coachSession?.coachRevealedBits[i] ?? 0;
+    const userBits = pencil[i] & ~revealed;
+    const coachBits = pencil[i] & revealed;
+    const userMarks = iterate(userBits);
+    const coachMarks = iterate(coachBits);
+    if (coachMarks.length > 0 && userMarks.length > 0) {
+      label += `: Coach candidates: ${coachMarks.join(', ')}. Your marks: ${userMarks.join(', ')}.`;
+    } else if (coachMarks.length > 0) {
+      label += `: Coach candidates: ${coachMarks.join(', ')}.`;
+    } else {
+      label += `: pencil marks ${userMarks.join(', ')}`;
+    }
   } else {
     label += ': empty';
   }

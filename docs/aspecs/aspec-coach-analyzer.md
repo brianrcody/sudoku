@@ -1,9 +1,12 @@
 
 # Architectural Spec — Coach Mode Analyzer
 **ID:** aspec-coach-analyzer
-**Status:** Final
+**Status:** Final (amended 2026-05-04)
 **Date:** 2026-05-04
 **Author:** Architect
+
+> **Amendment 2026-05-04:** Added optional `pencil?` parameter to `analyze()` (§4), candidate intersection step in the execution algorithm (§4.2), and a clarifying note on `autoReveal.cells` filtering (§8).
+
 **Loaded by:** Implementor (Phase 8 — Coach Mode), Reviewer, QE Test Writer, QE Test Runner. Also load when implementing the Coach UI module (`aspec-coach-ui.md`) — that spec consumes the `CoachStep` schema sealed here verbatim.
 
 > **Also load:** `aspec-overview.md` — for the master directory tree and cross-cutting conventions.
@@ -84,7 +87,7 @@ This spec defines exactly one thing: the data type that flows from analyzer to U
 `js/coach/analyzer.js` exports exactly one named function:
 
 ```js
-export function analyze(puzzle, playerState) → CoachStep | null
+export function analyze(puzzle, playerState) → CoachStep | NoTechniqueResult
 ```
 
 No default export. No other named exports. No constants exported (any module-private constants stay private).
@@ -235,23 +238,35 @@ export function analyze(
   playerState: {
     pen: Uint8Array(81),
     conflicts: Set<int>,
+    pencil?: Uint16Array(81) | null,   // optional — see §4.1 and §4.2
   }
-) → CoachStep | null
+) → CoachStep | NoTechniqueResult
 ```
 
 ### 4.1 Inputs
 
-The two-argument shape mirrors `hintProvider.nextHint` deliberately. The analyzer does not need or want the full `GameState`; it only needs the puzzle identity and the two pieces of player state required to construct a working board (pen entries and conflict flags). The UI spec will call `analyze(state.puzzle, { pen: state.pen, conflicts: state.conflicts })` from its coach-start path.
+The two-argument shape mirrors `hintProvider.nextHint` deliberately. The analyzer does not need or want the full `GameState`; it only needs the puzzle identity and the pieces of player state required to construct a working board and, optionally, to restrict candidates to what the user currently has marked.
 
-The analyzer ignores `playerState.pencil` entirely. Pencil marks are user-visible UI and are not used in any logical analysis. Candidates are recomputed fresh for every analyzer run, identical to the hint-provider rule (`aspec-hints.md` §1).
+`playerState.pencil` is optional. When provided (and non-null), it is a `Uint16Array(81)` using the same 9-bit encoding as `GameState.pencil` (bit 1 = digit 1 … bit 9 = digit 9). When absent, `null`, or `undefined`, the analyzer behaves identically to the pre-amendment form — candidates are computed purely from the working board.
+
+The UI spec calls `analyze(state.puzzle, { pen: state.pen, conflicts: state.conflicts, pencil: state.pencil })` from its coach-start path (§6.5 and §3.1 in `aspec-coach-ui.md`).
 
 ### 4.2 Execution Order
 
 1. Build the working board (§5).
-2. Call `solveLogically(workingBoard)` — no `techniqueLimit`, full ladder.
-3. If the resulting trace is empty, return the null/no-technique result (§9).
-4. Otherwise, take the first `Step` from `trace` and pass it through the per-technique mapper (§6, §7) to produce a `CoachStep`.
-5. Return the `CoachStep`.
+2. Call `solveLogically(workingBoard)` — no `techniqueLimit`, full ladder. This produces a `candidates` array representing the full logical candidate set for each cell.
+3. **Candidate intersection (pencil-awareness):** If `playerState.pencil` is provided and non-null, apply the following for each empty cell `i` (where `pen[i] === 0`):
+   - If `playerState.pencil[i] !== 0`: restrict `candidates[i]` to `candidates[i] & playerState.pencil[i]`. This intersects the logical candidate set with the user's current marks, so candidates the user has already cleared are invisible to the technique ladder.
+   - If `playerState.pencil[i] === 0`: leave `candidates[i]` unchanged. The user has no pencil marks for this cell; do not restrict.
+   - For filled cells (`pen[i] !== 0`): pencil is irrelevant; skip.
+4. If the solver trace is empty (and no candidate intersection changed the picture), return the null/no-technique result (§9).
+5. Re-run technique selection against the (possibly intersected) `candidates` array, or equivalently: if the initial `solveLogically` trace is empty after the intersection would have had effect, return `NoTechniqueResult`. In practice, the intersection is applied before the technique ladder runs the `MAPPERS` dispatch — the intersection narrows what candidates are visible, so techniques that required an already-user-cleared candidate will not fire.
+6. Otherwise, take the first `Step` from `trace` and pass it through the per-technique mapper (§6, §7) to produce a `CoachStep`.
+7. Return the `CoachStep`.
+
+**Effect of pencil intersection:** If the user has cleared all indicated elimination-target candidates for an elimination technique in their pencil marks, the analyzer will not return that technique — the relevant candidates are absent from the intersected set and the technique does not fire. The analyzer naturally advances to the next applicable technique, or returns `NoTechniqueResult` if nothing applicable remains.
+
+**Backwards compatibility:** `pencil` is optional. If not provided (or `null`/`undefined`), the execution order is identical to steps 1–2 and 4–7 above (step 3 is skipped entirely), and the function's behavior is unchanged from the pre-amendment form.
 
 The "first step" rule guarantees the lowest-ranked technique applicable, which is what the user wants — coach with the easiest move first (per fspec §4.1 step 1: "the lowest-ranked technique in the technique ladder that can make progress").
 
@@ -336,12 +351,24 @@ Per-technique mappers fill the remaining fields: `roles`, `digits`, `unit`, `arr
 ```js
 function analyze(puzzle, playerState) {
   const workingBoard = buildWorkingBoard(puzzle, playerState);
-  const result = solveLogically(workingBoard);
+  const candidates = initialCandidates(workingBoard);
+
+  // Candidate intersection — restrict to user's pencil marks when provided.
+  if (playerState.pencil != null) {
+    for (let i = 0; i < 81; i++) {
+      if (playerState.pen[i] !== 0) continue;        // filled cell — skip
+      if (playerState.pencil[i] !== 0) {             // user has marks — intersect
+        candidates[i] = candidates[i] & playerState.pencil[i];
+      }
+      // pencil[i] === 0: no user marks — leave candidates[i] unchanged
+    }
+  }
+
+  const result = solveLogically(workingBoard, candidates);  // pass intersected candidates
   if (result.trace.length === 0) {
     return buildNullStep(workingBoard, result, puzzle);  // see §9
   }
   const step = result.trace[0];
-  const candidates = initialCandidates(workingBoard);
   const techniqueName = canonicalise(step.technique);
   const mapper = MAPPERS[techniqueName];
   const partial = mapper(step, workingBoard, candidates);
@@ -764,8 +791,9 @@ Notes:
 
 1. The set unions deduplicate cells that appear in multiple roles (rare, but possible).
 2. Sorting ascending by `cellIndex` is purely for test stability.
-3. `candidates[i]` is taken from the freshly-computed `initialCandidates(workingBoard)` (§6.1), not from any solver intermediate. The UI receives the *correct* candidate set for each cell, regardless of player pencil-mark state.
+3. `candidates[i]` is taken from the (possibly pencil-intersected) `candidates` array passed to the mapper (§6.3). When no pencil was provided, this equals `initialCandidates(workingBoard)` directly. Either way, the UI receives the candidate set that the analyzer actually used — consistent with whatever was intersected.
 4. For ranks 1–2, `required` is `false` but `cells` is still populated. The UI spec may render or not render based on `required`. Including the data unconditionally keeps the schema uniform; ranks 1–2 callers simply ignore it.
+5. **`autoReveal.cells` and the COACH_START filter:** the `COACH_START` reducer in `aspec-coach-ui.md` §3.1 applies auto-reveal only where the revealed bits would add something new (`after & ~before !== 0`). The analyzer does not need to pre-filter `autoReveal.cells` for this — the reducer's `coachRevealedBits` computation handles it by only recording the delta. The analyzer emits the full candidate set for every referenced cell; the reducer is the filter. No change is needed here.
 
 ---
 
@@ -965,7 +993,10 @@ For each rank 1–15:
 
 1. **Happy path.** Load fixture, call `analyze`, assert every field of the returned `CoachStep` matches expectations.
 2. **Working-board rule.** Construct a fixture where the player has placed a *conflict-flagged* digit. Assert the analyzer ignores it (returns the same `CoachStep` as the conflict-free version of the fixture).
-3. **Pencil-mark independence.** Provide a `playerState` with non-empty pencil marks. Assert the returned `autoReveal.cells[*].candidates` matches what `initialCandidates(workingBoard)` produces, *not* what the player has pencilled.
+3. **Pencil-mark independence (no pencil provided).** Call `analyze` without a `pencil` argument. Assert the returned `autoReveal.cells[*].candidates` matches what `initialCandidates(workingBoard)` produces.
+4. **Pencil intersection — technique suppressed.** For a rank-3 (Locked Candidates) fixture, clear all elimination-target bits from `playerState.pencil` for the relevant cells, then call `analyze` with `pencil`. Assert the result is either a higher-rank technique or `NoTechniqueResult` — the Locked Candidates step does not fire.
+5. **Pencil intersection — partial marks.** For the same fixture, clear only some (not all) elimination-target bits. Assert that Locked Candidates still fires (remaining candidates are still present).
+6. **Pencil-absent cells (pencil[i] === 0).** Provide a `pencil` array where some referenced cells have `pencil[i] = 0`. Assert those cells' candidates are not restricted (full logical candidates remain).
 
 ### 13.4 Test Cases (Cross-Cutting)
 

@@ -1,8 +1,11 @@
 # Architectural Spec — Coach Mode UI and State Integration
 **ID:** aspec-coach-ui
-**Status:** Final
+**Status:** Final (amended 2026-05-04)
 **Date:** 2026-05-04
 **Author:** Architect
+
+> **Amendment 2026-05-04:** (1) Added `eliminationTargets` field to `CoachSession` (§2.1). (2) Extended `COACH_START` handler to compute `eliminationTargets` and updated `analyze()` call to pass `pencil` (§3.1). (3) Added `PENCIL_TOGGLE` hook for elimination completion detection (§4.3). (4) Extended `COACH_FILL_RECAP` to accept `variant: 'elim'` with pencil-adoption behavior (§3.3). (5) Added elim recap variant to `_showRecap` and `_composeElimRecapDetail` helper (§6.10). (6) Updated test strategy (§16.1, §16.2).
+
 **Loaded by:** Implementor (Phase 8b — Coach Mode), Reviewer, QE Test Writer, QE Test Runner. This is the second of two Coach Mode specs; load `aspec-coach-analyzer.md` first for the sealed `CoachStep` schema this spec consumes.
 
 > **Also load:** `aspec-overview.md` — for the master directory tree, event-flow diagram, and cross-cutting conventions.
@@ -88,8 +91,17 @@ GameState.coachSession =
       pencilSnapshot: Uint16Array(81),         // pencil[] at COACH_START time
       coachRevealedBits: Uint16Array(81),      // bits added by coach auto-reveal per cell
 
+      // --- elimination completion tracking (computed once at COACH_START) --
+      eliminationTargets: Map<int, int> | null,
+                                               // For elimination techniques: maps each
+                                               // elimTarget cell index to the bitmask of
+                                               // digits that must be cleared from pencil.
+                                               // null for placement techniques (ranks 1–2).
+                                               // Never mutated after COACH_START.
+
       // --- recap state ---------------------------------------------------
-      recap: 'normal' | 'error' | null,        // active recap variant; null while highlights
+      recap: 'normal' | 'error' | 'elim' | null,
+                                               // active recap variant; null while highlights
                                                // are showing
     }
 ```
@@ -150,7 +162,7 @@ All coach-related state transitions go through `dispatch(action)` on the reducer
 
 ### 3.1 `COACH_START` — `{ result: CoachStep | NoTechniqueResult }`
 
-**Dispatched by:** `coach.js` after calling `analyze(state.puzzle, { pen: state.pen, conflicts: state.conflicts })`.
+**Dispatched by:** `coach.js` after calling `analyze(state.puzzle, { pen: state.pen, conflicts: state.conflicts, pencil: state.pencil })`.
 
 **Guards:**
 1. If `state.puzzle === null`, no effect.
@@ -184,7 +196,18 @@ If a previous session is active (`state.coachSession !== null`), the reducer fir
    }
    ```
    Auto-reveal is the **only** time the coach writes to `state.pencil`. Even ranks 1–2 (`autoReveal.required === false`) do not touch `pencil`. The `coachRevealedBits` array is all-zeros for rank 1–2 sessions.
-3. Construct the slice:
+3. Compute `eliminationTargets` for elimination techniques:
+   ```js
+   const eliminationTargets = (result.type === 'elimination')
+     ? (() => {
+         const m = new Map();
+         const digitBits = result.digits.reduce((b, d) => b | (1 << (d - 1)), 0);
+         for (const c of result.roles.elimTarget) m.set(c, digitBits);
+         return m;
+       })()
+     : null;
+   ```
+4. Construct the slice:
    ```js
    state.coachSession = {
      step: result,
@@ -193,10 +216,11 @@ If a previous session is active (`state.coachSession !== null`), the reducer fir
        state.selected !== null && coachedCells.has(state.selected) ? state.selected : null,
      pencilSnapshot: snapshot,
      coachRevealedBits,
+     eliminationTargets,
      recap: null,
    };
    ```
-4. Emits: `'coachSession', 'pencil'` (the second only if `autoReveal.required` and at least one bit was added; emitting unconditionally is also acceptable — UI subscribers short-circuit on irrelevant changes per `aspec-ui.md` §1).
+5. Emits: `'coachSession', 'pencil'` (the second only if `autoReveal.required` and at least one bit was added; emitting unconditionally is also acceptable — UI subscribers short-circuit on irrelevant changes per `aspec-ui.md` §1).
 
 **`focusedCoachedCell` initialization:** if the user has a coached cell already selected at the moment Coach is pressed, the panel should open immediately. The reducer initializes `focusedCoachedCell` accordingly so `coach.js` can render the panel on its first render after `COACH_START`.
 
@@ -239,17 +263,19 @@ If a previous session is active (`state.coachSession !== null`), the reducer fir
 
 The reducer does not auto-clear pencil marks during the revert — auto-clear only fires on pen entry (`aspec-game-state.md` §5, PEN_ENTER step 7). Reverting auto-reveal is purely a candidate-bit restoration.
 
-### 3.3 `COACH_FILL_RECAP` — `{ variant: 'normal' | 'error' }`
+### 3.3 `COACH_FILL_RECAP` — `{ variant: 'normal' | 'error' | 'elim' }`
 
-**Dispatched by:** the reducer itself, from its `PEN_ENTER` handler when the filled cell is a coached cell on a placement-technique session (§4.1). Not dispatched by `coach.js`.
+**Dispatched by:**
+- The reducer itself, from its `PEN_ENTER` handler when the filled cell is a coached cell on a placement-technique session (§4.1) — `variant: 'normal'` or `'error'`.
+- The reducer itself, from its `PENCIL_TOGGLE` handler when all elimination targets are cleared (§4.3) — `variant: 'elim'`.
 
-This action exists so the reducer can transition `coachSession` from "highlights-active" to "recap-showing" atomically with the pen entry that triggered the recap. It cannot be done from `coach.js` because the reducer must finish the pen-entry mutation, the conflict re-check, and any potential `ON_COMPLETION_EVALUATE` before `coach.js` even sees the `'changed'` event. Pulling it into the reducer keeps the lifecycle sequence deterministic.
+This action exists so the reducer can transition `coachSession` from "highlights-active" to "recap-showing" atomically with the action that triggered the recap. It cannot be done from `coach.js` because the reducer must finish the originating mutation (pen entry, pencil toggle) before `coach.js` even sees the `'changed'` event. Pulling it into the reducer keeps the lifecycle sequence deterministic.
 
 **Guards:**
 1. If `coachSession === null`, no effect.
 2. If the slice is already in recap (`coachSession.recap !== null`), no effect.
 
-**Mutation:**
+**Mutation for `variant: 'normal'` and `variant: 'error'` (unchanged behavior):**
 
 1. Revert pencil marks per §5.4 (same as `COACH_END` step 1). The recap phase has no highlights and no auto-reveal — once the user has filled the coached cell, the auto-revealed marks are no longer needed.
 2. Zero out the `coachedCells` set effectively by clearing the slice's coached-cell role: assign `state.coachSession.coachedCells = new Set()`. This signals to `grid.js` and `coach.js` that no `.coached-*` classes should be applied during the recap. (The slice is still non-null, so `coachSession !== null` remains true; `coach.js` keeps the recap toast visible.)
@@ -258,7 +284,21 @@ This action exists so the reducer can transition `coachSession` from "highlights
 5. Set `state.coachSession.coachRevealedBits = new Uint16Array(81)` (already-reverted; further `COACH_END` revert becomes a no-op).
 6. Emits: `'coachSession', 'pencil'`.
 
-The recap auto-dismiss timer (2.5s) is started by `coach.js` on observing `coachSession.recap !== null` in the `'changed'` event. When the timer fires, `coach.js` dispatches `COACH_END { reason: 'recap-timeout' }`, which sets `coachSession = null` (the revert in step 1 of `COACH_END` is a no-op because `coachRevealedBits` is now all-zero).
+**Mutation for `variant: 'elim'` (pencil adoption — no revert):**
+
+For elimination techniques the user applied manually via pencil, the coach-revealed marks become theirs to keep. The auto-reveal revert does **not** run.
+
+1. **Do not run the pencil revert** (§5.4). Instead, adopt remaining coach-revealed marks by zeroing `coachRevealedBits`:
+   ```js
+   state.coachSession.coachRevealedBits = new Uint16Array(81);
+   ```
+   Since the revert loop in §3.2 skips cells where `revealed === 0`, this zeroed array makes any subsequent `COACH_END` revert a no-op. The user's pencil state is therefore preserved as-is.
+2. Assign `state.coachSession.coachedCells = new Set()` (highlights clear, same as other variants).
+3. Set `state.coachSession.recap = 'elim'`.
+4. Set `state.coachSession.focusedCoachedCell = null` (no panel during recap).
+5. Emits: `'coachSession'` (no `'pencil'` emit — pencil is unchanged for the elim variant).
+
+The recap auto-dismiss timer (2.5s) is started by `coach.js` on observing `coachSession.recap !== null` in the `'changed'` event. When the timer fires, `coach.js` dispatches `COACH_END { reason: 'recap-timeout' }`, which sets `coachSession = null` (the revert in step 1 of `COACH_END` is a no-op because `coachRevealedBits` is now all-zero for all variants).
 
 ### 3.4 `COACH_FOCUS_COACHED_CELL` — `{ index: int }`
 
@@ -352,7 +392,33 @@ if (state.coachSession !== null) {
 
 This applies whether the erased cell was coached or not. Per `fspec-002-coach.md` §2.2, "erase of any cell ends the session silently."
 
-### 4.3 `HINT`
+### 4.3 `PENCIL_TOGGLE`
+
+After the existing `PENCIL_TOGGLE` mutation (which toggles a single bit in `state.pencil[state.selected]`), check whether the user has cleared all elimination targets:
+
+```js
+// pseudocode appended to existing PENCIL_TOGGLE handler, AFTER existing mutation
+if (state.coachSession !== null
+    && state.coachSession.eliminationTargets !== null
+    && state.coachSession.recap === null) {
+  const targets = state.coachSession.eliminationTargets;
+  const allCleared = [...targets.entries()].every(
+    ([cellIndex, bits]) => (state.pencil[cellIndex] & bits) === 0
+  );
+  if (allCleared) {
+    dispatch({ type: 'COACH_FILL_RECAP', variant: 'elim' });
+  }
+}
+```
+
+**Condition:** All three guards must be true before the check runs:
+1. A coach session is active.
+2. The session is for an elimination technique (`eliminationTargets !== null`).
+3. The session is not already in recap (`recap === null`) — no double-dispatch.
+
+**Emit:** `PENCIL_TOGGLE` itself emits `'pencil'`. The inner `COACH_FILL_RECAP` dispatch emits `'coachSession'` (and possibly `'pencil'` per §3.3). No additional emit change is needed in the `PENCIL_TOGGLE` handler.
+
+### 4.5 `HINT`
 
 After the existing `HINT` mutation (which fills a cell via the hint path):
 
@@ -364,7 +430,7 @@ if (state.coachSession !== null) {
 
 No recap regardless of whether the hinted cell was coached. Per `fspec-002-coach.md` §11.1: "any Hint fill ends the coach session silently."
 
-### 4.4 `NEW_PUZZLE`
+### 4.6 `NEW_PUZZLE`
 
 The existing `NEW_PUZZLE` handler resets all state. Add to the reset block:
 
@@ -374,11 +440,11 @@ state.coachSession = null;
 
 No `COACH_END` dispatch — the reducer is mid-`NEW_PUZZLE` and resetting `coachSession` directly is consistent with how other slices are reset. The pencil revert is irrelevant because `pencil` is also being reset to all-zero. Add `'coachSession'` to the emit's change-set.
 
-### 4.5 `RESET_PUZZLE`
+### 4.7 `RESET_PUZZLE`
 
 Same treatment as `NEW_PUZZLE`. Add `state.coachSession = null` to the existing reset block; add `'coachSession'` to the emit.
 
-### 4.6 `CHANGE_DIFFICULTY`
+### 4.8 `CHANGE_DIFFICULTY`
 
 Per `fspec-002-coach.md` §11.2, difficulty change ends any active coach session immediately. The existing `CHANGE_DIFFICULTY` handler does not clear puzzle state; the coach session must be cleared explicitly:
 
@@ -390,13 +456,13 @@ if (state.coachSession !== null) {
 
 The internal dispatch reverts pencil marks via `COACH_END`'s standard path (§3.2), so the user's pencil state is preserved across difficulty changes minus any coach-revealed bits. This is correct: difficulty change does not clear the player's pen entries (§5 in `aspec-game-state.md`), and coach-revealed pencil bits should be reverted just as they would on any other session-end.
 
-### 4.7 `PUZZLE_LOADED`
+### 4.9 `PUZZLE_LOADED`
 
 The existing handler resets all state. Add `state.coachSession = null` to the reset block; add `'coachSession'` to the emit. No revert is needed because `pencil` is being reset to all-zero. The session is implicitly discarded.
 
 This handler runs both for fresh puzzles and for the restore path (`main.js` step 7). On restore, the puzzle is being installed; any previously-saved coach session is discarded by design (`fspec-002-coach.md` §11.7: "session-only … not persisted").
 
-### 4.8 `ON_COMPLETION_EVALUATE`
+### 4.10 `ON_COMPLETION_EVALUATE`
 
 If the evaluation produces a win and a coach session is active, the win takes precedence:
 
@@ -409,7 +475,7 @@ if (state.won && state.winHandled && state.coachSession !== null) {
 
 This collapses any in-flight recap as well — if the user filled the last cell and would have triggered a normal recap, the win banner replaces it. The `COACH_END` revert is a no-op for a recap-state session (`coachRevealedBits` is already zero per §3.3), but the slice clears, removing the recap toast.
 
-### 4.9 Existing-action emit-key changes
+### 4.11 Existing-action emit-key changes
 
 The following actions add `'coachSession'` to their emit's change-set when (and only when) they end an active session:
 
@@ -418,11 +484,12 @@ The following actions add `'coachSession'` to their emit's change-set when (and 
 | `PEN_ENTER` | Always when a session was active at entry (the inner `dispatch` emits separately, but for clarity the change is also listed in the outer `PEN_ENTER` emit) |
 | `ERASE` | Always when a session was active |
 | `HINT` | Always when a session was active |
+| `PENCIL_TOGGLE` | When the inner `COACH_FILL_RECAP` fires (emitted by that action); `PENCIL_TOGGLE` itself still emits `'pencil'` |
 | `NEW_PUZZLE`, `RESET_PUZZLE`, `PUZZLE_LOADED` | Always (the slice is reset to `null` regardless of whether one was active) |
 | `CHANGE_DIFFICULTY` | Always when a session was active |
 | `ON_COMPLETION_EVALUATE` | Always when a session was active and a win is recorded |
 
-Because the inner `dispatch` to `COACH_END` produces its own `'changed'` emit with `{ changed: ['coachSession', 'pencil'] }`, subscribers see the change unambiguously. Adding `'coachSession'` to the outer emit is belt-and-suspenders — it lets subscribers that only listen for the outer action type still observe the slice change.
+Because the inner `dispatch` to `COACH_END` or `COACH_FILL_RECAP` produces its own `'changed'` emit, subscribers see the change unambiguously. Adding `'coachSession'` to the outer emit is belt-and-suspenders — it lets subscribers that only listen for the outer action type still observe the slice change.
 
 ---
 
@@ -604,7 +671,7 @@ function _onCoachPressed() {
 
   const result = analyze(
     state.puzzle,
-    { pen: state.pen, conflicts: state.conflicts }
+    { pen: state.pen, conflicts: state.conflicts, pencil: state.pencil }
   );
 
   if (result.type === 'no-technique') {
@@ -782,6 +849,16 @@ function _showRecap(step, variant) {
   const techName = step.technique;
   const detailSentence = _composeRecapDetail(step);  // §6.11
 
+  if (variant === 'elim') {
+    const detail = _composeElimRecapDetail(step);
+    _recap.innerHTML = `
+      <div class="coach-recap-line1">Candidates eliminated.</div>
+      <div class="coach-recap-line2">${detail}</div>
+    `;
+    announce(`Candidates eliminated. ${detail}`);
+    return;
+  }
+
   if (variant === 'normal') {
     _recap.innerHTML = `
       <div class="coach-recap-line1">You used ${techName}.</div>
@@ -795,6 +872,13 @@ function _showRecap(step, variant) {
     `;
     announce(`That's not the right digit — ${techName} suggestion still stands. Press Coach to try again.`);
   }
+}
+
+function _composeElimRecapDetail(step) {
+  const D = step.digits[0];  // primary digit being eliminated
+  const n = step.roles.elimTarget.length;
+  const unitLabel = step.unit ? _formatUnitLabel(step.unit) : 'the grid';
+  return `${step.technique} in ${unitLabel}: digit ${D} removed from ${n} cell${n === 1 ? '' : 's'}.`;
 }
 
 function _hideRecap() {
@@ -1693,6 +1777,7 @@ Owned by `coach.js`. Source: vspec §12.2 + fspec §12.5.
 | `COACH_FOCUS_COACHED_CELL` dispatched | `"Coached cell. ${step.technique}. ${stripEmphasis(step.supportingText)}"` (and, if `step.complexity.acknowledged`, append `" ${step.complexity.note}"`) |
 | `COACH_FILL_RECAP` (`variant='normal'`) | `"You used ${technique}. ${detail sentence}"` |
 | `COACH_FILL_RECAP` (`variant='error'`) | `"That's not the right digit — ${technique} suggestion still stands. Press Coach to try again."` |
+| `COACH_FILL_RECAP` (`variant='elim'`) | `"Candidates eliminated. ${elim detail sentence}"` (from `_composeElimRecapDetail`) |
 | `COACH_END` (silent reasons) | No announcement (the originating action — pen entry, erase, hint — already announces) |
 
 `coach.js` dispatches the action *and then* announces, after observing the resulting state. (The reducer does not announce. Announcements are a UI concern.)
@@ -1813,7 +1898,7 @@ Phase 8a must be complete:
 1. **Reducer changes** (`js/game/state.js`):
    1. Add `coachSession: null` to the initial-state object.
    2. Add the six new action handlers (`COACH_START`, `COACH_END`, `COACH_FILL_RECAP`, `COACH_FOCUS_COACHED_CELL`, `COACH_FOCUS_OFF`, `COACH_NO_TECHNIQUE`).
-   3. Modify `PEN_ENTER`, `ERASE`, `HINT`, `NEW_PUZZLE`, `RESET_PUZZLE`, `CHANGE_DIFFICULTY`, `PUZZLE_LOADED`, `ON_COMPLETION_EVALUATE` per §4.
+   3. Modify `PEN_ENTER`, `ERASE`, `PENCIL_TOGGLE`, `HINT`, `NEW_PUZZLE`, `RESET_PUZZLE`, `CHANGE_DIFFICULTY`, `PUZZLE_LOADED`, `ON_COMPLETION_EVALUATE` per §4.
    4. Write reducer unit tests (§16.1).
 2. **DOM and CSS** (`index.html`, `css/`):
    1. Add `#sr-coached-desc`, `#coach-overlay`, `#coach-panel-wrap`, `#coach-recap` to `index.html` (§8).
@@ -1890,6 +1975,8 @@ These tests mock `analyze()` and exercise the reducer in isolation. They run in 
 1. Setting `recap = 'normal'` clears `coachedCells`, sets `coachRevealedBits` to all-zero, reverts pencil, leaves slice non-null.
 2. Setting `recap = 'error'` does the same with `recap: 'error'`.
 3. Subsequent `COACH_END` revert is a no-op (already reverted in `COACH_FILL_RECAP`).
+4. `COACH_FILL_RECAP { variant: 'elim' }` → `coachRevealedBits` zeroed, pencil state unchanged (no revert), `coachedCells` cleared, `recap = 'elim'`, slice non-null.
+5. Subsequent `COACH_END` after `variant: 'elim'` → revert is a no-op; slice sets to `null`; pencil unchanged.
 
 **`COACH_FOCUS_*` tests:**
 1. `COACH_FOCUS_COACHED_CELL { index: 5 }` with index in `coachedCells` and `recap === null` sets `focusedCoachedCell = 5`.
@@ -1908,6 +1995,10 @@ These tests mock `analyze()` and exercise the reducer in isolation. They run in 
 9. `RESET_PUZZLE` clears `coachSession` to `null`.
 10. `CHANGE_DIFFICULTY` during a session → `COACH_END { reason: 'puzzle-replaced' }`; pencil reverts.
 11. `ON_COMPLETION_EVALUATE` producing a win during a recap → `COACH_END { reason: 'won' }`; slice → `null`.
+12. `PENCIL_TOGGLE` during an elimination session with all `eliminationTargets` bits cleared → `COACH_FILL_RECAP { variant: 'elim' }` dispatched.
+13. `PENCIL_TOGGLE` during an elimination session with only some targets cleared → no dispatch.
+14. `PENCIL_TOGGLE` during a placement session (`eliminationTargets === null`) → no `COACH_FILL_RECAP` dispatch.
+15. `PENCIL_TOGGLE` during a recap (`recap !== null`) → no `COACH_FILL_RECAP` dispatch.
 
 ### 16.2 Playwright integration tests (`js/tests/integration/coach.test.js`)
 
@@ -1944,6 +2035,13 @@ These tests boot the real app and drive it through the coach flow.
 2. Toggle a different pencil mark on (user mark); end session via non-coached cell fill; assert coach marks gone, user mark preserved.
 3. Toggle off a coach-revealed mark; end session; assert pencil reverts to pre-session snapshot.
 
+**Elimination completion tests:**
+1. Locked Candidates session: switch to Pencil mode; remove the last indicated candidate from the last elimination-target cell; assert elim recap appears (`.visible`, no `.error`); line 1 is `"Candidates eliminated."`; line 2 contains the technique name and digit.
+2. Locked Candidates session: remove some but not all indicated candidates from elimination-target cells; assert no recap appears (session highlights still active).
+3. After elim recap: assert coach-revealed pencil marks are retained in all cells (not reverted); assert no `.coach-reveal` class changes.
+4. After elim recap auto-dismisses (2.5s): assert session cleared (`coachSession === null`); pencil unchanged.
+5. Press Coach again after elim recap completes: assert `analyze()` is called with current `pencil` state; assert the previously-suggested elimination technique is not re-suggested (candidates already cleared).
+
 **Cross-action tests:**
 1. Active session + Erase → session ends silently, pencil reverts.
 2. Active session + Hint (in coached cell) → session ends silently, hint applies, no recap.
@@ -1954,6 +2052,7 @@ These tests boot the real app and drive it through the coach flow.
 **A11y test:**
 1. Active session + Tab to coached cell → `aria-describedby="sr-coached-desc"` present.
 2. Live region contains the focus announcement after focusing a coached cell.
+3. Elim recap announced: live region contains `"Candidates eliminated."` and the detail sentence.
 
 ### 16.3 Coverage target
 

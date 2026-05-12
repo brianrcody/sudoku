@@ -49,10 +49,13 @@ function _buildNumpad() {
           </span>
         </button>
       </div>
-      <div class="numpad-bottom">
+      <div class="numpad-bottom-row1">
         <button class="btn btn-hint" id="btn-hint" aria-label="Hint">
           Hint <span class="hint-badge" id="hint-count">0</span>
         </button>
+        <button class="btn btn-coach" id="btn-coach" aria-label="Coach">Coach</button>
+      </div>
+      <div class="numpad-bottom-row2">
         <button class="btn btn-check" id="btn-check" aria-label="Check answers">Check</button>
       </div>
       <div class="completion-msg" id="completion-msg" aria-live="polite" hidden></div>

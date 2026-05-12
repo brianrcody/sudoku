@@ -14,13 +14,17 @@ import { initialCandidates, applyPlacement, applyElimination } from './candidate
  * Attempt to solve `board` using the technique ladder up to `techniqueLimit`.
  *
  * @param {Uint8Array} board - 81 cells; 0 = empty. Mutated in place.
- * @param {{ techniqueLimit?: number }} [opts]
+ * @param {{ techniqueLimit?: number, candidates?: Uint16Array }} [opts]
  *   `techniqueLimit` — only techniques with rank ≤ this value are used (1-based).
  *   Defaults to Infinity (all techniques).
+ *   `candidates` — pre-computed candidate bitsets to use instead of recomputing.
+ *   When provided, the caller is responsible for ensuring the array is consistent with
+ *   `board`. The array is used as-is (not copied); callers that pass this must ensure
+ *   it can be mutated by the solver.
  * @returns {{ solved: boolean, board: Uint8Array, candidates: Uint16Array, trace: Step[], hardestRank: number }}
  */
-export function solveLogically(board, { techniqueLimit = Infinity } = {}) {
-  const candidates = initialCandidates(board);
+export function solveLogically(board, { techniqueLimit = Infinity, candidates: precomputedCandidates } = {}) {
+  const candidates = precomputedCandidates ?? initialCandidates(board);
   const trace = [];
   let hardestRank = 0;
   const limit = Math.min(techniqueLimit, TECHNIQUES.length);

@@ -14,6 +14,8 @@ import { mount as mountControls } from './ui/controls.js';
 import { mount as mountStats } from './ui/stats.js';
 import { mount as mountWinBanner } from './ui/winBanner.js';
 import { mount as mountKeyboard } from './ui/keyboard.js';
+import { mount as mountCoach } from './ui/coach.js';
+import { mount as mountCoachOverlay } from './ui/coachOverlay.js';
 
 import { cookieStatsStore } from './providers/cookieStatsStore.js';
 import { createStatsProvider } from './providers/statsProvider.js';
@@ -136,6 +138,9 @@ mountNumpad(
   document.getElementById('numpad-root'),
   gameState
 );
+
+mountCoach(document.body, gameState);
+mountCoachOverlay(document.body, gameState);
 
 mountStats(
   document.getElementById('stats-root'),
