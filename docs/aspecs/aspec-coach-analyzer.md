@@ -94,6 +94,14 @@ No default export. No other named exports. No constants exported (any module-pri
 
 The function is synchronous. It runs `solveLogically` once on the working board and returns. There is no async, no Worker, no promise. The solver is fast enough on the main thread (`aspec-solver.md` §4 — "well under 10 ms").
 
+### 2.1 Coaching Model
+
+The coach is **state-dependent**: each invocation analyzes the current board state (givens plus confirmed pen entries, filtered through the user's pencil marks) rather than following a fixed predetermined path through the solution. The practical consequences:
+
+- **Order-dependence.** If the user makes moves before pressing Coach, those moves influence which technique fires first. Correct moves the user has already made are simply respected — the coach identifies the next applicable technique from the current state, not from an ideal starting position.
+- **Completability.** From any valid (error-free) partial board state, the coach can always identify a next move. Coaching is guaranteed to make progress as long as the board remains consistent with the puzzle's solution.
+- **Error gate.** If pen entries deviate from the correct solution in any way, the coach refuses to advise — it cannot provide locally-logical suggestions that might compound errors the user hasn't yet discovered. Pencil mark erasures are a partial exception: they are trusted as authoritative eliminations (see §9.1 for the rationale and tradeoff).
+
 ---
 
 ## 3. `CoachStep` Schema (Sealed)
@@ -870,6 +878,12 @@ Two categories of board error must be caught before the solver runs:
 **Conflicting entries** (`playerState.conflicts.size > 0`) — two cells in the same unit hold the same digit. `buildWorkingBoard` excludes conflicted cells by design, but this creates a subtler hazard: a *correct* cell that happens to share a digit with a wrong cell in the same unit is also dragged into the conflict set and excluded from the working board. The solver would then reason about a board with correct values missing, and can produce misleading advice. The simplest and most correct response is to refuse coaching entirely whenever any conflict exists. The player is told there is an error, and coaching does not proceed.
 
 **Non-conflicting wrong entries** — a wrong digit that does not share a unit with the same digit elsewhere is not flagged by conflict detection and is therefore not visible to the player as an error highlight. If `buildWorkingBoard` were allowed to include it, the solver would operate on a corrupted board and could return misleading technique suggestions. This check catches that case before the solver runs.
+
+**Pencil mark asymmetry** — only pen entries are validated against the solution. Pencil marks are not. Specifically, pencil *erasures* — cases where the user has manually removed a candidate from a cell's pencil marks — are accepted as authoritative eliminations and reflected in the intersected candidate set (§4.2). This is intentional:
+
+- *Why erasures must be trusted.* If the coach did not respect pencil erasures, it would re-suggest the same elimination technique on every invocation after the user applies it, because the working board hasn't changed (only the pencil state has). Trusting erasures is what allows the coach to advance past elimination steps.
+- *The accepted risk.* If a user incorrectly erases a correct candidate, the solver sees a restricted candidate set that may produce a false pattern. This is a known limitation. The primary source of pencil state is the coach's own `autoReveal`, which writes logically correct marks; manual erasure is the realistic path to corruption, and is a deliberate user action.
+- *Pencil additions are harmless.* The intersection (`candidates[i] &= pencil[i]`) can only restrict the logical set, never expand it. A pencil mark on a logically-impossible digit is silently filtered out.
 
 **Post-solver reason determination** (unchanged):
 

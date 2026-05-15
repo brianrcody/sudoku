@@ -348,14 +348,17 @@ When auto-reveal runs:
    same pencil-aware logic described in §4.1: where the user has pencil marks, only
    candidates that appear in both the logical set and the user's marks are considered.
 2. For each coached cell (and any related cells the explanation refers to), the computed
-   candidates are surfaced as visible pencil marks if they are not already showing.
-3. Auto-revealed marks are rendered in the coach accent color to distinguish them
-   visually from user-entered pencil marks (R14).
+   candidate set is rendered in the coach accent color. This is authoritative for those
+   cells: every candidate the coach is working with is shown, regardless of whether the
+   user already has that mark. If the user has previously erased a candidate that the
+   coach's explanation references, that candidate is re-added as a coach-revealed mark so
+   the explanation remains coherent.
+3. User-entered marks that fall *outside* the coach's candidate set are not removed —
+   they remain visible alongside the coach marks as user-colored marks.
 
-User-entered pencil marks in coached cells are not altered. If a user mark and an
-auto-revealed mark occupy the same candidate slot in the same cell, the mark is shown in
-the coach accent color for the duration of the session (it will be visible as a user mark
-again when the session ends).
+If a user mark and a coach-revealed mark occupy the same candidate slot, the slot is
+shown in the coach accent color for the duration of the session (it reverts to the user
+mark color when the session ends).
 
 ### 6.3 Scope of Auto-Reveal
 
