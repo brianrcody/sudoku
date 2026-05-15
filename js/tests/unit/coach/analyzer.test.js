@@ -24,6 +24,7 @@ import {
   rank08, rank09, rank10, rank11, rank12, rank13,
   rank14Short, rank14Long, rank15,
   noTechniqueComplete, noTechniqueInconsistent,
+  // rank05OneElimCell,  // pending — see docs/misc/coach-fixture-tracker.md
 } from '/js/tests/fixtures/puzzles/coach/index.js';
 
 // ---------------------------------------------------------------------------
@@ -254,6 +255,22 @@ describe('coach/analyzer — rank 5: Hidden Pair', function () {
     expect(step.roles.elimTarget).to.deep.equal([]);
     expect(step.unit).to.not.equal(null);
     expect(step.arrows).to.deep.equal([]);
+  });
+});
+*/
+
+/* rank05 regression: one-elim-cell hidden pair — fixture pending. See docs/misc/coach-fixture-tracker.md.
+describe('coach/analyzer — rank 5: Hidden Pair (one-elim-cell regression)', function () {
+  // Regression for the bug where pairCells was built solely from step.eliminations.
+  // When one pair cell already holds only the two hidden digits (no extras), the solver
+  // emits no eliminations for it, so it was omitted from roles.cause and A/B were undefined.
+  it('Hidden Pair one-elim-cell: digits has 2 elements and cause has 2 cells', function () {
+    const step = analyze(puzzleOf(rank05OneElimCell), playerStateOf(rank05OneElimCell));
+    expect(step.technique).to.equal('Hidden Pair');
+    expect(step.digits).to.have.length(2);
+    expect(step.roles.cause).to.have.length(2);
+    expect(step.supportingText).to.not.include('undefined');
+    assertSchemaComplete(step);
   });
 });
 */
