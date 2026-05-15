@@ -291,62 +291,66 @@ describe('COACH_END', () => {
   });
 
   it('Example B: pencil revert preserves user marks added during session', () => {
-    // Coach reveals digits 2 and 5 into cell 5 (snapshot = digit 3 only).
+    // Coach reveals digits 2 and 5 into cell 20 (snapshot = digit 3 only).
     // User toggles digit 7 on during session.
-    // After COACH_END: cell 5 should have digits 3 and 7 only.
+    // After COACH_END: cell 20 should have digits 3 and 7 only.
+    // Uses a placement step to avoid triggering elimination completion.
     const gs = stateWithPuzzle();
 
-    // Set pre-session pencil: digit 3 in cell 5.
-    gs.dispatch({ type: 'SELECT_CELL', index: 5 });
+    // Set pre-session pencil: digit 3 in cell 20.
+    gs.dispatch({ type: 'SELECT_CELL', index: 20 });
     gs.dispatch({ type: 'SET_MODE', mode: 'pencil' });
-    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });  // pencil[5] = 0b100 = 4
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });  // pencil[20] = 0b100 = 4
 
-    const snapBit = gs.getState().pencil[5];  // 4
+    const snapBit = gs.getState().pencil[20];  // 4
 
-    // Auto-reveal: add digits 2 and 5 (bits 1 and 4 → values 2 and 16).
-    const step = nakedPairStep({
-      revealCells: [{ cellIndex: 5, candidates: snapBit | 2 | 16 }],
-    });
+    // Placement step with auto-reveal: add digits 2 and 5 (bits 1 and 4 → values 2 and 16).
+    const step = {
+      ...nakedSingleStep(0),
+      autoReveal: { required: true, cells: [{ cellIndex: 20, candidates: snapBit | 2 | 16 }] },
+    };
     gs.dispatch({ type: 'COACH_START', result: step });
-    // pencil[5] = 4 | 2 | 16 = 22
-    expect(gs.getState().pencil[5]).to.equal(22);
+    // pencil[20] = 4 | 2 | 16 = 22
+    expect(gs.getState().pencil[20]).to.equal(22);
 
     // User toggles digit 7 on (bit 6 = 64).
-    gs.dispatch({ type: 'SELECT_CELL', index: 5 });
+    gs.dispatch({ type: 'SELECT_CELL', index: 20 });
     gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 7 });
-    expect(gs.getState().pencil[5]).to.equal(22 | 64);
+    expect(gs.getState().pencil[20]).to.equal(22 | 64);
 
     gs.dispatch({ type: 'COACH_END', reason: 'session-reset' });
 
     // After revert: snapshot (4) + user addition (64) = 68 = 0b1000100
-    expect(gs.getState().pencil[5]).to.equal(4 | 64);
+    expect(gs.getState().pencil[20]).to.equal(4 | 64);
   });
 
   it('Example C: user toggling off a coach-revealed bit results in clean revert', () => {
+    // Uses a placement step to avoid triggering elimination completion.
     const gs = stateWithPuzzle();
 
-    // Pre-session: digit 3 in cell 5.
-    gs.dispatch({ type: 'SELECT_CELL', index: 5 });
+    // Pre-session: digit 3 in cell 20.
+    gs.dispatch({ type: 'SELECT_CELL', index: 20 });
     gs.dispatch({ type: 'SET_MODE', mode: 'pencil' });
     gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
 
-    const snapBit = gs.getState().pencil[5];  // 4
+    const snapBit = gs.getState().pencil[20];  // 4
 
-    // Coach reveals digits 2 and 5.
-    const step = nakedPairStep({
-      revealCells: [{ cellIndex: 5, candidates: snapBit | 2 | 16 }],
-    });
+    // Placement step with auto-reveal: add digits 2 and 5.
+    const step = {
+      ...nakedSingleStep(0),
+      autoReveal: { required: true, cells: [{ cellIndex: 20, candidates: snapBit | 2 | 16 }] },
+    };
     gs.dispatch({ type: 'COACH_START', result: step });
 
     // User toggles digit 5 off (bit 4 = 16) — a coach-revealed bit.
-    gs.dispatch({ type: 'SELECT_CELL', index: 5 });
+    gs.dispatch({ type: 'SELECT_CELL', index: 20 });
     gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 5 });
-    // pencil[5] = 22 & ~16 = 6
+    // pencil[20] = 22 & ~16 = 6
 
     gs.dispatch({ type: 'COACH_END', reason: 'session-reset' });
 
     // Revert restores snapshot (4) — no user additions, coach bits stripped.
-    expect(gs.getState().pencil[5]).to.equal(4);
+    expect(gs.getState().pencil[20]).to.equal(4);
   });
 
   it('Example D: rank-1 session — COACH_END does not touch pencil', () => {
@@ -677,7 +681,8 @@ describe('PENCIL_TOGGLE — elimination completion', () => {
    * digits: [3] → digitBits = 1 << 2 = 4
    * eliminationTargets: { 5 => 4 }
    */
-  function lockedCandidatesElimStep(elimTarget = [5]) {
+  // Cell 20 (row 2, col 2) is empty in nakedSinglePuzzle and safe for pencil marks.
+  function lockedCandidatesElimStep(elimTarget = [20]) {
     return {
       type: 'elimination',
       technique: 'Locked Candidates',
@@ -702,23 +707,23 @@ describe('PENCIL_TOGGLE — elimination completion', () => {
 
   it('all eliminationTargets cleared → COACH_FILL_RECAP elim dispatched, recap = "elim"', () => {
     const gs = stateWithPuzzle();
-    // Use single elimTarget cell 5, digit 3 (bit index 2, value 4).
-    const step = lockedCandidatesElimStep([5]);
+    // Use single elimTarget cell 20, digit 3 (bit index 2, value 4).
+    const step = lockedCandidatesElimStep([20]);
     gs.dispatch({ type: 'COACH_START', result: step });
     expect(gs.getState().coachSession).to.not.equal(null);
-    // Verify eliminationTargets was computed: { 5 => 4 }.
+    // Verify eliminationTargets was computed: { 20 => 4 }.
     expect(gs.getState().coachSession.eliminationTargets).to.not.equal(null);
-    expect(gs.getState().coachSession.eliminationTargets.get(5)).to.equal(1 << 2);
+    expect(gs.getState().coachSession.eliminationTargets.get(20)).to.equal(1 << 2);
 
-    // First: mark digit 3 in pencil for cell 5 so we have something to toggle off.
-    gs.dispatch({ type: 'SELECT_CELL', index: 5 });
+    // First: mark digit 3 in pencil for cell 20 so we have something to toggle off.
+    gs.dispatch({ type: 'SELECT_CELL', index: 20 });
     gs.dispatch({ type: 'SET_MODE', mode: 'pencil' });
     gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });  // toggle ON
-    expect(gs.getState().pencil[5] & (1 << 2)).to.not.equal(0); // bit 2 is set
+    expect(gs.getState().pencil[20] & (1 << 2)).to.not.equal(0); // bit 2 is set
 
     // Now toggle digit 3 OFF — this clears the only elimination target bit.
     gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });  // toggle OFF
-    expect(gs.getState().pencil[5] & (1 << 2)).to.equal(0);
+    expect(gs.getState().pencil[20] & (1 << 2)).to.equal(0);
 
     const session = gs.getState().coachSession;
     expect(session).to.not.equal(null);
@@ -727,19 +732,19 @@ describe('PENCIL_TOGGLE — elimination completion', () => {
 
   it('partial elimination targets cleared → no COACH_FILL_RECAP dispatch', () => {
     const gs = stateWithPuzzle();
-    // Two elim targets: cells 5 and 6, both must have digit 3 cleared.
-    const step = lockedCandidatesElimStep([5, 6]);
+    // Two elim targets: cells 20 and 21, both must have digit 3 cleared.
+    const step = lockedCandidatesElimStep([20, 21]);
     gs.dispatch({ type: 'COACH_START', result: step });
 
     // Mark digit 3 in both cells.
-    gs.dispatch({ type: 'SELECT_CELL', index: 5 });
+    gs.dispatch({ type: 'SELECT_CELL', index: 20 });
     gs.dispatch({ type: 'SET_MODE', mode: 'pencil' });
     gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
-    gs.dispatch({ type: 'SELECT_CELL', index: 6 });
+    gs.dispatch({ type: 'SELECT_CELL', index: 21 });
     gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
 
-    // Clear digit 3 from cell 5 only — cell 6 still has it.
-    gs.dispatch({ type: 'SELECT_CELL', index: 5 });
+    // Clear digit 3 from cell 20 only — cell 21 still has it.
+    gs.dispatch({ type: 'SELECT_CELL', index: 20 });
     gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
 
     const session = gs.getState().coachSession;
@@ -835,6 +840,102 @@ describe('PENCIL_TOGGLE — elimination completion', () => {
     for (let i = 0; i < 81; i++) {
       expect(pencilAfterEnd[i]).to.equal(pencilAfterRecap[i]);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Hidden Pair / Hidden Triple: elimination completion with empty elimTarget
+// ---------------------------------------------------------------------------
+
+describe('PENCIL_TOGGLE — elimination completion (Hidden Pair, roles.elimTarget empty)', () => {
+
+  /**
+   * Minimal Hidden Pair step: roles.elimTarget = [], but eliminations carries
+   * the actual per-cell per-digit removals (non-hidden candidates in pair cells).
+   * Cell 10: remove digit 3 (bit 2)
+   * Cell 11: remove digits 3 and 7 (bits 2 and 6)
+   */
+  function hiddenPairStep() {
+    return {
+      type: 'elimination',
+      technique: 'Hidden Pair',
+      rank: 5,
+      digits: [1, 5],
+      roles: {
+        target: null,
+        cause: [10, 11],
+        elimTarget: [],
+        unitMember: [],
+        scA: [],
+        scB: [],
+      },
+      unit: { type: 'row', index: 1 },
+      arrows: [],
+      eliminations: [
+        { cellIndex: 10, digit: 3 },
+        { cellIndex: 11, digit: 3 },
+        { cellIndex: 11, digit: 7 },
+      ],
+      autoReveal: { required: true, cells: [] },
+      supportingText: '*1* and *5* can only go in these two cells.',
+      complexity: { acknowledged: false, note: null, endpoints: null },
+    };
+  }
+
+  it('eliminationTargets built from eliminations when elimTarget is empty', () => {
+    const gs = stateWithPuzzle();
+    gs.dispatch({ type: 'COACH_START', result: hiddenPairStep() });
+    const targets = gs.getState().coachSession.eliminationTargets;
+    expect(targets).to.not.equal(null);
+    // Cell 10: bit for digit 3 = 1 << 2 = 4
+    expect(targets.get(10)).to.equal(1 << 2);
+    // Cell 11: bits for digits 3 and 7 = (1 << 2) | (1 << 6) = 68
+    expect(targets.get(11)).to.equal((1 << 2) | (1 << 6));
+  });
+
+  it('recap does not fire until all Hidden Pair eliminations are cleared', () => {
+    const gs = stateWithPuzzle();
+    gs.dispatch({ type: 'COACH_START', result: hiddenPairStep() });
+
+    // Seed pencil marks for all three targeted candidates.
+    gs.dispatch({ type: 'SELECT_CELL', index: 10 });
+    gs.dispatch({ type: 'SET_MODE', mode: 'pencil' });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+    gs.dispatch({ type: 'SELECT_CELL', index: 11 });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 7 });
+
+    // Clear cell 10 digit 3 — two more remain in cell 11.
+    gs.dispatch({ type: 'SELECT_CELL', index: 10 });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+    expect(gs.getState().coachSession.recap).to.equal(null);
+
+    // Clear cell 11 digit 3 — one more remains.
+    gs.dispatch({ type: 'SELECT_CELL', index: 11 });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+    expect(gs.getState().coachSession.recap).to.equal(null);
+
+    // Clear cell 11 digit 7 — all done, recap should fire.
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 7 });
+    expect(gs.getState().coachSession.recap).to.equal('elim');
+  });
+
+  it('recap fires immediately on first toggle (old bug) is NOT present', () => {
+    const gs = stateWithPuzzle();
+    gs.dispatch({ type: 'COACH_START', result: hiddenPairStep() });
+
+    // Seed ALL three targeted candidates so the completion check has real work to do.
+    gs.dispatch({ type: 'SELECT_CELL', index: 10 });
+    gs.dispatch({ type: 'SET_MODE', mode: 'pencil' });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+    gs.dispatch({ type: 'SELECT_CELL', index: 11 });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 7 });
+
+    // Clear cell 10 digit 3 — two more remain in cell 11, so recap must NOT fire.
+    gs.dispatch({ type: 'SELECT_CELL', index: 10 });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 }); // clear it
+    expect(gs.getState().coachSession.recap).to.equal(null);
   });
 });
 
