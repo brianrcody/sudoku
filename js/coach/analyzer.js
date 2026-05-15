@@ -513,7 +513,33 @@ const MAPPERS = {
     // Elim targets are within the cause cells (non-pair candidates removed).
     const elimCells = [...new Set(step.eliminations.map(e => e.cellIndex))];
     // The pair cells are the cells receiving eliminations.
-    const pairCells = [...new Set(elimCells)].sort((a, b) => a - b);
+    let pairCells = [...elimCells].sort((a, b) => a - b);
+
+    // One pair cell may already hold only the hidden digits (no extras), so
+    // the solver emits no eliminations for it and it won't appear in elimCells.
+    // Recover the missing partner by scanning units for the cell that contains
+    // exactly the hidden digits (candidates of the known cell minus its elims).
+    if (pairCells.length === 1) {
+      const knownCell = pairCells[0];
+      const elimBits = step.eliminations
+        .reduce((m, e) => m | (1 << (e.digit - 1)), 0);
+      const hiddenMask = candidates[knownCell] & ~elimBits;
+      outer:
+      for (let slot = 0; slot < 3; slot++) {
+        const unit = UNITS_OF[knownCell][slot];
+        for (const c of unit) {
+          if (c === knownCell || workingBoard[c] !== 0) continue;
+          if ((candidates[c] & hiddenMask) === hiddenMask) {
+            const others = unit.filter(x => x !== knownCell && x !== c);
+            if (others.every(x => workingBoard[x] !== 0 || !(candidates[x] & hiddenMask))) {
+              pairCells = [knownCell, c].sort((a, b) => a - b);
+              break outer;
+            }
+          }
+        }
+      }
+    }
+
     const unitDesc = sharedUnit(pairCells);
 
     // Find the two hidden digits: digits that appear only in these two cells within the unit.
