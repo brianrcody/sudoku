@@ -307,7 +307,9 @@ function _hideRecap() {
  */
 function _composeElimRecapDetail(step) {
   const D = step.digits[0];
-  const n = step.roles.elimTarget.length;
+  const n = step.roles.elimTarget.length > 0
+    ? step.roles.elimTarget.length
+    : new Set(step.eliminations.map(e => e.cellIndex)).size;
   const unitLabel = step.unit ? _formatUnitLabel(step.unit) : 'the grid';
   return `${step.technique} in ${unitLabel}: digit ${D} removed from ${n} cell${n === 1 ? '' : 's'}.`;
 }

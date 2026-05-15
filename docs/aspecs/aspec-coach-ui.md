@@ -6,6 +6,8 @@
 
 > **Amendment 2026-05-04:** (1) Added `eliminationTargets` field to `CoachSession` (§2.1). (2) Extended `COACH_START` handler to compute `eliminationTargets` and updated `analyze()` call to pass `pencil` (§3.1). (3) Added `PENCIL_TOGGLE` hook for elimination completion detection (§4.3). (4) Extended `COACH_FILL_RECAP` to accept `variant: 'elim'` with pencil-adoption behavior (§3.3). (5) Added elim recap variant to `_showRecap` and `_composeElimRecapDetail` helper (§6.10). (6) Updated test strategy (§16.1, §16.2).
 
+> **Amendment 2026-05-14:** Fixed Hidden Pair / Hidden Triple elimination completion. These techniques set `roles.elimTarget = []` because their eliminations happen within the cause cells, not in external cells. The original `eliminationTargets` construction iterated `roles.elimTarget` and produced an empty Map, causing `Array.every()` on an empty iterable to return `true` immediately — the elim recap fired on the first pencil toggle. Fix: when `roles.elimTarget` is empty, build per-cell bitmasks from `result.eliminations` instead. Updated §2.1 (`eliminationTargets` field description), §3.1 (COACH_START step 3 code), and §6.10 (`_composeElimRecapDetail` cell-count fix).
+
 **Loaded by:** Implementor (Phase 8b — Coach Mode), Reviewer, QE Test Writer, QE Test Runner. This is the second of two Coach Mode specs; load `aspec-coach-analyzer.md` first for the sealed `CoachStep` schema this spec consumes.
 
 > **Also load:** `aspec-overview.md` — for the master directory tree, event-flow diagram, and cross-cutting conventions.
@@ -94,8 +96,13 @@ GameState.coachSession =
       // --- elimination completion tracking (computed once at COACH_START) --
       eliminationTargets: Map<int, int> | null,
                                                // For elimination techniques: maps each
-                                               // elimTarget cell index to the bitmask of
+                                               // affected cell index to the bitmask of
                                                // digits that must be cleared from pencil.
+                                               // Built from roles.elimTarget for most
+                                               // techniques; built from result.eliminations
+                                               // for Hidden Pair / Hidden Triple (which set
+                                               // roles.elimTarget = [] because eliminations
+                                               // happen within the cause cells).
                                                // null for placement techniques (ranks 1–2).
                                                // Never mutated after COACH_START.
 
@@ -201,8 +208,18 @@ If a previous session is active (`state.coachSession !== null`), the reducer fir
    const eliminationTargets = (result.type === 'elimination')
      ? (() => {
          const m = new Map();
-         const digitBits = result.digits.reduce((b, d) => b | (1 << (d - 1)), 0);
-         for (const c of result.roles.elimTarget) m.set(c, digitBits);
+         if (result.roles.elimTarget.length > 0) {
+           // Most techniques: all elim-target cells lose the same digit set.
+           const digitBits = result.digits.reduce((b, d) => b | (1 << (d - 1)), 0);
+           for (const c of result.roles.elimTarget) m.set(c, digitBits);
+         } else {
+           // Hidden Pair / Hidden Triple: roles.elimTarget is empty because
+           // eliminations happen within the cause cells. Build per-cell bitmasks
+           // from the individual elimination entries instead.
+           for (const { cellIndex, digit } of result.eliminations) {
+             m.set(cellIndex, (m.get(cellIndex) ?? 0) | (1 << (digit - 1)));
+           }
+         }
          return m;
        })()
      : null;
@@ -878,7 +895,12 @@ function _showRecap(step, variant) {
 
 function _composeElimRecapDetail(step) {
   const D = step.digits[0];  // primary digit being eliminated
-  const n = step.roles.elimTarget.length;
+  // Use roles.elimTarget when non-empty (most techniques). Fall back to
+  // counting distinct cells in step.eliminations for Hidden Pair / Hidden
+  // Triple, which set roles.elimTarget = [].
+  const n = step.roles.elimTarget.length > 0
+    ? step.roles.elimTarget.length
+    : new Set(step.eliminations.map(e => e.cellIndex)).size;
   const unitLabel = step.unit ? _formatUnitLabel(step.unit) : 'the grid';
   return `${step.technique} in ${unitLabel}: digit ${D} removed from ${n} cell${n === 1 ? '' : 's'}.`;
 }
