@@ -387,6 +387,11 @@ body.theme-terminal .win-banner .win-title {
     height: min(calc(100vw - 32px), 414px);
   }
 
+  #coach-overlay {
+    width: min(calc(100vw - 32px), 414px);
+    height: min(calc(100vw - 32px), 414px);
+  }
+
   .cell {
     font-size: clamp(14px, 4.5vw, 22px);
   }
@@ -398,6 +403,11 @@ body.theme-terminal .win-banner .win-title {
 
 @media (max-width: 375px) {
   .sudoku-grid {
+    width: calc(100vw - 32px);
+    height: calc(100vw - 32px);
+  }
+
+  #coach-overlay {
     width: calc(100vw - 32px);
     height: calc(100vw - 32px);
   }

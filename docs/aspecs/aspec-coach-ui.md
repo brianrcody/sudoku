@@ -1136,17 +1136,7 @@ function _cellCenter(i) {
 }
 ```
 
-**Hard assumption:** these constants assume the grid is exactly 414×414 px, matching `vspec-001-v1.md` and `vspec-002-coach.md` §6. If the grid dimensions ever change, this function and the offsets in §7.7 break. This constraint is documented at the top of `coachOverlay.js`:
-
-```js
-// COACH OVERLAY COORDINATE CONSTRAINT:
-// This module assumes a 414×414 px grid with 46×46 cells (414/9 = 46).
-// Cell index i centers at (col*46 + 23, row*46 + 23).
-// If the grid size changes, update GRID_PX and CELL_PX below.
-const GRID_PX = 414;
-const CELL_PX = 46;
-const CELL_HALF = 23;
-```
+**Coordinate assumption:** these constants are in SVG viewBox units (`viewBox="0 0 414 414"`), not CSS pixels. The overlay SVG scales to match the grid at every viewport size via responsive CSS rules that mirror the `.sudoku-grid` breakpoints; the viewBox mapping handles the coordinate scaling automatically, so JS constants never need to change for responsive shrinking. The constants would only need updating if the base grid size (414 px) changed.
 
 ### 7.7 Arrow rendering by style
 

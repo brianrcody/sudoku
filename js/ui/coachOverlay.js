@@ -9,10 +9,10 @@
  * aspec-coach-ui.md §7.1).
  */
 
-// COACH OVERLAY COORDINATE CONSTRAINT:
-// This module assumes a 414×414 px grid with 46×46 cells (414/9 ≈ 46).
-// Cell index i centers at (col*46 + 23, row*46 + 23).
-// If the grid size changes, update GRID_PX and CELL_PX below.
+// Coordinates below are in SVG viewBox units (viewBox="0 0 414 414"). The overlay
+// CSS mirrors the grid's responsive breakpoints, so the viewBox-to-CSS scaling
+// handles shrinking automatically. Only update these constants if the base grid
+// size (414 px) changes.
 const GRID_PX = 414;
 const CELL_PX = 46;
 const CELL_HALF = 23;
