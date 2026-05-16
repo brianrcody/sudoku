@@ -483,6 +483,20 @@ or already contain D eliminated.
 **Grid visual:** The unit (row, column, or box) is outlined or shaded in the coach accent
 color. The target cell is distinctly highlighted within the unit.
 
+For each empty non-target cell E in the unit, straight lines extend from the filled cells
+that force D's elimination in E, through E, and stop at E's far boundary — making the
+reasoning visible. Specifically:
+
+- *Column constraint* (row and box Hidden Singles): if D appears in E's column outside
+  the unit, a vertical line extends from that D-cell through E.
+- *Row constraint* (column and box Hidden Singles): if D appears in E's row outside the
+  unit, a horizontal line extends from that D-cell through E.
+- *Box constraint* (row and column Hidden Singles): if D appears in E's box outside the
+  unit, a diagonal line extends from that D-cell through E.
+
+Multiple constraints on the same cell produce multiple lines. Filled non-target cells in
+the unit receive no additional treatment.
+
 **Supporting text:** "[Digit] can only go in one place in this [row/column/box]."
 
 **User move:** Enter the digit in the target cell.

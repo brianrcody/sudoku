@@ -351,11 +351,71 @@ const MAPPERS = {
       : [];
 
     const unitTypeName = unitDesc ? unitDesc.type : 'unit';
+    const hidingUnitType = unitDesc ? unitDesc.type : null;
+
+    // For each empty non-target cell E in the unit, find which filled D-cells
+    // outside the unit force its elimination. Check columns (for row/box HS),
+    // rows (for col/box HS), and boxes (for row/col HS). Deduplicate (from,to).
+    const checkCol = hidingUnitType !== 'col';
+    const checkRow = hidingUnitType !== 'row';
+    const checkBox = hidingUnitType !== 'box';
+
+    const arrowKeys = new Set();
+    const arrows = [];
+    const causeSet = new Set();
+
+    for (const E of unitMembers) {
+      if (workingBoard[E] !== 0) continue;
+
+      if (checkCol) {
+        for (const c of UNITS_OF[E][1]) {
+          if (workingBoard[c] === D) {
+            const key = `${c},${E}`;
+            if (!arrowKeys.has(key)) {
+              arrowKeys.add(key);
+              arrows.push({ from: c, to: E, style: 'elim-line' });
+              causeSet.add(c);
+            }
+            break;
+          }
+        }
+      }
+
+      if (checkRow) {
+        for (const c of UNITS_OF[E][0]) {
+          if (workingBoard[c] === D) {
+            const key = `${c},${E}`;
+            if (!arrowKeys.has(key)) {
+              arrowKeys.add(key);
+              arrows.push({ from: c, to: E, style: 'elim-line' });
+              causeSet.add(c);
+            }
+            break;
+          }
+        }
+      }
+
+      if (checkBox) {
+        for (const c of UNITS_OF[E][2]) {
+          if (workingBoard[c] === D) {
+            const key = `${c},${E}`;
+            if (!arrowKeys.has(key)) {
+              arrowKeys.add(key);
+              arrows.push({ from: c, to: E, style: 'elim-line' });
+              causeSet.add(c);
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    const causeCells = [...causeSet].sort((a, b) => a - b);
 
     return {
       roles: {
         target,
-        cause: [],
+        cause: causeCells,
         elimTarget: [],
         unitMember: unitMembers,
         scA: [],
@@ -363,7 +423,7 @@ const MAPPERS = {
       },
       digits: [D],
       unit: unitDesc,
-      arrows: [],
+      arrows,
       supportingText: `*${D}* can only go in one place in this *${unitTypeName}*.`,
       complexity: { acknowledged: false, note: null, endpoints: null },
     };

@@ -100,6 +100,39 @@ function _cellCenter(i) {
 }
 
 /**
+ * Return the point on the far boundary of cell `to` when travelling in a
+ * straight line from the center of cell `from`.
+ *
+ * @param {number} from - source cell index
+ * @param {number} to   - eliminated cell index
+ * @returns {{ x: number, y: number }}
+ */
+function _cellFarBoundary(from, to) {
+  const a = _cellCenter(from);
+  const b = _cellCenter(to);
+  const toRow = Math.floor(to / 9);
+  const toCol = to % 9;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+
+  const left   = toCol * CELL_PX;
+  const right  = (toCol + 1) * CELL_PX;
+  const top    = toRow * CELL_PX;
+  const bottom = (toRow + 1) * CELL_PX;
+
+  let t = Infinity;
+  if (ux >  1e-9) t = Math.min(t, (right  - b.x) / ux);
+  if (ux < -1e-9) t = Math.min(t, (left   - b.x) / ux);
+  if (uy >  1e-9) t = Math.min(t, (bottom - b.y) / uy);
+  if (uy < -1e-9) t = Math.min(t, (top    - b.y) / uy);
+
+  return isFinite(t) ? { x: b.x + ux * t, y: b.y + uy * t } : b;
+}
+
+/**
  * Shorten a line segment by `startClear` px from `a` and `endClear` px from `b`.
  *
  * @param {{ x: number, y: number }} a
@@ -204,6 +237,14 @@ function _renderArrow(arrow) {
       const closed = `${pts} ${first.x},${first.y}`;
       return _polyline(closed, {
         stroke: '#7c3aed', strokeOpacity: 0.5, strokeWidth: 1.5, fill: 'none',
+      });
+    }
+
+    case 'elim-line': {
+      const a = _cellCenter(arrow.from);
+      const end = _cellFarBoundary(arrow.from, arrow.to);
+      return _line(a.x, a.y, end.x, end.y, {
+        stroke: '#7c3aed', strokeOpacity: 0.45, strokeWidth: 1.5,
       });
     }
 

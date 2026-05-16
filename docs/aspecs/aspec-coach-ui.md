@@ -1238,6 +1238,25 @@ case 'chain-edge': {
 }
 ```
 
+#### 7.7.6 `elim-line`
+
+Used by Hidden Single. A straight line from the cause cell center to the far boundary of
+the eliminated cell — the line passes through the eliminated cell and terminates at its
+exit edge rather than stopping short of it.
+
+```js
+case 'elim-line': {
+  const a = _cellCenter(arrow.from);
+  const end = _cellFarBoundary(arrow.from, arrow.to);
+  return _line(a.x, a.y, end.x, end.y, {
+    stroke: '#7c3aed', strokeOpacity: 0.45, strokeWidth: 1.5,
+  });
+}
+```
+
+`_cellFarBoundary(from, to)` computes where the straight ray from `_cellCenter(from)`
+exits the boundary of cell `to` on the far side (the side away from `from`).
+
 ### 7.8 SVG element factories
 
 ```js

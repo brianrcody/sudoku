@@ -183,6 +183,13 @@ An SVG element (`#coach-overlay`) is absolutely positioned above the grid within
 - Lines start 16px from the peer center, end 20px from the target center (to clear cell content)
 - Arrowhead: `<marker>` with `markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto"`, filled `<polygon points="0 0, 6 2, 0 4">` at `fill: #7c3aed`, `opacity: 0.7`
 
+*Hidden Single — elimination crossing lines:*
+- Straight `<line>` elements from each cause cell center to the far boundary of the
+  eliminated cell (the line passes through the eliminated cell and stops at its exit edge)
+- `stroke: #7c3aed`, `stroke-opacity: 0.45`, `stroke-width: 1.5`
+- No arrowhead; no shortening — the line starts at the cause cell center and terminates
+  exactly at the eliminated cell's far boundary in the direction of travel
+
 *Naked Pair — arc between cause cells, dashed lines to elimination targets:*
 - Cause-to-cause: quadratic Bézier `<path>` with control point raised 18px above the midpoint. `stroke: #7c3aed`, `stroke-opacity: 0.8`, `stroke-width: 2`, `fill: none`. Arrowhead on the end point; marker `opacity: 0.85`
 - Cause-to-target: `<line>` elements with `stroke-dasharray: "4 3"`, `stroke-opacity: 0.5`, `stroke-width: 1.5`, same arrowhead marker

@@ -208,8 +208,10 @@ describe('coach/analyzer — rank 2: Hidden Single', function () {
     expect(['row', 'col', 'box']).to.include(step.unit.type);
     // unitMember must have length 8 (all 9 cells minus the target).
     expect(step.roles.unitMember).to.have.length(8);
-    expect(step.roles.cause).to.deep.equal([]);
-    expect(step.arrows).to.deep.equal([]);
+    // All arrows are elim-line crossing-out lines originating from cause cells.
+    expect(step.arrows.every(a => a.style === 'elim-line')).to.equal(true);
+    const arrowFroms = new Set(step.arrows.map(a => a.from));
+    expect([...arrowFroms].every(f => step.roles.cause.includes(f))).to.equal(true);
   });
 });
 

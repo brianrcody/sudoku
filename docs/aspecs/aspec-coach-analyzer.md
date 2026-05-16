@@ -211,6 +211,13 @@ Arrow =
                                               // and closes the figure. Use this for
                                               // pure outline shapes, not directional
                                               // arrows.
+  | { from: int, to: int, style: 'elim-line' }
+                                              // Hidden Single elimination line: straight
+                                              // from cause cell center, through the
+                                              // eliminated cell, stopping at its far
+                                              // boundary. No arrowhead. Rendered with
+                                              // reduced opacity to distinguish from
+                                              // directional arrows.
   | { from: int, to: int, style: 'chain-edge',
       strong?: bool }                         // chain link for coloring chains and
                                               // XY-Chain. `strong: true` denotes a
@@ -456,13 +463,13 @@ The supporting-text patterns below follow the fspec §8 wording exactly. Bracket
 | Field | Value |
 |---|---|
 | `roles.target` | `target` |
-| `roles.cause` | `[]` (the unit-member set carries the visual; cause is empty for this technique) |
+| `roles.cause` | All distinct filled cells outside the unit that contain D and directly eliminate a candidate from an empty non-target unit member. Sorted ascending. May be empty if all non-target unit members are filled. |
 | `roles.elimTarget` | `[]` |
 | `roles.unitMember` | All 9 cells of the unit in which D is hidden, **excluding** `target`. (Length 8.) |
 | `roles.scA`, `roles.scB` | `[]`, `[]` |
 | `digits` | `[D]` |
 | `unit` | `{ type, index }` of the unit in which D is hidden. |
-| `arrows` | `[]` — fspec §8.2 grid visual is "the unit is outlined or shaded"; the unit-member highlighting alone communicates this; no arrow is needed. |
+| `arrows` | One `{ from: causeCell, to: E, style: 'elim-line' }` per (cause, eliminated-cell) pair. For each empty non-target unit member E: check E's column if hiding unit is row or box; check E's row if hiding unit is col or box; check E's box if hiding unit is row or col. (from, to) pairs are deduplicated — when the same cause cell eliminates E via both column and box membership, only one arrow is emitted. |
 | `supportingText` | `"*[D]* can only go in one place in this *[row/column/box]*."` |
 | `complexity` | `{ acknowledged: false, note: null, endpoints: null }` |
 
