@@ -437,47 +437,80 @@ const MAPPERS = {
     const dBit = 1 << (D - 1);
     const elimTargets = [...new Set(step.eliminations.map(e => e.cellIndex))].sort((a, b) => a - b);
 
-    // Identify the source cluster: cells that share a unit with all elim targets
-    // and have D as a candidate (the "confined" cells).
-    // The source cluster is in the unit that doesn't contain the elim targets.
-    // Strategy: collect elim target units; the cause cells are in a unit NOT
-    // shared by elim targets, yet they form a cluster with D candidates.
-    //
-    // Simpler: derive cause cells from candidates — cells with D that peer-intersect
-    // all elim targets but are not elim targets themselves.
-    // The cause cells are all cells with D as candidate that see ALL elim targets.
-    const causeCells = [];
+    // Re-derive the locked intersection from the current candidate set,
+    // mirroring the solver's own checks. This gives us both the correct
+    // variant text and the actual cause cells (used for highlighting and
+    // arrows), avoiding the heuristic "sees all elim targets" approach which
+    // picks up spurious cells and can misplace arrows.
+    const dCandCells = [];
     for (let i = 0; i < 81; i++) {
-      if (workingBoard[i] !== 0) continue;
-      if (!(candidates[i] & dBit)) continue;
-      if (elimTargets.includes(i)) continue;
-      // Must see all elim targets
-      if (elimTargets.every(e => PEERS[i].includes(e))) {
-        causeCells.push(i);
+      if (workingBoard[i] === 0 && (candidates[i] & dBit)) dCandCells.push(i);
+    }
+    const elimSet = new Set(elimTargets);
+
+    let variantText = '';
+    let causeCells = [];
+
+    // Try pointing: some box has all its D candidates in one row or column,
+    // and the elim targets are exactly the D candidates in that line outside the box.
+    let found = false;
+    for (let b = 0; b < 9 && !found; b++) {
+      const inBox = dCandCells.filter(c => boxOf(c) === b);
+      if (inBox.length < 2) continue;
+
+      const boxRows = [...new Set(inBox.map(rowOf))];
+      if (boxRows.length === 1) {
+        const r = boxRows[0];
+        const exp = dCandCells.filter(c => rowOf(c) === r && boxOf(c) !== b);
+        if (exp.length === elimTargets.length && exp.every(e => elimSet.has(e))) {
+          variantText = `*${D}* in this box is confined to this *row* — eliminate it from the rest of that *row*.`;
+          causeCells = inBox;
+          found = true;
+          break;
+        }
+      }
+
+      const boxCols = [...new Set(inBox.map(colOf))];
+      if (!found && boxCols.length === 1) {
+        const col = boxCols[0];
+        const exp = dCandCells.filter(c => colOf(c) === col && boxOf(c) !== b);
+        if (exp.length === elimTargets.length && exp.every(e => elimSet.has(e))) {
+          variantText = `*${D}* in this box is confined to this *column* — eliminate it from the rest of that *column*.`;
+          causeCells = inBox;
+          found = true;
+        }
       }
     }
-    causeCells.sort((a, b) => a - b);
 
-    // Determine variant: pointing (cause shares box) or claiming (cause shares row/col).
-    let variant = 'pointing';
-    let variantText = '';
-    if (causeCells.length > 0) {
-      const boxes = causeCells.map(c => boxOf(c));
-      const allSameBox = boxes.every(b => b === boxes[0]);
-      if (allSameBox) {
-        // Pointing: cause in same box, elims in row or col
-        const rows = causeCells.map(c => rowOf(c));
-        const cols = causeCells.map(c => colOf(c));
-        const allSameRow = rows.every(r => r === rows[0]);
-        const lineName = allSameRow ? 'row' : 'column';
-        variantText = `*${D}* in this box is confined to this *${lineName}* — eliminate it from the rest of that *${lineName}*.`;
-      } else {
-        // Claiming: cause in same row/col, elims in box
-        const rows = causeCells.map(c => rowOf(c));
-        const allSameRow = rows.every(r => r === rows[0]);
-        const lineName = allSameRow ? 'row' : 'column';
-        variant = 'claiming';
-        variantText = `*${D}* in this *${lineName}* only appears within this box — eliminate it from the rest of the box.`;
+    // Try claiming: some row or column has all its D candidates in one box,
+    // and the elim targets are exactly the D candidates in that box outside the line.
+    for (let r = 0; r < 9 && !found; r++) {
+      const inRow = dCandCells.filter(c => rowOf(c) === r);
+      if (inRow.length < 2) continue;
+      const rowBoxes = [...new Set(inRow.map(boxOf))];
+      if (rowBoxes.length === 1) {
+        const b = rowBoxes[0];
+        const exp = dCandCells.filter(c => boxOf(c) === b && rowOf(c) !== r);
+        if (exp.length === elimTargets.length && exp.every(e => elimSet.has(e))) {
+          variantText = `*${D}* in this *row* is confined to this box — eliminate it from the rest of that box.`;
+          causeCells = inRow;
+          found = true;
+        }
+      }
+    }
+
+    for (let col = 0; col < 9 && !found; col++) {
+      const inCol = dCandCells.filter(c => colOf(c) === col);
+      if (inCol.length < 2) continue;
+      const colBoxes = [...new Set(inCol.map(boxOf))];
+      if (colBoxes.length === 1) {
+        const b = colBoxes[0];
+        const exp = dCandCells.filter(c => boxOf(c) === b && colOf(c) !== col);
+        if (exp.length === elimTargets.length && exp.every(e => elimSet.has(e))) {
+          variantText = `*${D}* in this *column* is confined to this box — eliminate it from the rest of that box.`;
+          causeCells = inCol;
+          found = true;
+        }
       }
     }
 
