@@ -155,6 +155,7 @@ players. The system keyboard is never triggered. The pad contains:
 - Erase button
 - Pen/Pencil mode toggle (see §6.1)
 - Hint button (see §8)
+- Undo button (see §9.7)
 
 All pad interactions require a cell to be selected. If no cell is selected when a pad
 button is tapped, the tap has no effect.
@@ -171,6 +172,7 @@ On desktop, the following keyboard shortcuts are supported:
 | Tab / Shift+Tab              | Move to next/previous focusable element (standard browser tab order) |
 | **P**                        | Toggle Pen/Pencil mode                             |
 | Enter or Space (on a button) | Activate the focused button                        |
+| Ctrl+Z (Win/Linux) or Cmd+Z (Mac) | Undo last move (see §9.7)               |
 
 **Rationale for P as the pen/pencil shortcut:** Single-letter, mnemonic (P for Pencil),
 unambiguous — no browser or OS conflict for an in-game context, and easy to reach
@@ -495,6 +497,22 @@ Clears the selected cell. See §6.4 for the full behavior specification.
 
 If no cell is selected, Erase has no effect.
 
+### 9.7 Undo
+
+Reverts the board to the state immediately before the last move. A "move" is any pen digit entry, pencil mark toggle, or erase. Undo restores both the pen array and all pencil marks that existed before the move — including any pencil candidates that were auto-cleared from peer cells by a pen digit entry (§6.5).
+
+Undo is **one-level only**. After an undo, the button is disabled until the player makes another move. There is no redo; if the player wants to re-apply an undone move, they must enter it again manually.
+
+The undo history is **session-only** — it does not survive a page refresh. The button starts disabled on every page load.
+
+**Undo is not available once the puzzle is won.** The winning move cannot be undone. The button remains disabled for the duration of the win state.
+
+Moves that do not change the board state (entering the same digit already in the cell, erasing an empty cell) do not update the undo history — the prior undo point is preserved.
+
+**Button disabled when:** no move has been made since page load or the last undo; the puzzle is won; or a puzzle is being generated.
+
+**Keyboard shortcut:** Ctrl+Z (Windows/Linux) or Cmd+Z (Mac) — see §5.2. The shortcut respects the same disabled conditions as the button and has no effect when focus is inside a text input or button element.
+
 ---
 
 ## 10. Win State
@@ -643,7 +661,7 @@ in tab order.
 Within the grid, arrow keys navigate between cells (§4.2). Tab/Shift+Tab moves focus
 out of the grid to the next/previous focusable element in page order.
 
-The number pad buttons (1–9, Erase, Pen/Pencil, Hint), difficulty selector, New Puzzle,
+The number pad buttons (1–9, Erase, Pen/Pencil, Hint, Undo), difficulty selector, New Puzzle,
 Reset, Check, and theme selector are all focusable and operable via keyboard.
 
 ### 14.2 ARIA Roles and Labels
@@ -679,6 +697,7 @@ The following events must produce screen reader announcements via a live region:
 | Hint used                                       | "Hint used: [digit] placed in cell [row, col]. [N] hints remaining" |
 | Hints exhausted                                 | "No hints remaining"                                      |
 | Puzzle complete (win)                           | "Puzzle complete! Well done."                             |
+| Undo applied                                    | "Last move undone"                                        |
 
 ### 14.4 Focus Management
 

@@ -355,8 +355,9 @@ Applied via `body.theme-terminal`.
 - Outer `.numpad` gap between rows: `8px`
 - Digit grid: `repeat(3, 1fr)`, `gap: 6px` — 9 buttons in 3 columns
 - Utils row (Erase + Mode): `repeat(2, 1fr)`, `gap: 6px`
-- Bottom row (Hint + Check): `repeat(2, 1fr)`, `gap: 6px`
-- Check button: `grid-column: span 2` when visible (spans full width of 2-column row)
+- Undo row: full-width single button (`width: 100%`) — sits between the utils row and the Hint/Coach row
+- Hint/Coach row: `repeat(2, 1fr)`, `gap: 6px` — Hint on left, Coach on right (see vspec-002-coach §2)
+- Check row: full-width single button (see vspec-002-coach §2)
 
 ### 4.6 Buttons
 
@@ -462,6 +463,14 @@ Visible only when difficulty is "Easy" or "Medium". Hidden (`display: none`) for
 Shown (class `.show`, `display: flex`) over the grid when puzzle is complete. Contains:
 - `.win-title`: "Puzzle Complete!", `font-size: 28px`, `font-weight: 700`, color `var(--win)`
 - `.win-sub`: "Well done.", `font-size: 14px`, color `var(--text-muted)`
+
+### 5.8 Undo Button
+
+**Enabled:** Standard `.btn` appearance — `background: var(--btn-bg)`, `border: 1px solid var(--btn-border)`, `color: var(--text)`. Full width of its row. Label: "Undo". `aria-label="Undo last move"`.
+
+**Disabled (no undo history, puzzle won, or generating):** `opacity: 0.38`, `cursor: not-allowed`. The button starts disabled on every page load. It enables after the first move and disables again after each undo — so after one undo it grays out immediately.
+
+No badge or dynamic label. The label is always "Undo".
 
 ### 5.7 Stats Table Active Row
 
@@ -621,6 +630,7 @@ A visually hidden `<div id="sr-live" aria-live="assertive" aria-atomic="true" ro
 - Digit keys `1`–`9` enter values in the selected cell
 - `Backspace`/`Delete` erase the selected cell
 - `p`/`P` toggles pen/pencil mode (when focus is not on an input/select/button)
+- `Ctrl+Z` (Win/Linux) or `Cmd+Z` (Mac) undoes the last move (when undo is available; no-op when button would be disabled)
 - `Escape` closes the confirmation dialog
 
 ---

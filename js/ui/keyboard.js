@@ -29,6 +29,19 @@ export function mount(root, gameState) {
       return;
     }
 
+    // Undo: Ctrl+Z (Win/Linux) or Cmd+Z (Mac). Single-level; no redo.
+    if ((e.key === 'z' || e.key === 'Z') &&
+        (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+      if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(tag)) return;
+      const state = gameState.getState();
+      if (state.undoSnapshot === null || state.won === true || state.generating === true) {
+        return;  // do not preventDefault — leave native Ctrl+Z intact
+      }
+      e.preventDefault();
+      gameState.dispatch({ type: 'UNDO' });
+      return;
+    }
+
     // Digit keys 1–9.
     if (e.key >= '1' && e.key <= '9') {
       const state = gameState.getState();

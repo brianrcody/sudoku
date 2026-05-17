@@ -11,6 +11,7 @@ import { rowOf, colOf } from '../util/grid.js';
 
 const RELEVANT_KEYS = new Set([
   'puzzle', 'selected', 'activeMode', 'hintsRemaining', 'won', 'completionMessage',
+  'undoSnapshot', 'generating',
 ]);
 
 let _root = null;
@@ -48,6 +49,9 @@ function _buildNumpad() {
             <span class="mode-sub" id="mode-label-sub">tap for pencil</span>
           </span>
         </button>
+      </div>
+      <div class="numpad-undo-row">
+        <button class="btn btn-undo" id="btn-undo" aria-label="Undo last move" disabled>Undo</button>
       </div>
       <div class="numpad-bottom-row1">
         <button class="btn btn-hint" id="btn-hint" aria-label="Hint">
@@ -119,6 +123,13 @@ function _buildNumpad() {
     } else {
       announce(`${count} cell${count > 1 ? 's' : ''} incorrect.`);
     }
+  });
+
+  _root.querySelector('#btn-undo').addEventListener('click', () => {
+    const s = _gameState.getState();
+    if (s.undoSnapshot === null || s.won || s.generating) return;
+    _gameState.dispatch({ type: 'UNDO' });
+    announce('Last move undone');
   });
 
   // Toolbar pattern: prevent pointer-driven focus transfer so the selected cell
@@ -204,6 +215,12 @@ function _update(state) {
   const checkBtn = _root.querySelector('#btn-check');
   if (checkBtn) {
     checkBtn.style.display = CHECK_VISIBLE[difficulty] ? '' : 'none';
+  }
+
+  // Undo button.
+  const undoBtn = _root.querySelector('#btn-undo');
+  if (undoBtn) {
+    undoBtn.disabled = state.undoSnapshot === null || state.won === true || state.generating === true;
   }
 
   // Hard/Death March on-completion incorrect message.

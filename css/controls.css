@@ -31,6 +31,14 @@
   width: 100%;
 }
 
+.numpad-undo-row {
+  width: 100%;
+}
+
+.numpad-undo-row .btn-undo {
+  width: 100%;
+}
+
 /* ── Base button ──────────────────────────────────────────────────────── */
 .btn {
   display: inline-flex;

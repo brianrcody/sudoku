@@ -800,4 +800,643 @@ describe('game/state.js', () => {
     unsub();
     expect(emitCount).to.equal(1);
   });
+
+  // ── UNDO tests (S55–S77) ─────────────────────────────────────────────────
+
+  describe('UNDO', () => {
+    // S55: PEN_ENTER on empty cell sets undoSnapshot (deep copy)
+    it('S55: PEN_ENTER on empty cell sets undoSnapshot as a value copy', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      const s = gs.getState();
+      expect(s.undoSnapshot).to.not.be.null;
+      // Snapshot pen should be a distinct typed array with pre-move value (0).
+      expect(s.undoSnapshot.pen).to.be.instanceOf(Uint8Array);
+      expect(s.undoSnapshot.pen[1]).to.equal(0);
+      // Mutating live pen does not affect snapshot.
+      const snapPenRef = s.undoSnapshot.pen;
+      s.pen[1] = 9;
+      expect(snapPenRef[1]).to.equal(0);
+      s.pen[1] = 3; // restore
+    });
+
+    // S56: UNDO restores pen/pencil and consumes snapshot
+    it('S56: UNDO restores pen and sets undoSnapshot to null', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      expect(gs.getState().pen[1]).to.equal(3);
+      gs.dispatch({ type: 'UNDO' });
+      const s = gs.getState();
+      expect(s.pen[1]).to.equal(0);
+      expect(s.undoSnapshot).to.be.null;
+    });
+
+    // S57: UNDO restores auto-cleared peer pencil marks (critical case)
+    it('S57: UNDO restores peer pencil marks cleared by PEN_ENTER auto-clear', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      // Cell 1 is in row 0, col 1. Peers in same row: cells 2–8. Same col: cells 10,19,28,37,46,55,64,73.
+      // Box-0 peers of cell 1: cells 2,9,10 (row/col/box overlap).
+      // Set digit-3 pencil mark in peers: cell 2 (row), cell 10 (col+box), cell 9 (box row1 col0).
+      select(gs, 2);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+      select(gs, 9);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+      select(gs, 10);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+
+      // Verify pencil marks are set.
+      const bit3 = 1 << 2; // digit 3 = bit index 2
+      expect(gs.getState().pencil[2] & bit3).to.not.equal(0);
+      expect(gs.getState().pencil[9] & bit3).to.not.equal(0);
+      expect(gs.getState().pencil[10] & bit3).to.not.equal(0);
+
+      // PEN_ENTER digit 3 in cell 1 — auto-clears peers.
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      expect(gs.getState().pencil[2] & bit3).to.equal(0);
+      expect(gs.getState().pencil[9] & bit3).to.equal(0);
+      expect(gs.getState().pencil[10] & bit3).to.equal(0);
+
+      // UNDO — restores all peer pencil marks.
+      gs.dispatch({ type: 'UNDO' });
+      expect(gs.getState().pencil[2] & bit3).to.not.equal(0);
+      expect(gs.getState().pencil[9] & bit3).to.not.equal(0);
+      expect(gs.getState().pencil[10] & bit3).to.not.equal(0);
+    });
+
+    // S58: UNDO recomputes conflicts
+    it('S58: UNDO recomputes conflicts and removes them when the duplicate is reverted', () => {
+      // Use a puzzle with NO given in row 1, so the conflict we create is among player cells only.
+      // makeEasyPuzzle has given[0]=5 (row 0). Use row 1: cells 9,10,11,...
+      // Cell 9 is row 1 col 0 (not a given), cell 10 is row 1 col 1 (not a given).
+      loadPuzzle(gs, makeEasyPuzzle());
+      // Enter digit 7 in cell 9 (row 1, col 0).
+      select(gs, 9);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 7 });
+      // Enter same digit 7 in cell 10 (row 1, col 1) — creates a conflict.
+      select(gs, 10);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 7 });
+      expect(gs.getState().conflicts.size).to.be.above(0);
+
+      // UNDO the second entry (restores pre-entry state: cell 10 = 0, cell 9 = 7).
+      // Now only one 7 in row 1 — conflict clears.
+      gs.dispatch({ type: 'UNDO' });
+      expect(gs.getState().conflicts.size).to.equal(0);
+    });
+
+    // S59: PENCIL_TOGGLE captures snapshot; UNDO reverts the bit
+    it('S59: PENCIL_TOGGLE captures undoSnapshot; UNDO reverts the pencil bit', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 5 });
+      const bit5 = 1 << 4;
+      expect(gs.getState().pencil[1] & bit5).to.not.equal(0);
+      expect(gs.getState().undoSnapshot).to.not.be.null;
+      gs.dispatch({ type: 'UNDO' });
+      expect(gs.getState().pencil[1]).to.equal(0);
+    });
+
+    // S60: ERASE of pen digit captures + UNDO restores
+    it('S60: ERASE of pen digit captures undoSnapshot; UNDO restores the digit', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      // Consume snapshot from PEN_ENTER.
+      gs.dispatch({ type: 'UNDO' });
+      expect(gs.getState().undoSnapshot).to.be.null;
+
+      // Re-enter to get a snapshot, then erase.
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      gs.dispatch({ type: 'UNDO' });
+      // Now cell is empty. Re-enter for ERASE test.
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      // Now UNDO the entry and ERASE with fresh snapshot.
+      gs.dispatch({ type: 'UNDO' }); // back to empty, no snapshot
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 }); // snapshot set pre-entry
+      // snapshot now holds pre-PEN_ENTER state. Consume it.
+      gs.dispatch({ type: 'UNDO' });
+      // pen[1] = 0, undoSnapshot = null.
+      expect(gs.getState().pen[1]).to.equal(0);
+      expect(gs.getState().undoSnapshot).to.be.null;
+
+      // Enter digit, then ERASE — ERASE should capture a new snapshot.
+      gs.dispatch({ type: 'PEN_ENTER', digit: 7 });
+      gs.dispatch({ type: 'UNDO' }); // consume that snapshot
+      gs.dispatch({ type: 'PEN_ENTER', digit: 7 });
+      // snapshot is now for the pre-PEN_ENTER state (pen[1]=0). Consume it so we test ERASE separately.
+      gs.dispatch({ type: 'UNDO' }); // pen[1]=0
+      // Now test: enter, undo, re-enter to reset, then ERASE creates its own snapshot.
+      gs.dispatch({ type: 'PEN_ENTER', digit: 4 }); // snapshot covers pre-state
+      gs.dispatch({ type: 'UNDO' });  // now pen[1]=0, snapshot=null
+      gs.dispatch({ type: 'PEN_ENTER', digit: 4 }); // snapshot = {pen[1]=0,...}
+      // Discard the PEN_ENTER snapshot by undoing.
+      gs.dispatch({ type: 'UNDO' }); // pen[1]=0, snapshot=null
+
+      // Clean isolated ERASE test:
+      gs.dispatch({ type: 'PEN_ENTER', digit: 6 }); // capture pre-entry snapshot
+      // Undo gives back pen[1]=0. Now enter 6 again so ERASE has something to erase.
+      gs.dispatch({ type: 'UNDO' });
+      gs.dispatch({ type: 'PEN_ENTER', digit: 6 }); // pen[1]=6, snapshot covers pre-entry
+      // UNDO the PEN_ENTER first (snapshot consumed, pen[1]=0). Then re-enter for ERASE.
+      gs.dispatch({ type: 'UNDO' }); // pen[1]=0, snapshot=null
+      gs.dispatch({ type: 'PEN_ENTER', digit: 6 }); // pen[1]=6, snapshot set
+      // Now ERASE captures its own snapshot (overwrites the PEN_ENTER snapshot).
+      gs.dispatch({ type: 'ERASE' }); // pen[1]=0, snapshot now = {pen[1]=6,...}
+      expect(gs.getState().pen[1]).to.equal(0);
+      expect(gs.getState().undoSnapshot).to.not.be.null;
+      expect(gs.getState().undoSnapshot.pen[1]).to.equal(6);
+      gs.dispatch({ type: 'UNDO' }); // restore pen[1]=6
+      expect(gs.getState().pen[1]).to.equal(6);
+    });
+
+    // S61: ERASE of pencil marks captures + UNDO restores
+    it('S61: ERASE of pencil-only cell captures undoSnapshot; UNDO restores pencil', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 4 });
+      // Consume that snapshot.
+      gs.dispatch({ type: 'UNDO' });
+      expect(gs.getState().pencil[1]).to.equal(0);
+      expect(gs.getState().undoSnapshot).to.be.null;
+
+      // Re-toggle to set the pencil mark.
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 4 });
+      // Consume the snapshot from PENCIL_TOGGLE.
+      gs.dispatch({ type: 'UNDO' });
+      // Toggle again for the ERASE test.
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 4 });
+      // snapshot = pre-PENCIL_TOGGLE. ERASE should capture its own.
+      gs.dispatch({ type: 'UNDO' }); // pencil[1]=0, snapshot=null
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 4 }); // pencil[1] bit-4 set, snapshot captured
+      gs.dispatch({ type: 'UNDO' }); // pencil[1]=0
+      // Now: pencil[1]=0, undoSnapshot=null. Set via PENCIL_TOGGLE then test ERASE.
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 4 }); // pencil[1] = bit-4, snapshot = pre-state
+      // ERASE should capture a NEW snapshot (overwriting the PENCIL_TOGGLE snapshot).
+      const bit4 = 1 << 3; // digit 4 = bit index 3
+      expect(gs.getState().pencil[1] & bit4).to.not.equal(0);
+      gs.dispatch({ type: 'ERASE' }); // pencil[1]=0, snapshot = {pencil[1] with bit-4}
+      expect(gs.getState().pencil[1]).to.equal(0);
+      expect(gs.getState().undoSnapshot).to.not.be.null;
+      expect(gs.getState().undoSnapshot.pencil[1] & bit4).to.not.equal(0);
+      gs.dispatch({ type: 'UNDO' });
+      expect(gs.getState().pencil[1] & bit4).to.not.equal(0);
+    });
+
+    // S62: ERASE on empty cell does not capture or clobber prior snapshot
+    it('S62: ERASE on empty cell does not overwrite prior snapshot', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      // Set snapshot A via PEN_ENTER in cell 1.
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      const snapA = gs.getState().undoSnapshot;
+      expect(snapA).to.not.be.null;
+
+      // ERASE on empty cell 2 — should not overwrite snapshot or emit.
+      select(gs, 2);
+      let emitCount = 0;
+      const unsub = gs.on('changed', () => emitCount++);
+      gs.dispatch({ type: 'ERASE' });
+      unsub();
+      expect(emitCount).to.equal(0);
+      expect(gs.getState().undoSnapshot).to.equal(snapA);
+    });
+
+    // S63: PEN_ENTER same-digit no-op preserves prior snapshot
+    it('S63: PEN_ENTER same digit (no-op) does not overwrite prior snapshot', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      // First real entry — snapshot captures pre-entry state (pen[1]=0).
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      const snap = gs.getState().undoSnapshot;
+      expect(snap).to.not.be.null;
+      expect(snap.pen[1]).to.equal(0);
+
+      // Same digit again — no-op. Snapshot must not change.
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      expect(gs.getState().undoSnapshot).to.equal(snap);
+
+      // One UNDO should revert to pen[1]===0.
+      gs.dispatch({ type: 'UNDO' });
+      expect(gs.getState().pen[1]).to.equal(0);
+    });
+
+    // S64: PEN_ENTER given/no-selection does not capture
+    it('S64a: PEN_ENTER with no selection does not capture undoSnapshot', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      // selected === null (after PUZZLE_LOADED, no SELECT_CELL).
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      expect(gs.getState().undoSnapshot).to.be.null;
+    });
+
+    it('S64b: prior snapshot survives a no-op PEN_ENTER (same digit); given guard documented', () => {
+      // Note: the _applyPenEnter given-cell guard (givens[cellIndex] !== 0) is unreachable
+      // via the public dispatch API because SELECT_CELL blocks selection of given cells,
+      // so selected is always null when trying to enter a digit on a given — the
+      // selected===null guard in PEN_ENTER fires first. The guard is defensive dead code.
+      // This test verifies the documented behavior: a prior real snapshot survives a no-op.
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 }); // real move, snapshot = pre-entry state
+      const snapBefore = gs.getState().undoSnapshot;
+      expect(snapBefore).to.not.be.null;
+      expect(snapBefore.pen[1]).to.equal(0);
+
+      // Same-digit no-op — snapshot must not be replaced.
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      expect(gs.getState().undoSnapshot).to.equal(snapBefore);
+
+      // Entering from null-selected state after UNDO — no snapshot created.
+      gs.dispatch({ type: 'UNDO' }); // pen[1]=0, snapshot=null
+      // selected is null now (UNDO doesn't touch selected). Actually selected stays at 1 after UNDO.
+      // Deselect to guarantee null.
+      gs.dispatch({ type: 'DESELECT' });
+      gs.dispatch({ type: 'PEN_ENTER', digit: 9 }); // selected===null → break, no capture
+      expect(gs.getState().undoSnapshot).to.be.null;
+    });
+
+    // S65: One-level only: second consecutive UNDO is no-op
+    it('S65: Second consecutive UNDO is a no-op (snapshot is null)', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      select(gs, 2);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 4 });
+      // First UNDO reverts cell 2.
+      gs.dispatch({ type: 'UNDO' });
+      expect(gs.getState().pen[2]).to.equal(0);
+      expect(gs.getState().pen[1]).to.equal(3);
+      expect(gs.getState().undoSnapshot).to.be.null;
+
+      // Second UNDO must be no-op.
+      let emitCount = 0;
+      const unsub = gs.on('changed', () => emitCount++);
+      gs.dispatch({ type: 'UNDO' });
+      unsub();
+      expect(emitCount).to.equal(0);
+      expect(gs.getState().pen[2]).to.equal(0);
+      expect(gs.getState().pen[1]).to.equal(3);
+    });
+
+    // S66: UNDO blocked while won
+    it('S66: UNDO is a no-op when state.won is true', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      expect(gs.getState().undoSnapshot).to.not.be.null;
+      // Force won=true on the live state object.
+      gs.getState().won = true;
+
+      let emitCount = 0;
+      const unsub = gs.on('changed', () => emitCount++);
+      gs.dispatch({ type: 'UNDO' });
+      unsub();
+      expect(emitCount).to.equal(0);
+      expect(gs.getState().won).to.be.true;
+      expect(gs.getState().pen[1]).to.equal(3);
+      // Restore for isolation.
+      gs.getState().won = false;
+    });
+
+    // S67: UNDO blocked while generating
+    it('S67: UNDO is a no-op when state.generating is true', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      expect(gs.getState().undoSnapshot).to.not.be.null;
+      gs.dispatch({ type: 'SET_GENERATING', flag: true, message: 'test' });
+
+      let emitCount = 0;
+      const unsub = gs.on('changed', () => emitCount++);
+      gs.dispatch({ type: 'UNDO' });
+      unsub();
+      expect(emitCount).to.equal(0);
+      expect(gs.getState().pen[1]).to.equal(3);
+      expect(gs.getState().undoSnapshot).to.not.be.null;
+    });
+
+    // S68: HINT does not capture or clear snapshot
+    it('S68: HINT does not capture or clear an existing undoSnapshot', () => {
+      // The key invariant: undoSnapshot is never touched by HINT.
+      // Verify using the outer gs (no prior hint placement).
+
+      // First sub-case: HINT is a no-op (hintProvider returns null by default).
+      // undoSnapshot set by PEN_ENTER must survive the no-op HINT.
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      const snapA = gs.getState().undoSnapshot;
+      expect(snapA).to.not.be.null;
+      expect(snapA.pen[1]).to.equal(0); // pre-move value
+
+      // HINT with null return (no-op) must leave undoSnapshot intact.
+      select(gs, 2);
+      gs.dispatch({ type: 'HINT' }); // hintProvider returns null → breaks early
+      expect(gs.getState().undoSnapshot).to.equal(snapA);
+
+      // UNDO reverts PEN_ENTER — proves snapshot was preserved through the no-op HINT.
+      gs.dispatch({ type: 'UNDO' });
+      expect(gs.getState().pen[1]).to.equal(0);
+      expect(gs.getState().undoSnapshot).to.be.null;
+
+      // Second sub-case: HINT places a digit (proves undoSnapshot not mutated by real HINT).
+      // This uses S29-style setup (no prior PEN_ENTER before HINT, to match proven-working pattern).
+      // undoSnapshot is null at this point. HINT should not create a snapshot.
+      select(gs, 3);
+      // Temporarily configure hintProvider to return a real hint.
+      hintProvider._hint = { cellIndex: 3, digit: 7, technique: 'nakedSingle' };
+      gs.dispatch({ type: 'HINT' });
+      hintProvider._hint = null; // restore
+
+      expect(gs.getState().pen[3]).to.equal(7); // hint placed
+      // HINT must not have created an undoSnapshot.
+      expect(gs.getState().undoSnapshot).to.be.null;
+    });
+
+    // S69: attemptRecorded restored on undo of first move
+    it('S69: UNDO restores attemptRecorded=false after undoing the first PEN_ENTER', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      expect(gs.getState().attemptRecorded).to.be.false;
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 }); // first move flips attemptRecorded
+      expect(gs.getState().attemptRecorded).to.be.true;
+      expect(stats.attempts).to.have.length(1); // cookie recorded
+
+      gs.dispatch({ type: 'UNDO' });
+      expect(gs.getState().attemptRecorded).to.be.false;
+      // Stats cookie NOT decremented — still 1 attempt (accepted behavior).
+      expect(stats.attempts).to.have.length(1);
+    });
+
+    // S70: hintsRemaining restored on undo (no-op in practice)
+    it('S70: UNDO restores hintsRemaining (a no-op since HINT does not capture snapshot)', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      const initialHints = gs.getState().hintsRemaining;
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      gs.dispatch({ type: 'UNDO' });
+      // hintsRemaining is unchanged (PEN_ENTER doesn't touch it).
+      expect(gs.getState().hintsRemaining).to.equal(initialHints);
+    });
+
+    // S71: UNDO ends coach session via direct null
+    it('S71: UNDO sets coachSession=null and emits coachSession + undoSnapshot in changed', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+
+      // Build a minimal COACH_START result (placement, no auto-reveal).
+      const coachResult = {
+        type: 'placement',
+        technique: 'Naked Single',
+        rank: 1,
+        digits: [3],
+        roles: {
+          target: 1,
+          cause: [],
+          elimTarget: [],
+          unitMember: [],
+          scA: [],
+          scB: [],
+        },
+        unit: null,
+        arrows: [],
+        eliminations: [],
+        autoReveal: { required: false, cells: [] },
+        supportingText: 'Only 3 can go here.',
+        complexity: { acknowledged: false, note: null, endpoints: null },
+      };
+
+      gs.dispatch({ type: 'COACH_START', result: coachResult });
+      expect(gs.getState().coachSession).to.not.be.null;
+
+      // PEN_ENTER to create a snapshot while coach session is active.
+      select(gs, 2);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 5 });
+      expect(gs.getState().undoSnapshot).to.not.be.null;
+
+      // UNDO — should null coachSession and emit both keys.
+      let lastChanged = null;
+      const unsub = gs.on('changed', ({ changed }) => { lastChanged = changed; });
+      gs.dispatch({ type: 'UNDO' });
+      unsub();
+
+      expect(gs.getState().coachSession).to.be.null;
+      expect(gs.getState().undoSnapshot).to.be.null;
+      expect(lastChanged).to.not.be.null;
+      expect(lastChanged.has('coachSession')).to.be.true;
+      expect(lastChanged.has('undoSnapshot')).to.be.true;
+    });
+
+    // S72: UNDO skips coach block when session null
+    it('S72: UNDO with no active coach session does not error; coachSession stays null', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      expect(gs.getState().coachSession).to.be.null;
+      gs.dispatch({ type: 'UNDO' });
+      expect(gs.getState().coachSession).to.be.null;
+    });
+
+    // S73: Coach pencil churn does not capture snapshot
+    it('S73: COACH_START then COACH_END with no user move leaves undoSnapshot null', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+
+      const coachResult = {
+        type: 'placement',
+        technique: 'Naked Single',
+        rank: 1,
+        digits: [3],
+        roles: { target: 1, cause: [], elimTarget: [], unitMember: [], scA: [], scB: [] },
+        unit: null,
+        arrows: [],
+        eliminations: [],
+        autoReveal: { required: false, cells: [] },
+        supportingText: '',
+        complexity: { acknowledged: false, note: null, endpoints: null },
+      };
+
+      gs.dispatch({ type: 'COACH_START', result: coachResult });
+      expect(gs.getState().undoSnapshot).to.be.null;
+      gs.dispatch({ type: 'COACH_END', reason: 'user-dismissed' });
+      expect(gs.getState().undoSnapshot).to.be.null;
+    });
+
+    // S74: Lifecycle actions clear snapshot and emit key
+    it('S74: PUZZLE_LOADED clears undoSnapshot and includes undoSnapshot in emit', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      expect(gs.getState().undoSnapshot).to.not.be.null;
+
+      let lastChanged = null;
+      const unsub = gs.on('changed', ({ changed }) => { lastChanged = changed; });
+      loadPuzzle(gs, makeEasyPuzzle());
+      unsub();
+      expect(gs.getState().undoSnapshot).to.be.null;
+      expect(lastChanged.has('undoSnapshot')).to.be.true;
+      gs.dispatch({ type: 'UNDO' }); // must be no-op
+      expect(gs.getState().undoSnapshot).to.be.null;
+    });
+
+    it('S74: NEW_PUZZLE clears undoSnapshot and includes undoSnapshot in emit', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      expect(gs.getState().undoSnapshot).to.not.be.null;
+
+      let lastChanged = null;
+      const unsub = gs.on('changed', ({ changed }) => { lastChanged = changed; });
+      const puzzle2 = makeEasyPuzzle();
+      gs.dispatch({ type: 'NEW_PUZZLE', difficulty: 'easy', puzzle: puzzle2 });
+      unsub();
+      expect(gs.getState().undoSnapshot).to.be.null;
+      expect(lastChanged.has('undoSnapshot')).to.be.true;
+      gs.dispatch({ type: 'UNDO' }); // must be no-op
+      expect(gs.getState().undoSnapshot).to.be.null;
+    });
+
+    it('S74: RESET_PUZZLE clears undoSnapshot and includes undoSnapshot in emit', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      expect(gs.getState().undoSnapshot).to.not.be.null;
+
+      let lastChanged = null;
+      const unsub = gs.on('changed', ({ changed }) => { lastChanged = changed; });
+      gs.dispatch({ type: 'RESET_PUZZLE' });
+      unsub();
+      expect(gs.getState().undoSnapshot).to.be.null;
+      expect(lastChanged.has('undoSnapshot')).to.be.true;
+      gs.dispatch({ type: 'UNDO' }); // must be no-op
+      expect(gs.getState().undoSnapshot).to.be.null;
+    });
+
+    it('S74: CHANGE_DIFFICULTY clears undoSnapshot and includes undoSnapshot in emit', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      expect(gs.getState().undoSnapshot).to.not.be.null;
+
+      let lastChanged = null;
+      const unsub = gs.on('changed', ({ changed }) => { lastChanged = changed; });
+      gs.dispatch({ type: 'CHANGE_DIFFICULTY', difficulty: 'hard' });
+      unsub();
+      expect(gs.getState().undoSnapshot).to.be.null;
+      expect(lastChanged.has('undoSnapshot')).to.be.true;
+      gs.dispatch({ type: 'UNDO' }); // must be no-op
+      expect(gs.getState().undoSnapshot).to.be.null;
+    });
+
+    // S75: UNDO clears incorrect + cancels clearIncorrectTimer
+    it('S75: UNDO clears incorrect state and cancels the clearIncorrectTimer', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      // Enter a wrong digit and CHECK to set incorrect flags and schedule a timer.
+      gs.dispatch({ type: 'PEN_ENTER', digit: 9 }); // wrong (solution is 2)
+      gs.dispatch({ type: 'CHECK' });
+      expect(gs.getState().incorrect.size).to.be.above(0);
+      expect(gs.getState().incorrectShownUntil).to.be.above(0);
+
+      // Spy on clearTimeout to verify it is called.
+      const originalClearTimeout = window.clearTimeout;
+      const clearedIds = [];
+      window.clearTimeout = (id) => { clearedIds.push(id); originalClearTimeout(id); };
+
+      // Make another move so we have a snapshot to undo.
+      select(gs, 2);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 5 });
+
+      // UNDO — should clear incorrect state and cancel the timer.
+      gs.dispatch({ type: 'UNDO' });
+      window.clearTimeout = originalClearTimeout;
+
+      const s = gs.getState();
+      expect(s.incorrect.size).to.equal(0);
+      expect(s.incorrectShownUntil).to.equal(0);
+      expect(s.completionMessage).to.equal('');
+      // clearTimeout must have been called (with some valid numeric id).
+      expect(clearedIds.length).to.be.above(0);
+
+      // Verify the timer was actually cancelled: wait past CHECK_HIGHLIGHT_MS
+      // and confirm no spurious CLEAR_INCORRECT emit fires after UNDO.
+      // (We rely on the spy: if clearTimeout was called with the timer id, it's cancelled.)
+    });
+
+    // S76: UNDO when clearIncorrectTimer is null
+    it('S76: UNDO executes cleanly when there is no active clearIncorrectTimer', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      // No CHECK dispatched — clearIncorrectTimer is null.
+      let threw = false;
+      try {
+        gs.dispatch({ type: 'UNDO' });
+      } catch (e) {
+        threw = true;
+      }
+      expect(threw).to.be.false;
+      expect(gs.getState().pen[1]).to.equal(0);
+    });
+
+    // S77: UNDO emit-key set is exactly §10.1; move emits include undoSnapshot
+    it('S77: UNDO changed set equals the full §10.1 set', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+
+      let undoChanged = null;
+      const unsub = gs.on('changed', ({ changed }) => { undoChanged = changed; });
+      gs.dispatch({ type: 'UNDO' });
+      unsub();
+
+      const expected = new Set([
+        'pen', 'pencil', 'conflicts', 'incorrect', 'incorrectShownUntil',
+        'completionMessage', 'hintsRemaining', 'attemptRecorded', 'coachSession', 'undoSnapshot',
+      ]);
+      expect(undoChanged).to.not.be.null;
+      for (const key of expected) {
+        expect(undoChanged.has(key), `UNDO emit missing key: ${key}`).to.be.true;
+      }
+      expect(undoChanged.size).to.equal(expected.size);
+    });
+
+    it('S77: PEN_ENTER, PENCIL_TOGGLE, and ERASE mutating emits include undoSnapshot', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+
+      // PEN_ENTER mutating path.
+      select(gs, 1);
+      let changed = null;
+      let unsub = gs.on('changed', ({ action, changed: c }) => {
+        if (action.type === 'PEN_ENTER') changed = c;
+      });
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      unsub();
+      expect(changed.has('undoSnapshot')).to.be.true;
+
+      // PENCIL_TOGGLE mutating path.
+      gs.dispatch({ type: 'UNDO' }); // reset
+      select(gs, 1);
+      changed = null;
+      unsub = gs.on('changed', ({ action, changed: c }) => {
+        if (action.type === 'PENCIL_TOGGLE') changed = c;
+      });
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 5 });
+      unsub();
+      expect(changed.has('undoSnapshot')).to.be.true;
+
+      // ERASE pen-digit mutating path.
+      gs.dispatch({ type: 'UNDO' }); // revert PENCIL_TOGGLE
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 }); // pen[1]=3, snapshot set
+      gs.dispatch({ type: 'UNDO' }); // revert to empty
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 }); // pen[1]=3, fresh snapshot
+      // Now ERASE: should emit with undoSnapshot.
+      changed = null;
+      unsub = gs.on('changed', ({ action, changed: c }) => {
+        if (action.type === 'ERASE') changed = c;
+      });
+      gs.dispatch({ type: 'ERASE' }); // pen-erase path
+      unsub();
+      expect(changed.has('undoSnapshot')).to.be.true;
+    });
+  }); // end describe('UNDO')
 });

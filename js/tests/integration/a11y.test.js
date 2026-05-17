@@ -288,6 +288,39 @@ describe('integration/a11y', () => {
     expect(isCell).to.be.false;
   });
 
+  // A21: Undo button aria-label + disabled toggles with undoSnapshot
+  it('A21: undo button has correct aria-label and disabled toggles with undoSnapshot', async function () {
+    this.timeout(15000);
+    const gs = gameState();
+    if (!gs) return this.skip();
+
+    const state = gs.getState();
+    if (!state.puzzle) return this.skip();
+
+    const undoBtn = iframe.contentDocument.getElementById('btn-undo');
+    if (!undoBtn) return this.skip();
+
+    // aria-label must be exactly "Undo last move".
+    expect(undoBtn.getAttribute('aria-label')).to.equal('Undo last move');
+
+    // Disabled at load (no undoSnapshot).
+    expect(undoBtn.disabled).to.be.true;
+
+    // After pen entry — button should enable.
+    const idx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
+    const digit = state.puzzle.solution[idx] === 9 ? 1 : 9;
+    gs.dispatch({ type: 'SELECT_CELL', index: idx });
+    gs.dispatch({ type: 'PEN_ENTER', digit });
+    await new Promise(r => setTimeout(r, 100));
+    expect(undoBtn.disabled).to.be.false;
+
+    // After clicking Undo — button re-disables.
+    undoBtn.click();
+    await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
+    await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
+    expect(undoBtn.disabled).to.be.true;
+  });
+
   // A20: Double-frame re-announce fires live region
   it('A20: announcing the same text twice clears then re-sets the live region', async function () {
     this.timeout(10000);

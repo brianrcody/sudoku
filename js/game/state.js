@@ -23,6 +23,14 @@ import { rowOf, colOf } from '../util/grid.js';
  */
 
 /**
+ * @typedef {Object} UndoSnapshot
+ * @property {Uint8Array}  pen             - Copy of pen[] before the last move.
+ * @property {Uint16Array} pencil          - Copy of pencil[] before the last move.
+ * @property {number}      hintsRemaining  - hintsRemaining before the last move.
+ * @property {boolean}     attemptRecorded - attemptRecorded before the last move.
+ */
+
+/**
  * @typedef {Object} GameState
  * @property {object|null} puzzle
  * @property {Uint8Array} pen
@@ -39,6 +47,7 @@ import { rowOf, colOf } from '../util/grid.js';
  * @property {boolean} generating
  * @property {string} generatingMessage
  * @property {CoachSession|null} coachSession
+ * @property {UndoSnapshot|null} undoSnapshot
  */
 
 /**
@@ -86,6 +95,7 @@ export function createGameState({ stats, hintProvider }) {
     generatingMessage: '',
     completionMessage: '',
     coachSession: null,
+    undoSnapshot: null,
   };
 
   // Timer handle for auto-clearing incorrect highlights.
@@ -101,6 +111,16 @@ export function createGameState({ stats, hintProvider }) {
       clearIncorrectTimer = null;
       dispatch({ type: 'CLEAR_INCORRECT' });
     }, CHECK_HIGHLIGHT_MS);
+  }
+
+  /** Captures the current board into undoSnapshot (before a mutating move). */
+  function _captureUndoSnapshot() {
+    state.undoSnapshot = {
+      pen: new Uint8Array(state.pen),
+      pencil: new Uint16Array(state.pencil),
+      hintsRemaining: state.hintsRemaining,
+      attemptRecorded: state.attemptRecorded,
+    };
   }
 
   /** Auto-clear pencil mark digit D from peers of a committed pen cell. */
@@ -148,12 +168,12 @@ export function createGameState({ stats, hintProvider }) {
   }
 
   function _applyPenEnter(cellIndex, digit, fromHint) {
-    if (!state.puzzle) return;
-    if (state.puzzle.givens[cellIndex] !== 0) return;
-    if (state.won) return;
+    if (!state.puzzle) return false;
+    if (state.puzzle.givens[cellIndex] !== 0) return false;
+    if (state.won) return false;
 
     const prevValue = state.pen[cellIndex];
-    if (prevValue === digit) return; // no-op per fspec §6.2
+    if (prevValue === digit) return false; // no-op per fspec §6.2
 
     state.pen[cellIndex] = digit;
     state.pencil[cellIndex] = 0; // clear pencil marks
@@ -179,8 +199,10 @@ export function createGameState({ stats, hintProvider }) {
     // Check for win condition after any pen entry.
     if (_isBoardFull()) {
       dispatch({ type: 'ON_COMPLETION_EVALUATE' });
-      return;
+      return true;
     }
+
+    return true;
   }
 
   function dispatch(action) {
@@ -207,11 +229,12 @@ export function createGameState({ stats, hintProvider }) {
         state.generatingMessage = '';
         state.completionMessage = '';
         state.coachSession = null;
+        state.undoSnapshot = null;
         if (clearIncorrectTimer !== null) { clearTimeout(clearIncorrectTimer); clearIncorrectTimer = null; }
         _emit(action, 'puzzle', 'pen', 'pencil', 'selected', 'activeMode', 'conflicts',
               'incorrect', 'incorrectShownUntil', 'hintsRemaining', 'attemptRecorded',
               'won', 'winHandled', 'generating', 'generatingMessage', 'completionMessage',
-              'coachSession');
+              'coachSession', 'undoSnapshot');
         break;
       }
 
@@ -284,7 +307,14 @@ export function createGameState({ stats, hintProvider }) {
 
       case 'PEN_ENTER': {
         if (state.selected === null) break;
-        _applyPenEnter(state.selected, action.digit, action.fromHint ?? false);
+        const pending = {
+          pen: new Uint8Array(state.pen),
+          pencil: new Uint16Array(state.pencil),
+          hintsRemaining: state.hintsRemaining,
+          attemptRecorded: state.attemptRecorded,
+        };
+        const mutated = _applyPenEnter(state.selected, action.digit, action.fromHint ?? false);
+        if (mutated) state.undoSnapshot = pending;
 
         // Coach block — runs before _emit so coachSession changes emit separately.
         if (state.coachSession !== null && !(action.fromHint ?? false)) {
@@ -307,7 +337,7 @@ export function createGameState({ stats, hintProvider }) {
         }
 
         _emit(action, 'pen', 'pencil', 'conflicts', 'incorrect', 'hintsRemaining',
-              'attemptRecorded', 'won', 'winHandled');
+              'attemptRecorded', 'won', 'winHandled', 'undoSnapshot');
         break;
       }
 
@@ -317,6 +347,8 @@ export function createGameState({ stats, hintProvider }) {
         if (state.puzzle.givens[state.selected] !== 0) break;
         if (state.pen[state.selected] !== 0) break; // cell has pen digit — ignore
         if (state.won) break;
+
+        _captureUndoSnapshot();
 
         const bit = 1 << (action.digit - 1);
         if (state.pencil[state.selected] & bit) {
@@ -339,7 +371,7 @@ export function createGameState({ stats, hintProvider }) {
           }
         }
 
-        _emit(action, 'pencil');
+        _emit(action, 'pencil', 'undoSnapshot');
         break;
       }
 
@@ -351,19 +383,63 @@ export function createGameState({ stats, hintProvider }) {
 
         const cellIdx = state.selected;
         if (state.pen[cellIdx] !== 0) {
+          _captureUndoSnapshot();
           state.pen[cellIdx] = 0;
           state.conflicts = computeConflicts(state.pen);
           // Clear realtime incorrect flag if erasing an incorrect cell.
           state.incorrect.delete(cellIdx);
-          _emit(action, 'pen', 'conflicts', 'incorrect');
+          _emit(action, 'pen', 'conflicts', 'incorrect', 'undoSnapshot');
         } else if (state.pencil[cellIdx] !== 0) {
+          _captureUndoSnapshot();
           state.pencil[cellIdx] = 0;
-          _emit(action, 'pencil');
+          _emit(action, 'pencil', 'undoSnapshot');
         }
 
         if (state.coachSession !== null) {
           dispatch({ type: 'COACH_END', reason: 'erase' });
         }
+        break;
+      }
+
+      case 'UNDO': {
+        if (state.undoSnapshot === null) break;
+        if (state.won === true) break;
+        if (state.generating === true) break;
+
+        const snap = state.undoSnapshot;
+
+        // End any active coach session directly (no COACH_END dispatch — full
+        // pencil restore supersedes the revert formula).
+        if (state.coachSession !== null) {
+          state.coachSession = null;
+        }
+
+        // Restore board arrays in place (preserve typed-array identity).
+        state.pen.set(snap.pen);
+        state.pencil.set(snap.pencil);
+
+        // Restore stats fields.
+        state.hintsRemaining = snap.hintsRemaining;
+        state.attemptRecorded = snap.attemptRecorded;
+
+        // Recompute conflicts from restored pen.
+        state.conflicts = computeConflicts(state.pen);
+
+        // Clear transient correctness highlight state.
+        state.incorrect = new Set();
+        state.incorrectShownUntil = 0;
+        state.completionMessage = '';
+        if (clearIncorrectTimer !== null) {
+          clearTimeout(clearIncorrectTimer);
+          clearIncorrectTimer = null;
+        }
+
+        // Consume snapshot — one-level only, no redo.
+        state.undoSnapshot = null;
+
+        _emit(action, 'pen', 'pencil', 'conflicts', 'incorrect', 'incorrectShownUntil',
+              'completionMessage', 'hintsRemaining', 'attemptRecorded', 'coachSession',
+              'undoSnapshot');
         break;
       }
 
@@ -507,11 +583,12 @@ export function createGameState({ stats, hintProvider }) {
         state.generatingMessage = '';
         state.completionMessage = '';
         state.coachSession = null;
+        state.undoSnapshot = null;
         if (clearIncorrectTimer !== null) { clearTimeout(clearIncorrectTimer); clearIncorrectTimer = null; }
         _emit(action, 'puzzle', 'pen', 'pencil', 'selected', 'activeMode', 'conflicts',
               'incorrect', 'incorrectShownUntil', 'hintsRemaining', 'attemptRecorded',
               'won', 'winHandled', 'generating', 'generatingMessage', 'completionMessage',
-              'coachSession');
+              'coachSession', 'undoSnapshot');
         break;
       }
 
@@ -533,10 +610,11 @@ export function createGameState({ stats, hintProvider }) {
         // attemptRecorded is intentionally not reset (fspec §10.3).
         state.completionMessage = '';
         state.coachSession = null;
+        state.undoSnapshot = null;
         if (clearIncorrectTimer !== null) { clearTimeout(clearIncorrectTimer); clearIncorrectTimer = null; }
         _emit(action, 'pen', 'pencil', 'selected', 'activeMode', 'conflicts',
               'incorrect', 'incorrectShownUntil', 'hintsRemaining', 'won', 'winHandled',
-              'completionMessage', 'coachSession');
+              'completionMessage', 'coachSession', 'undoSnapshot');
         break;
       }
 
@@ -549,7 +627,8 @@ export function createGameState({ stats, hintProvider }) {
           state.puzzle = { ...state.puzzle, difficulty };
         }
         state.hintsRemaining = HINT_LIMITS[difficulty];
-        _emit(action, 'puzzle', 'hintsRemaining');
+        state.undoSnapshot = null;
+        _emit(action, 'puzzle', 'hintsRemaining', 'undoSnapshot');
         break;
       }
 

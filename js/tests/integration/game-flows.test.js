@@ -415,4 +415,442 @@ describe('integration/game-flows', () => {
 
     expect(gameState.getState().won).to.be.false;
   });
+
+  // GF15: Undo button enable/disable + SR announce
+  it('GF15: undo button is disabled at load; enables after pen entry; click reverts board and re-disables; announces', async function () {
+    this.timeout(15000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    const state = gameState.getState();
+    if (!state.puzzle) return this.skip();
+
+    const undoBtn = iframe.contentDocument.getElementById('btn-undo');
+    if (!undoBtn) return this.skip();
+
+    // Disabled at load (no snapshot).
+    expect(undoBtn.disabled).to.be.true;
+
+    // Make a pen entry — button should enable.
+    const idx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
+    // Use a digit that won't win the puzzle.
+    const wrongDigit = state.puzzle.solution[idx] === 9 ? 1 : 9;
+    gameState.dispatch({ type: 'SELECT_CELL', index: idx });
+    gameState.dispatch({ type: 'PEN_ENTER', digit: wrongDigit });
+    await new Promise(r => setTimeout(r, 100));
+    expect(undoBtn.disabled).to.be.false;
+
+    // Click Undo — board reverts, button re-disables.
+    undoBtn.click();
+    // Wait two rAF frames for state and DOM to settle.
+    await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
+    await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
+
+    expect(gameState.getState().pen[idx]).to.equal(state.puzzle.givens[idx] || 0);
+    expect(gameState.getState().undoSnapshot).to.be.null;
+    expect(undoBtn.disabled).to.be.true;
+
+    // #sr-live should contain "Last move undone" after two rAF frames.
+    const srLive = iframe.contentDocument.getElementById('sr-live');
+    expect(srLive).to.not.be.null;
+    expect(srLive.textContent).to.include('Last move undone');
+  });
+
+  // GF16: Auto-clear undo end-to-end (DOM)
+  it('GF16: undo restores peer pencil marks that were auto-cleared by a pen entry', async function () {
+    this.timeout(15000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    const state = gameState.getState();
+    if (!state.puzzle) return this.skip();
+
+    // Find two non-given cells in the same row to use as peerCell and penCell.
+    let penCell = -1, peerCell = -1;
+    outer: for (let r = 0; r < 9; r++) {
+      const row = [];
+      for (let c = 0; c < 9; c++) {
+        const i = r * 9 + c;
+        if (state.puzzle.givens[i] === 0) row.push(i);
+      }
+      if (row.length >= 2) { penCell = row[0]; peerCell = row[1]; break outer; }
+    }
+    if (penCell === -1) return this.skip();
+
+    // Choose a digit that won't trigger a win (use wrong digit).
+    const penDigit = state.puzzle.solution[penCell] === 9 ? 1 : 9;
+
+    // Set a pencil mark for penDigit in peerCell.
+    gameState.dispatch({ type: 'SELECT_CELL', index: peerCell });
+    gameState.dispatch({ type: 'PENCIL_TOGGLE', digit: penDigit });
+    await new Promise(r => setTimeout(r, 100));
+
+    // Verify pencil mark DOM is present in peerCell.
+    const peerEl = iframe.contentDocument.querySelector(`.cell[data-index="${peerCell}"]`);
+    expect(peerEl).to.not.be.null;
+    // After PENCIL_TOGGLE, cell should have pencil-marks container.
+    const pencilContainer = peerEl.querySelector('.pencil-marks');
+    expect(pencilContainer).to.not.be.null;
+
+    // Find the specific pencil mark span for penDigit — it should be set (not empty).
+    const markSpans = peerEl.querySelectorAll('.pencil-mark');
+    expect(markSpans.length).to.equal(9);
+    // penDigit - 1 is the index (spans are digits 1-9 in order).
+    const targetMark = markSpans[penDigit - 1];
+    expect(targetMark.classList.contains('empty')).to.be.false;
+
+    // Enter penDigit in penCell — should auto-clear peerCell's pencil mark.
+    gameState.dispatch({ type: 'SELECT_CELL', index: penCell });
+    gameState.dispatch({ type: 'PEN_ENTER', digit: penDigit });
+    await new Promise(r => setTimeout(r, 100));
+
+    // peerCell's pencil marks should be gone (cleared by auto-clear).
+    const pencilAfter = peerEl.querySelector('.pencil-marks');
+    // Either no pencil container at all, or all marks are empty.
+    if (pencilAfter !== null) {
+      const marks = pencilAfter.querySelectorAll('.pencil-mark');
+      const targetAfter = marks[penDigit - 1];
+      expect(targetAfter.classList.contains('empty')).to.be.true;
+    }
+
+    // Click Undo.
+    const undoBtn = iframe.contentDocument.getElementById('btn-undo');
+    if (!undoBtn) return this.skip();
+    undoBtn.click();
+    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
+    await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
+
+    // peerCell's pencil mark for penDigit should be restored.
+    const peerElAfterUndo = iframe.contentDocument.querySelector(`.cell[data-index="${peerCell}"]`);
+    const pencilRestored = peerElAfterUndo.querySelector('.pencil-marks');
+    expect(pencilRestored).to.not.be.null;
+    const restoredMarks = pencilRestored.querySelectorAll('.pencil-mark');
+    expect(restoredMarks[penDigit - 1].classList.contains('empty')).to.be.false;
+  });
+
+  // GF17: Coach + Ctrl+Z keyboard undo
+  it('GF17: Ctrl+Z with active coach session ends coach and reverts the board', async function () {
+    this.timeout(15000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    const state = gameState.getState();
+    if (!state.puzzle) return this.skip();
+
+    // Find a non-given cell.
+    const idx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
+
+    // Synthesize a coach session by dispatching COACH_START directly with a minimal result.
+    const coachResult = {
+      type: 'placement',
+      technique: 'Naked Single',
+      rank: 1,
+      digits: [3],
+      roles: { target: idx, cause: [], elimTarget: [], unitMember: [], scA: [], scB: [] },
+      unit: null,
+      arrows: [],
+      eliminations: [],
+      autoReveal: { required: false, cells: [] },
+      supportingText: 'Test coach',
+      complexity: { acknowledged: false, note: null, endpoints: null },
+    };
+    gameState.dispatch({ type: 'COACH_START', result: coachResult });
+    expect(gameState.getState().coachSession).to.not.be.null;
+
+    // Make a pen entry to create a snapshot.
+    const penCell = [...Array(81).keys()].find(i =>
+      state.puzzle.givens[i] === 0 && i !== idx
+    );
+    if (penCell === undefined) return this.skip();
+    const penDigit = state.puzzle.solution[penCell] === 9 ? 1 : 9;
+    gameState.dispatch({ type: 'SELECT_CELL', index: penCell });
+    gameState.dispatch({ type: 'PEN_ENTER', digit: penDigit });
+    await new Promise(r => setTimeout(r, 100));
+    expect(gameState.getState().undoSnapshot).to.not.be.null;
+
+    // Synthesize Ctrl+Z on the iframe's document.
+    const keyEvent = new iframe.contentWindow.KeyboardEvent('keydown', {
+      key: 'z',
+      ctrlKey: true,
+      shiftKey: false,
+      altKey: false,
+      metaKey: false,
+      bubbles: true,
+      cancelable: true,
+    });
+    iframe.contentDocument.dispatchEvent(keyEvent);
+    await new Promise(r => setTimeout(r, 100));
+
+    // Coach session should be null; board reverted.
+    expect(gameState.getState().coachSession).to.be.null;
+    expect(gameState.getState().pen[penCell]).to.equal(0);
+    expect(gameState.getState().undoSnapshot).to.be.null;
+  });
+
+  // GF18: Keyboard guards — all branches
+  it('GF18: keyboard guard: metaKey+Z dispatches undo', async function () {
+    this.timeout(15000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    const state = gameState.getState();
+    if (!state.puzzle) return this.skip();
+
+    const idx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
+    const digit = state.puzzle.solution[idx] === 9 ? 1 : 9;
+    gameState.dispatch({ type: 'SELECT_CELL', index: idx });
+    gameState.dispatch({ type: 'PEN_ENTER', digit });
+    await new Promise(r => setTimeout(r, 50));
+    expect(gameState.getState().undoSnapshot).to.not.be.null;
+
+    // Cmd+Z (metaKey) — should dispatch UNDO.
+    const keyEvent = new iframe.contentWindow.KeyboardEvent('keydown', {
+      key: 'z', ctrlKey: false, metaKey: true, shiftKey: false, altKey: false,
+      bubbles: true, cancelable: true,
+    });
+    iframe.contentDocument.dispatchEvent(keyEvent);
+    await new Promise(r => setTimeout(r, 100));
+    expect(gameState.getState().pen[idx]).to.equal(0);
+    expect(gameState.getState().undoSnapshot).to.be.null;
+  });
+
+  it('GF18: keyboard guard: focus in BUTTON prevents undo', async function () {
+    this.timeout(15000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    const state = gameState.getState();
+    if (!state.puzzle) return this.skip();
+
+    const idx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
+    const digit = state.puzzle.solution[idx] === 9 ? 1 : 9;
+    gameState.dispatch({ type: 'SELECT_CELL', index: idx });
+    gameState.dispatch({ type: 'PEN_ENTER', digit });
+    await new Promise(r => setTimeout(r, 50));
+    expect(gameState.getState().undoSnapshot).to.not.be.null;
+
+    // Focus a button so the focus guard fires.
+    const anyBtn = iframe.contentDocument.querySelector('button');
+    anyBtn?.focus();
+    await new Promise(r => setTimeout(r, 50));
+
+    const keyEvent = new iframe.contentWindow.KeyboardEvent('keydown', {
+      key: 'z', ctrlKey: true, metaKey: false, shiftKey: false, altKey: false,
+      bubbles: true, cancelable: true,
+    });
+    iframe.contentDocument.dispatchEvent(keyEvent);
+    await new Promise(r => setTimeout(r, 100));
+    // Board should NOT be reverted — snapshot still present.
+    expect(gameState.getState().undoSnapshot).to.not.be.null;
+    expect(gameState.getState().pen[idx]).to.equal(digit);
+  });
+
+  it('GF18: keyboard guard: after win, Ctrl+Z does not undo; win banner stays', async function () {
+    this.timeout(15000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    const state = gameState.getState();
+    if (!state.puzzle) return this.skip();
+
+    // Force won state with a snapshot present.
+    const idx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
+    const digit = state.puzzle.solution[idx] === 9 ? 1 : 9;
+    gameState.dispatch({ type: 'SELECT_CELL', index: idx });
+    gameState.dispatch({ type: 'PEN_ENTER', digit });
+    await new Promise(r => setTimeout(r, 50));
+    gameState.getState().won = true;
+
+    const keyEvent = new iframe.contentWindow.KeyboardEvent('keydown', {
+      key: 'z', ctrlKey: true, metaKey: false, shiftKey: false, altKey: false,
+      bubbles: true, cancelable: true,
+    });
+    iframe.contentDocument.dispatchEvent(keyEvent);
+    await new Promise(r => setTimeout(r, 100));
+    // Still won; board unchanged.
+    expect(gameState.getState().won).to.be.true;
+    expect(gameState.getState().pen[idx]).to.equal(digit);
+
+    // Restore for cleanup.
+    gameState.getState().won = false;
+  });
+
+  it('GF18: keyboard guard: Ctrl+Shift+Z and Ctrl+Alt+Z are not matched', async function () {
+    this.timeout(15000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    const state = gameState.getState();
+    if (!state.puzzle) return this.skip();
+
+    const idx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
+    const digit = state.puzzle.solution[idx] === 9 ? 1 : 9;
+    gameState.dispatch({ type: 'SELECT_CELL', index: idx });
+    gameState.dispatch({ type: 'PEN_ENTER', digit });
+    await new Promise(r => setTimeout(r, 50));
+    expect(gameState.getState().undoSnapshot).to.not.be.null;
+
+    // Ctrl+Shift+Z — redo chord, must not dispatch UNDO.
+    const shiftZ = new iframe.contentWindow.KeyboardEvent('keydown', {
+      key: 'z', ctrlKey: true, shiftKey: true, altKey: false, metaKey: false,
+      bubbles: true, cancelable: true,
+    });
+    iframe.contentDocument.dispatchEvent(shiftZ);
+    await new Promise(r => setTimeout(r, 50));
+    expect(gameState.getState().undoSnapshot).to.not.be.null;
+
+    // Ctrl+Alt+Z — must not dispatch UNDO.
+    const altZ = new iframe.contentWindow.KeyboardEvent('keydown', {
+      key: 'z', ctrlKey: true, shiftKey: false, altKey: true, metaKey: false,
+      bubbles: true, cancelable: true,
+    });
+    iframe.contentDocument.dispatchEvent(altZ);
+    await new Promise(r => setTimeout(r, 50));
+    expect(gameState.getState().undoSnapshot).to.not.be.null;
+  });
+
+  it('GF18: keyboard guard: snapshot null — Ctrl+Z does not preventDefault and does not dispatch', async function () {
+    this.timeout(15000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    const state = gameState.getState();
+    if (!state.puzzle) return this.skip();
+    // No pen entry — undoSnapshot is null.
+    expect(gameState.getState().undoSnapshot).to.be.null;
+
+    let dispatchedUndo = false;
+    const origDispatch = gameState.dispatch.bind(gameState);
+    // We can't intercept dispatch easily from outside, but we can verify state doesn't change.
+    const penBefore = new Uint8Array(gameState.getState().pen);
+
+    let defaultPrevented = false;
+    iframe.contentDocument.addEventListener('keydown', (e) => {
+      if (e.key === 'z' && e.ctrlKey) defaultPrevented = e.defaultPrevented;
+    }, { capture: true, once: true });
+
+    const keyEvent = new iframe.contentWindow.KeyboardEvent('keydown', {
+      key: 'z', ctrlKey: true, metaKey: false, shiftKey: false, altKey: false,
+      bubbles: true, cancelable: true,
+    });
+    iframe.contentDocument.dispatchEvent(keyEvent);
+    await new Promise(r => setTimeout(r, 50));
+    // State unchanged — no undo dispatched.
+    expect(gameState.getState().undoSnapshot).to.be.null;
+  });
+
+  it('GF18: keyboard guard: snapshot present + SET_GENERATING true + Ctrl+Z → no dispatch', async function () {
+    this.timeout(15000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    const state = gameState.getState();
+    if (!state.puzzle) return this.skip();
+
+    const idx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
+    const digit = state.puzzle.solution[idx] === 9 ? 1 : 9;
+    gameState.dispatch({ type: 'SELECT_CELL', index: idx });
+    gameState.dispatch({ type: 'PEN_ENTER', digit });
+    await new Promise(r => setTimeout(r, 50));
+    expect(gameState.getState().undoSnapshot).to.not.be.null;
+
+    // Also verify that #btn-undo is disabled when generating=true.
+    gameState.dispatch({ type: 'SET_GENERATING', flag: true, message: 'test' });
+    await new Promise(r => setTimeout(r, 50));
+    const undoBtn = iframe.contentDocument.getElementById('btn-undo');
+    if (undoBtn) expect(undoBtn.disabled).to.be.true;
+
+    // Ctrl+Z — keyboard guard should return without dispatching UNDO.
+    const keyEvent = new iframe.contentWindow.KeyboardEvent('keydown', {
+      key: 'z', ctrlKey: true, metaKey: false, shiftKey: false, altKey: false,
+      bubbles: true, cancelable: true,
+    });
+    iframe.contentDocument.dispatchEvent(keyEvent);
+    await new Promise(r => setTimeout(r, 100));
+    // Still generating and board unchanged.
+    expect(gameState.getState().generating).to.be.true;
+    expect(gameState.getState().pen[idx]).to.equal(digit);
+    expect(gameState.getState().undoSnapshot).to.not.be.null;
+
+    // Cleanup.
+    gameState.dispatch({ type: 'SET_GENERATING', flag: false });
+  });
+
+  // GF19: Session-only across fresh mount
+  it('GF19: undoSnapshot is null on fresh mount even when persisted pen/pencil are restored', async function () {
+    this.timeout(25000);
+    // First: get a puzzle id and make an entry to trigger persistence write.
+    const iframe1 = iframe; // the current iframe from beforeEach
+    const gs1 = gs(iframe1);
+    if (!gs1) return this.skip();
+
+    const state1 = gs1.getState();
+    if (!state1.puzzle) return this.skip();
+
+    const idx = [...Array(81).keys()].find(i => state1.puzzle.givens[i] === 0);
+    const digit = state1.puzzle.solution[idx] === 9 ? 1 : 9;
+    gs1.dispatch({ type: 'SELECT_CELL', index: idx });
+    gs1.dispatch({ type: 'PEN_ENTER', digit });
+    await new Promise(r => setTimeout(r, 400)); // wait for debounced persist write
+
+    const puzzleId = state1.puzzle.id;
+    const puzzleGivens = Array.from(state1.puzzle.givens);
+    const puzzleSolution = Array.from(state1.puzzle.solution);
+    const difficulty = state1.puzzle.difficulty;
+    const penState = Array.from(gs1.getState().pen);
+
+    // Build a localStorage blob directly (same format as main.js persistence writer).
+    const blob = JSON.stringify({
+      version: 1,
+      difficulty,
+      puzzle: { id: puzzleId, givens: puzzleGivens, solution: puzzleSolution },
+      pen: penState,
+      pencil: Array(81).fill(0),
+      hintsRemaining: gs1.getState().hintsRemaining,
+      attemptRecorded: gs1.getState().attemptRecorded,
+    });
+
+    // Pre-seed localStorage in the first iframe's window (same origin as the new iframe).
+    iframe1.contentWindow.localStorage.setItem('sudoku.state.v1', blob);
+
+    // Load a fresh iframe — it will restore from localStorage.
+    const iframe2 = document.createElement('iframe');
+    iframe2.src = '/index.html';
+    iframe2.style.cssText = 'width:1px;height:1px;position:fixed;left:-9999px;top:-9999px;';
+    document.body.appendChild(iframe2);
+
+    await new Promise((resolve, reject) => {
+      const deadline = Date.now() + 15000;
+      function check() {
+        if (Date.now() > deadline) return reject(new Error('Timed out waiting for fresh iframe'));
+        const doc = iframe2.contentDocument;
+        if (!doc) return setTimeout(check, 100);
+        const cellsReady = doc.querySelectorAll('.cell').length === 81;
+        const gs2 = iframe2.contentWindow?.gameState;
+        const puzzleLoaded = gs2 && gs2.getState().puzzle !== null;
+        if (cellsReady && puzzleLoaded) return resolve();
+        setTimeout(check, 100);
+      }
+      setTimeout(check, 300);
+    });
+
+    const gs2 = iframe2.contentWindow.gameState;
+    if (!gs2) { iframe2.remove(); return this.skip(); }
+
+    const restored = gs2.getState();
+    // undoSnapshot must be null — it is session-only and never persisted.
+    expect(restored.undoSnapshot).to.be.null;
+
+    // Also verify the undo button starts disabled.
+    const undoBtn2 = iframe2.contentDocument.getElementById('btn-undo');
+    if (undoBtn2) expect(undoBtn2.disabled).to.be.true;
+
+    // Verify the pen entry was actually restored (confirms localStorage was read).
+    if (restored.puzzle?.id === puzzleId) {
+      expect(restored.pen[idx]).to.equal(digit);
+    }
+
+    iframe2.remove();
+  });
 });

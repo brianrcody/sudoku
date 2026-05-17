@@ -381,3 +381,4 @@ All other fspec and vspec requirements map cleanly onto this plan.
 | `aspec-themes.md` | Theme system, CSS structure, applyTheme, no-flash script, extensibility | Implementor (Phase 6), Reviewer, QE |
 | `aspec-coach-analyzer.md` | Coach Mode analyzer — pure function returning CoachStep; sealed schema consumed by aspec-coach-ui.md | Implementor (Phase 8a), Reviewer, QE |
 | `aspec-coach-ui.md` | Coach Mode UI — CoachSession state, all COACH_* actions, pencil revert, coach.js, coachOverlay.js, CSS, a11y, tests | Implementor (Phase 8b), Reviewer, QE |
+| `aspec-undo.md` | One-level undo — `undoSnapshot` field, `UNDO` action, numpad button, Ctrl/Cmd+Z | Implementor (Phase 9), Reviewer, QE |
