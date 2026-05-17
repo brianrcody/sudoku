@@ -509,15 +509,17 @@ const MAPPERS = {
   // -------------------------------------------------------------------------
   'Naked Pair'(step, workingBoard, candidates) {
     const elimTargets = [...new Set(step.eliminations.map(e => e.cellIndex))].sort((a, b) => a - b);
+    const allElimDigits = new Set(step.eliminations.map(e => e.digit));
 
-    // Find the two pair cells: cells with identical 2-bit candidate masks that
-    // share a unit with all elim targets.
+    // Find the two pair cells: cells with identical 2-bit candidate masks whose
+    // digits match the elimination digits and that share a unit with all elim targets.
     let pairCells = [];
-    // Collect candidate masks for empty cells
     for (let i = 0; i < 81; i++) {
       if (workingBoard[i] !== 0) continue;
       if (count(candidates[i]) !== 2) continue;
       const mask = candidates[i];
+      // Pair digits must match the elim digits (guards against wrong pair in same unit).
+      if (!iterate(mask).every(d => allElimDigits.has(d))) continue;
       // Find a partner
       for (let j = i + 1; j < 81; j++) {
         if (workingBoard[j] !== 0) continue;
