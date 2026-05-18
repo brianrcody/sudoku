@@ -85,8 +85,8 @@ describe('integration/a11y', () => {
     expect(region.textContent.toLowerCase()).to.include('row');
   });
 
-  // A2: Erase announces "Cell [r,c] cleared"
-  it('A2: erase announces cell cleared', async function () {
+  // A2: Clear announces "Cell [r,c] cleared"
+  it('A2: clear announces cell cleared', async function () {
     this.timeout(10000);
     const gs = gameState();
     if (!gs) return this.skip();
@@ -100,7 +100,7 @@ describe('integration/a11y', () => {
     await waitTwoFrames(iframe);
 
     // Click erase button.
-    const eraseBtn = iframe.contentDocument.querySelector('#btn-erase');
+    const eraseBtn = iframe.contentDocument.querySelector('#btn-clear');
     if (!eraseBtn) return this.skip();
     eraseBtn.click();
     await waitTwoFrames(iframe);
@@ -356,5 +356,38 @@ describe('integration/a11y', () => {
     await waitTwoFrames(iframe);
     // After rAF — text is re-set.
     expect(srLiveRegion().textContent).to.not.equal('');
+  });
+
+  // A22: #btn-erase-all aria-label, visible text, and disabled coupling
+  it('A22: #btn-erase-all has correct aria-label and text; disabled at load, enabled after pencil mark, disabled after erase', async function () {
+    this.timeout(15000);
+    const gs = gameState();
+    if (!gs) return this.skip();
+
+    const state = gs.getState();
+    if (!state.puzzle) return this.skip();
+
+    const eraseAllBtn = iframe.contentDocument.getElementById('btn-erase-all');
+    if (!eraseAllBtn) return this.skip();
+
+    // aria-label and visible text.
+    expect(eraseAllBtn.getAttribute('aria-label')).to.equal('Erase all pencil marks');
+    expect(eraseAllBtn.textContent.trim()).to.equal('Erase all pencil');
+
+    // Disabled at load (no pencil marks).
+    expect(eraseAllBtn.disabled).to.be.true;
+
+    // After adding a pencil mark — button enables.
+    const idx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
+    gs.dispatch({ type: 'SELECT_CELL', index: idx });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 4 });
+    await new Promise(r => setTimeout(r, 100));
+    expect(eraseAllBtn.disabled).to.be.false;
+
+    // After ERASE_ALL_PENCIL fires — button re-disables.
+    gs.dispatch({ type: 'ERASE_ALL_PENCIL' });
+    await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
+    await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
+    expect(eraseAllBtn.disabled).to.be.true;
   });
 });

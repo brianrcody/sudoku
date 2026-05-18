@@ -298,6 +298,18 @@ c8 with `--include=js/**` and `--exclude=js/tests/**`. Target: **100% branch cov
 33. Performance validation: <1 s for all non-generation actions; Death March cold-start <5 s on mid-range device baseline
 34. README and deployment documentation
 
+**Phase 8 — Coach Mode** (see `aspec-coach-analyzer.md`, `aspec-coach-ui.md`)
+35. `coach/analyzer.js` + unit tests
+36. `ui/coach.js`, `ui/coachOverlay.js` + integration tests
+
+**Phase 9 — One-level Undo** (see `aspec-undo.md`)
+37. `game/state.js` — `undoSnapshot` field, `UNDO` action, snapshot lifecycle
+38. `ui/numpad.js` — Undo button; `ui/keyboard.js` — Ctrl/Cmd+Z
+
+**Phase 10 — Erase All Pencil** (see `aspec-erase-pencil.md`)
+39. `game/state.js` — `ERASE_ALL_PENCIL` action, `_hasNoPencil()` helper
+40. `ui/numpad.js` — "Erase all pencil" button; `css/controls.css` — 2-column undo row
+
 **Milestone exits:**
 - Phase 2: solver correctly rates 100% of a curated 50-puzzle regression set at known difficulty.
 - Phase 3: `generateForTier` produces a correctly-rated puzzle for all five tiers within budget.
@@ -382,3 +394,4 @@ All other fspec and vspec requirements map cleanly onto this plan.
 | `aspec-coach-analyzer.md` | Coach Mode analyzer — pure function returning CoachStep; sealed schema consumed by aspec-coach-ui.md | Implementor (Phase 8a), Reviewer, QE |
 | `aspec-coach-ui.md` | Coach Mode UI — CoachSession state, all COACH_* actions, pencil revert, coach.js, coachOverlay.js, CSS, a11y, tests | Implementor (Phase 8b), Reviewer, QE |
 | `aspec-undo.md` | One-level undo — `undoSnapshot` field, `UNDO` action, numpad button, Ctrl/Cmd+Z | Implementor (Phase 9), Reviewer, QE |
+| `aspec-erase-pencil.md` | Erase-all-pencil — `ERASE_ALL_PENCIL` action, numpad button, 2-column undo row | Implementor (Phase 10), Reviewer, QE |

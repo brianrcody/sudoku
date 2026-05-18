@@ -11,7 +11,7 @@ import { rowOf, colOf } from '../util/grid.js';
 
 const RELEVANT_KEYS = new Set([
   'puzzle', 'selected', 'activeMode', 'hintsRemaining', 'won', 'completionMessage',
-  'undoSnapshot', 'generating',
+  'undoSnapshot', 'generating', 'pencil',
 ]);
 
 let _root = null;
@@ -41,7 +41,7 @@ function _buildNumpad() {
     <div class="numpad" role="toolbar" aria-label="Number pad">
       <div class="numpad-digits" id="numpad-digits"></div>
       <div class="numpad-utils">
-        <button class="btn" id="btn-erase" aria-label="Erase selected cell">Erase</button>
+        <button class="btn" id="btn-clear" aria-label="Clear selected cell">Clear</button>
         <button class="btn btn-mode mode-pen" id="btn-mode"
                 aria-label="Switch to Pencil mode" aria-pressed="false">
           <span class="mode-label">
@@ -51,6 +51,8 @@ function _buildNumpad() {
         </button>
       </div>
       <div class="numpad-undo-row">
+        <button class="btn btn-erase-all" id="btn-erase-all"
+                aria-label="Erase all pencil marks" disabled>Erase all pencil</button>
         <button class="btn btn-undo" id="btn-undo" aria-label="Undo last move" disabled>Undo</button>
       </div>
       <div class="numpad-bottom-row1">
@@ -77,7 +79,7 @@ function _buildNumpad() {
     digitsEl.appendChild(btn);
   }
 
-  _root.querySelector('#btn-erase').addEventListener('click', () => {
+  _root.querySelector('#btn-clear').addEventListener('click', () => {
     _gameState.dispatch({ type: 'ERASE' });
     const state = _gameState.getState();
     if (state.selected !== null) {
@@ -130,6 +132,18 @@ function _buildNumpad() {
     if (s.undoSnapshot === null || s.won || s.generating) return;
     _gameState.dispatch({ type: 'UNDO' });
     announce('Last move undone');
+  });
+
+  _root.querySelector('#btn-erase-all').addEventListener('click', () => {
+    const s = _gameState.getState();
+    if (s.generating || s.won || !s.puzzle) return;
+    let hasPencil = false;
+    for (let i = 0; i < 81; i++) {
+      if (s.pencil[i] !== 0) { hasPencil = true; break; }
+    }
+    if (!hasPencil) return;
+    _gameState.dispatch({ type: 'ERASE_ALL_PENCIL' });
+    announce('All pencil marks erased');
   });
 
   // Toolbar pattern: prevent pointer-driven focus transfer so the selected cell
@@ -221,6 +235,22 @@ function _update(state) {
   const undoBtn = _root.querySelector('#btn-undo');
   if (undoBtn) {
     undoBtn.disabled = state.undoSnapshot === null || state.won === true || state.generating === true;
+  }
+
+  // Erase-all button.
+  const eraseAllBtn = _root.querySelector('#btn-erase-all');
+  if (eraseAllBtn) {
+    let hasPencil = false;
+    if (state.puzzle) {
+      for (let i = 0; i < 81; i++) {
+        if (state.pencil[i] !== 0) { hasPencil = true; break; }
+      }
+    }
+    eraseAllBtn.disabled =
+      state.generating === true ||
+      state.won === true ||
+      !state.puzzle ||
+      !hasPencil;
   }
 
   // Hard/Death March on-completion incorrect message.

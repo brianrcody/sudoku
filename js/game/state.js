@@ -167,6 +167,14 @@ export function createGameState({ stats, hintProvider }) {
     return true;
   }
 
+  /** Returns true if no cell has any pencil mark set. */
+  function _hasNoPencil() {
+    for (let i = 0; i < 81; i++) {
+      if (state.pencil[i] !== 0) return false;
+    }
+    return true;
+  }
+
   function _applyPenEnter(cellIndex, digit, fromHint) {
     if (!state.puzzle) return false;
     if (state.puzzle.givens[cellIndex] !== 0) return false;
@@ -394,6 +402,26 @@ export function createGameState({ stats, hintProvider }) {
           state.pencil[cellIdx] = 0;
           _emit(action, 'pencil', 'undoSnapshot');
         }
+
+        if (state.coachSession !== null) {
+          dispatch({ type: 'COACH_END', reason: 'erase' });
+        }
+        break;
+      }
+
+      case 'ERASE_ALL_PENCIL': {
+        if (!state.puzzle) break;             // no puzzle loaded
+        if (state.won === true) break;        // symmetry with ERASE/PEN_ENTER won-guard
+        if (state.generating === true) break; // defensive: no stable board
+        if (_hasNoPencil()) break;            // no-op: nothing to erase, prior snapshot survives
+
+        _captureUndoSnapshot();               // BEFORE mutation — mirrors ERASE §3.1
+
+        for (let i = 0; i < 81; i++) {
+          state.pencil[i] = 0;
+        }
+
+        _emit(action, 'pencil', 'undoSnapshot');
 
         if (state.coachSession !== null) {
           dispatch({ type: 'COACH_END', reason: 'erase' });

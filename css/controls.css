@@ -32,11 +32,9 @@
 }
 
 .numpad-undo-row {
-  width: 100%;
-}
-
-.numpad-undo-row .btn-undo {
-  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
 }
 
 /* ── Base button ──────────────────────────────────────────────────────── */

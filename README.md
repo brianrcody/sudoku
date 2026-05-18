@@ -19,6 +19,9 @@ technique-ladder difficulty rater.
 **Gameplay**
 - Pen and pencil mark modes
 - Arrow-key and tab navigation; system keyboard never invoked
+- One-level undo (Undo button or Ctrl/Cmd+Z)
+- Erase all pencil marks in one tap
+- Coach mode — step-by-step technique guidance with visual overlay
 - Puzzle state persisted across page loads (`localStorage`)
 - Per-difficulty statistics (games played, win rate, best/average time) persisted in cookies
 - New Puzzle confirmation when a game is in progress

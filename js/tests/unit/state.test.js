@@ -1439,4 +1439,272 @@ describe('game/state.js', () => {
       expect(changed.has('undoSnapshot')).to.be.true;
     });
   }); // end describe('UNDO')
+
+  // ── ERASE_ALL_PENCIL ───────────────────────────────────────────────────────
+
+  describe('ERASE_ALL_PENCIL', () => {
+    // S78: mutating path zeroes all pencil marks and captures snapshot
+    it('S78: clears all pencil marks and captures undoSnapshot with pre-wipe pencil copy', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+
+      // Toggle pencil marks on several non-given cells.
+      select(gs, 1);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+      select(gs, 2);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 5 });
+      select(gs, 3);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 7 });
+
+      const preWipePencil = new Uint16Array(gs.getState().pencil);
+
+      gs.dispatch({ type: 'ERASE_ALL_PENCIL' });
+
+      const s = gs.getState();
+      // All pencil cells zeroed.
+      for (let i = 0; i < 81; i++) {
+        expect(s.pencil[i], `pencil[${i}] should be 0`).to.equal(0);
+      }
+      // Snapshot captured with pre-wipe values.
+      expect(s.undoSnapshot).to.not.be.null;
+      expect(s.undoSnapshot.pencil).to.not.equal(preWipePencil); // distinct reference
+      for (let i = 0; i < 81; i++) {
+        expect(s.undoSnapshot.pencil[i]).to.equal(preWipePencil[i]);
+      }
+    });
+
+    // S79: no-op when all pencil marks are zero
+    it('S79: is a no-op when all pencil marks are already zero; prior snapshot survives; no emit', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+
+      // Establish a real snapshot by making a move.
+      select(gs, 1);
+      gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+      const priorSnapshot = gs.getState().undoSnapshot;
+      expect(priorSnapshot).to.not.be.null;
+
+      // All pencil marks are zero (none toggled) — ERASE_ALL_PENCIL is a no-op.
+      let emitFired = false;
+      const unsub = gs.on('changed', ({ action }) => {
+        if (action.type === 'ERASE_ALL_PENCIL') emitFired = true;
+      });
+      gs.dispatch({ type: 'ERASE_ALL_PENCIL' });
+      unsub();
+
+      expect(emitFired).to.be.false;
+      expect(gs.getState().undoSnapshot).to.equal(priorSnapshot); // same reference
+      for (let i = 0; i < 81; i++) {
+        expect(gs.getState().pencil[i]).to.equal(0);
+      }
+    });
+
+    // S80: no-op before any puzzle is loaded
+    it('S80: is inert before PUZZLE_LOADED; no throw, no emit, undoSnapshot stays null', () => {
+      // Fresh game state — no puzzle loaded.
+      let emitFired = false;
+      const unsub = gs.on('changed', ({ action }) => {
+        if (action.type === 'ERASE_ALL_PENCIL') emitFired = true;
+      });
+      let threw = false;
+      try {
+        gs.dispatch({ type: 'ERASE_ALL_PENCIL' });
+      } catch (e) {
+        threw = true;
+      }
+      unsub();
+      expect(threw).to.be.false;
+      expect(emitFired).to.be.false;
+      expect(gs.getState().undoSnapshot).to.be.null;
+    });
+
+    // S81: won guard
+    it('S81: is a no-op when won===true; pencil and snapshot unchanged', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+
+      // Add a pencil mark and capture state.
+      select(gs, 1);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 4 });
+      const pencilBefore = new Uint16Array(gs.getState().pencil);
+      const snapshotBefore = gs.getState().undoSnapshot;
+
+      // Force won=true directly (same pattern as S66).
+      gs.getState().won = true;
+
+      let emitFired = false;
+      const unsub = gs.on('changed', ({ action }) => {
+        if (action.type === 'ERASE_ALL_PENCIL') emitFired = true;
+      });
+      gs.dispatch({ type: 'ERASE_ALL_PENCIL' });
+      unsub();
+
+      expect(emitFired).to.be.false;
+      expect(gs.getState().undoSnapshot).to.equal(snapshotBefore);
+      for (let i = 0; i < 81; i++) {
+        expect(gs.getState().pencil[i]).to.equal(pencilBefore[i]);
+      }
+
+      // Restore for isolation.
+      gs.getState().won = false;
+    });
+
+    // S82: generating guard
+    it('S82: is a no-op when generating===true; pencil unchanged', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+
+      // Toggle a pencil mark.
+      select(gs, 1);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 2 });
+      const pencilBefore = new Uint16Array(gs.getState().pencil);
+
+      gs.dispatch({ type: 'SET_GENERATING', flag: true });
+
+      let emitFired = false;
+      const unsub = gs.on('changed', ({ action }) => {
+        if (action.type === 'ERASE_ALL_PENCIL') emitFired = true;
+      });
+      gs.dispatch({ type: 'ERASE_ALL_PENCIL' });
+      unsub();
+
+      expect(emitFired).to.be.false;
+      for (let i = 0; i < 81; i++) {
+        expect(gs.getState().pencil[i]).to.equal(pencilBefore[i]);
+      }
+    });
+
+    // S83: undo round-trip restores all pencil marks exactly
+    it('S83: UNDO after ERASE_ALL_PENCIL restores every pencil mark; undoSnapshot becomes null', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+
+      // Set multiple pencil marks across cells.
+      select(gs, 1);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 1 });
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 5 });
+      select(gs, 2);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 9 });
+      select(gs, 4);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+
+      const preWipePencil = new Uint16Array(gs.getState().pencil);
+
+      gs.dispatch({ type: 'ERASE_ALL_PENCIL' });
+      // All zero now.
+      for (let i = 0; i < 81; i++) {
+        expect(gs.getState().pencil[i]).to.equal(0);
+      }
+
+      gs.dispatch({ type: 'UNDO' });
+
+      const s = gs.getState();
+      expect(s.undoSnapshot).to.be.null;
+      for (let i = 0; i < 81; i++) {
+        expect(s.pencil[i], `pencil[${i}] after undo`).to.equal(preWipePencil[i]);
+      }
+    });
+
+    // S84: no-op does not destroy prior snapshot (analogue of U9)
+    it('S84: second ERASE_ALL_PENCIL (no-op) preserves snapshot from first; UNDO recovers marks', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+
+      // Toggle a mark to create initial state.
+      select(gs, 1);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 6 });
+
+      // First ERASE_ALL_PENCIL — mutating, captures snapshot.
+      gs.dispatch({ type: 'ERASE_ALL_PENCIL' });
+      const snapshotAfterFirst = gs.getState().undoSnapshot;
+      expect(snapshotAfterFirst).to.not.be.null;
+
+      // Now all pencil marks are zero — second ERASE_ALL_PENCIL must be a no-op.
+      gs.dispatch({ type: 'ERASE_ALL_PENCIL' });
+
+      // Snapshot must be unchanged (same object reference).
+      expect(gs.getState().undoSnapshot).to.equal(snapshotAfterFirst);
+
+      // UNDO must restore the toggled mark.
+      gs.dispatch({ type: 'UNDO' });
+      expect(gs.getState().pencil[1] & (1 << 5)).to.not.equal(0); // digit 6, bit 5
+      expect(gs.getState().undoSnapshot).to.be.null;
+    });
+
+    // S85: coach termination — COACH_END dispatched, two separate 'changed' events
+    it('S85: with active coach session, ERASE_ALL_PENCIL dispatches COACH_END; two separate changed events', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+
+      const coachResult = {
+        type: 'placement',
+        technique: 'Naked Single',
+        rank: 1,
+        digits: [3],
+        roles: { target: 1, cause: [], elimTarget: [], unitMember: [], scA: [], scB: [] },
+        unit: null,
+        arrows: [],
+        eliminations: [],
+        autoReveal: { required: false, cells: [] },
+        supportingText: 'Only 3 can go here.',
+        complexity: { acknowledged: false, note: null, endpoints: null },
+      };
+      gs.dispatch({ type: 'COACH_START', result: coachResult });
+      expect(gs.getState().coachSession).to.not.be.null;
+
+      // Add a pencil mark so ERASE_ALL_PENCIL is not a no-op.
+      select(gs, 2);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 4 });
+
+      const events = [];
+      const unsub = gs.on('changed', ({ action, changed }) => {
+        events.push({ type: action.type, changed });
+      });
+      gs.dispatch({ type: 'ERASE_ALL_PENCIL' });
+      unsub();
+
+      // coachSession must be null after the dispatch.
+      expect(gs.getState().coachSession).to.be.null;
+
+      // Two separate changed events must have been emitted.
+      expect(events.length).to.be.at.least(2);
+
+      // First event: ERASE_ALL_PENCIL with pencil + undoSnapshot.
+      const eraseEvent = events.find(e => e.type === 'ERASE_ALL_PENCIL');
+      expect(eraseEvent).to.not.be.undefined;
+      expect(eraseEvent.changed.has('pencil')).to.be.true;
+      expect(eraseEvent.changed.has('undoSnapshot')).to.be.true;
+      expect(eraseEvent.changed.has('coachSession')).to.be.false;
+
+      // Second event: COACH_END with coachSession + pencil.
+      const coachEndEvent = events.find(e => e.type === 'COACH_END');
+      expect(coachEndEvent).to.not.be.undefined;
+      expect(coachEndEvent.changed.has('coachSession')).to.be.true;
+    });
+
+    // S86: emit keys — mutating path is exactly {pencil, undoSnapshot}; no-op emits nothing
+    it('S86: mutating emit changed set equals exactly {pencil, undoSnapshot}; no-op path emits nothing', () => {
+      loadPuzzle(gs, makeEasyPuzzle());
+
+      // Add a pencil mark.
+      select(gs, 1);
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 2 });
+
+      // Capture mutating emit.
+      let mutatingChanged = null;
+      const unsub1 = gs.on('changed', ({ action, changed }) => {
+        if (action.type === 'ERASE_ALL_PENCIL') mutatingChanged = changed;
+      });
+      gs.dispatch({ type: 'ERASE_ALL_PENCIL' });
+      unsub1();
+
+      expect(mutatingChanged).to.not.be.null;
+      expect(mutatingChanged.size).to.equal(2);
+      expect(mutatingChanged.has('pencil')).to.be.true;
+      expect(mutatingChanged.has('undoSnapshot')).to.be.true;
+
+      // No-op path: all pencil already zero.
+      let noOpFired = false;
+      const unsub2 = gs.on('changed', ({ action }) => {
+        if (action.type === 'ERASE_ALL_PENCIL') noOpFired = true;
+      });
+      gs.dispatch({ type: 'ERASE_ALL_PENCIL' });
+      unsub2();
+
+      expect(noOpFired).to.be.false;
+    });
+  }); // end describe('ERASE_ALL_PENCIL')
 });

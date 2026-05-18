@@ -80,10 +80,10 @@ describe('ui/numpad.js', () => {
     expect(call).to.exist;
   });
 
-  // UN3: Erase button dispatches ERASE
-  it('UN3: clicking Erase dispatches ERASE', () => {
+  // UN3: Clear button dispatches ERASE
+  it('UN3: clicking Clear dispatches ERASE', () => {
     const fakeGs = mountNumpad();
-    root.querySelector('#btn-erase').click();
+    root.querySelector('#btn-clear').click();
     const call = fakeGs.dispatch.calls.find(a => a.type === 'ERASE');
     expect(call).to.exist;
   });
