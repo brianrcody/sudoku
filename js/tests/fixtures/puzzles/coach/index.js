@@ -159,6 +159,50 @@ export const rank04 = {
 };
 
 // ===========================================================================
+// Rank 4 regression: Naked Pair — one pair digit has no eliminations.
+//
+// Regression for the bug where the pair-cell search guard required every pair
+// digit to be in allElimDigits (pair digits ⊆ allElimDigits). When one pair
+// digit appears in no other unit cell its elimination count is zero, so
+// allElimDigits is a strict subset of the pair digits and the old guard skipped
+// the pair — leaving digits=[] and "undefined" in supportingText.
+//
+// Setup: col 3, all 9 cells carry explicit pencil marks.
+//   Pair: r3c3 (cell 30) and r7c3 (cell 66) — both {7,8}.
+//   Elim target: r6c3 (cell 57) — {4,8}. Digit 8 is eliminated; digit 7 is
+//   absent from this cell, so allElimDigits = {8} only.
+//
+// Non-pair col-3 cells carry candidates that span at least two boxes each so
+// no Locked Candidates pattern fires before the Naked Pair.
+// ===========================================================================
+export const rank04OneElimDigit = {
+  givens: new Uint8Array(81), // empty board — pencil marks drive candidate state
+  playerPen: null,
+  pencil: (() => {
+    const p = new Uint16Array(81);
+    // Col-3 pencil masks. Bit N encodes digit N+1 (bit 0 = digit 1).
+    p[3]  = 0b100111111; // r0c3 = {1,2,3,5,6,9}
+    p[12] = 0b100111111; // r1c3 = {1,2,3,5,6,9}
+    p[21] = 0b000110111; // r2c3 = {1,2,3,5,6}
+    p[30] = 0b011000000; // r3c3 = {7,8}          ← pair cell A
+    p[39] = 0b100110111; // r4c3 = {1,2,3,5,6,9}  ← 9 spans box1+box4, prevents LC
+    p[48] = 0b000111111; // r5c3 = {1,2,3,4,5,6}
+    p[57] = 0b010001000; // r6c3 = {4,8}           ← elim target (8 eliminated, 7 absent)
+    p[66] = 0b011000000; // r7c3 = {7,8}           ← pair cell B
+    p[75] = 0b000011000; // r8c3 = {4,5}
+    return p;
+  })(),
+  expected: {
+    technique: 'Naked Pair',
+    rank: 4,
+    type: 'elimination',
+    digits: [7, 8],
+    autoRevealRequired: true,
+    complexityAcknowledged: false,
+  },
+};
+
+// ===========================================================================
 // Rank 5: Hidden Pair
 //
 // Adapted from hiddenSubsets.js hiddenPairRow board `g`.

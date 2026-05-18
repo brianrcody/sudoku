@@ -551,8 +551,8 @@ const MAPPERS = {
       if (workingBoard[i] !== 0) continue;
       if (count(candidates[i]) !== 2) continue;
       const mask = candidates[i];
-      // Pair digits must match the elim digits (guards against wrong pair in same unit).
-      if (!iterate(mask).every(d => allElimDigits.has(d))) continue;
+      // Every eliminated digit must be one of the pair's two candidates.
+      if (![...allElimDigits].every(d => (mask >> (d - 1)) & 1)) continue;
       // Find a partner
       for (let j = i + 1; j < 81; j++) {
         if (workingBoard[j] !== 0) continue;

@@ -20,7 +20,7 @@
 import { analyze } from '/js/coach/analyzer.js';
 import { initialCandidates } from '/js/solver/candidates.js';
 import {
-  rank01, rank02, rank03, rank04, rank05, rank06, rank07,
+  rank01, rank02, rank03, rank04, rank04OneElimDigit, rank05, rank06, rank07,
   rank08, rank09, rank10, rank11, rank12, rank13,
   rank14Short, rank14Long, rank15,
   noTechniqueComplete, noTechniqueInconsistent,
@@ -225,6 +225,21 @@ describe('coach/analyzer — rank 3: Locked Candidates', function () {
     expect(step.arrows.every(a => a.style === 'dashed-arrow')).to.equal(true);
     // One arrow per elim target.
     expect(step.arrows.length).to.equal(step.roles.elimTarget.length);
+  });
+});
+
+// Regression: Naked Pair where one pair digit (7) has no elimination targets.
+// The old guard required `pair digits ⊆ allElimDigits`; when allElimDigits = {8}
+// only, digit 7 caused the pair cell to be skipped → digits=[] → "undefined" in
+// supportingText.
+describe('coach/analyzer — rank 4 regression: Naked Pair one-elim-digit', function () {
+  it('digits has 2 elements, cause has 2 cells, supportingText contains no undefined', function () {
+    const step = analyze(puzzleOf(rank04OneElimDigit), playerStateOf(rank04OneElimDigit));
+    expect(step.technique).to.equal('Naked Pair');
+    expect(step.digits).to.have.length(2);
+    expect(step.roles.cause).to.have.length(2);
+    expect(step.supportingText).to.not.include('undefined');
+    assertSchemaComplete(step);
   });
 });
 
