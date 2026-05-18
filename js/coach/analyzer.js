@@ -694,8 +694,7 @@ const MAPPERS = {
           const union = candidates[i] | candidates[j] | candidates[k];
           if (count(union) !== 3) continue;
           // All digits in union must match
-          const unionDigits = iterate(union);
-          if (!unionDigits.every(d => allElimDigits.has(d))) continue;
+          if (![...allElimDigits].every(d => (union >> (d - 1)) & 1)) continue;
           // Must share a unit
           const tripleUnit = sharedUnit([i, j, k]);
           if (!tripleUnit) continue;

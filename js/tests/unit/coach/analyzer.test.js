@@ -20,7 +20,7 @@
 import { analyze } from '/js/coach/analyzer.js';
 import { initialCandidates } from '/js/solver/candidates.js';
 import {
-  rank01, rank02, rank03, rank04, rank04OneElimDigit, rank05, rank06, rank07,
+  rank01, rank02, rank03, rank04, rank04OneElimDigit, rank05, rank06, rank06OneElimDigit, rank07,
   rank08, rank09, rank10, rank11, rank12, rank13,
   rank14Short, rank14Long, rank15,
   noTechniqueComplete, noTechniqueInconsistent,
@@ -291,6 +291,21 @@ describe('coach/analyzer — rank 5: Hidden Pair (one-elim-cell regression)', fu
   });
 });
 */
+
+// Regression: Naked Triple where one triple digit (4) has no elimination targets.
+// The old guard required `union digits ⊆ allElimDigits`; when allElimDigits = {6,9}
+// only, digit 4 caused the triple search to skip every valid combination → digits=[]
+// → "undefined, undefined, undefined" in supportingText.
+describe('coach/analyzer — rank 6 regression: Naked Triple one-elim-digit', function () {
+  it('digits has 3 elements, cause has 3 cells, supportingText contains no undefined', function () {
+    const step = analyze(puzzleOf(rank06OneElimDigit), playerStateOf(rank06OneElimDigit));
+    expect(step.technique).to.equal('Naked Triple');
+    expect(step.digits).to.have.length(3);
+    expect(step.roles.cause).to.have.length(3);
+    expect(step.supportingText).to.not.include('undefined');
+    assertSchemaComplete(step);
+  });
+});
 
 /* rank06 fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
 describe('coach/analyzer — rank 6: Naked Triple', function () {

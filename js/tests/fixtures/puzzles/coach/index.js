@@ -293,6 +293,50 @@ export const rank06 = {
 };
 
 // ===========================================================================
+// Rank 6 regression: Naked Triple where one triple digit has no elim targets.
+//
+// Col-1 pencil marks only; all other cells use full logical candidates (empty board).
+// Triple cells: r0c1={4,6,9}, r3c1={6,9}, r6c1={4,9} → union={4,6,9} ✓
+// Elim target: r4c1={2,5,6,9} → has 6 and 9 but not 4.
+// allElimDigits = {6,9} — digit 4 has no elimination targets.
+//
+// Old guard required unionDigits ⊆ allElimDigits → {4,6,9} ⊆ {6,9} → false
+// → triple cells skipped → digits=[] → "undefined" in supportingText.
+// Fixed guard: allElimDigits ⊆ union → {6,9} ⊆ {4,6,9} → true ✓
+//
+// Non-triple cells use varied masks so every digit in col 1 spans all 3 boxes
+// (0, 3, 6) — no digit is confined to one box, preventing Locked Candidates.
+// No digit appears in exactly 1 col-1 cell (no HS). No 2-candidate cells share
+// the same mask (no NP fires before NT).
+// ===========================================================================
+export const rank06OneElimDigit = {
+  givens: new Uint8Array(81),
+  playerPen: null,
+  pencil: (() => {
+    const p = new Uint16Array(81);
+    // Col-1 pencil masks. Bit N encodes digit N+1 (bit 0 = digit 1).
+    p[1]  = 0b100101000; // r0c1 = {4,6,9}   ← triple cell A
+    p[10] = 0b001010101; // r1c1 = {1,3,5,7}
+    p[19] = 0b011000110; // r2c1 = {2,3,7,8}
+    p[28] = 0b100100000; // r3c1 = {6,9}     ← triple cell B
+    p[37] = 0b100110010; // r4c1 = {2,5,6,9} ← elim target (6 and 9 eliminated, 4 absent)
+    p[46] = 0b001010101; // r5c1 = {1,3,5,7}
+    p[55] = 0b100001000; // r6c1 = {4,9}     ← triple cell C
+    p[64] = 0b011000110; // r7c1 = {2,3,7,8}
+    p[73] = 0b001010101; // r8c1 = {1,3,5,7}
+    return p;
+  })(),
+  expected: {
+    technique: 'Naked Triple',
+    rank: 6,
+    type: 'elimination',
+    digits: [4, 6, 9],
+    autoRevealRequired: true,
+    complexityAcknowledged: false,
+  },
+};
+
+// ===========================================================================
 // Rank 7: Hidden Triple
 //
 // Adapted from hiddenSubsets.js hiddenTriple1 board.
