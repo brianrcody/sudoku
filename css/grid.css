@@ -311,11 +311,19 @@ body.theme-mountain .pencil-mark {
   z-index: 2;
 }
 
+.cell.coached-sc-a .pencil-mark {
+  color: var(--pencil-on-coach);
+}
+
 .cell.coached-sc-b {
   background: var(--coach-light) !important;
   outline: 2.5px dashed var(--coach);
   outline-offset: -2px;
   z-index: 2;
+}
+
+.cell.coached-sc-b .pencil-mark {
+  color: var(--pencil-on-coach-light);
 }
 
 /* Focus ring overrides — coached cells use the coach accent color */

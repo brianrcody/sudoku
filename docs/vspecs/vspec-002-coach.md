@@ -10,25 +10,27 @@
 
 ## 1. Coach Accent Color System
 
-Coach Mode uses three CSS custom properties — `--coach`, `--coach-light`, and `--coach-mid` — that are defined **per theme** inside each `body.theme-*` block in `css/themes.css`. The Minimalist theme's values also sit in the `:root, body.theme-minimalist` block and serve as the cascade fallback.
+Coach Mode uses five CSS custom properties — `--coach`, `--coach-light`, `--coach-mid`, `--pencil-on-coach`, and `--pencil-on-coach-light` — that are defined **per theme** inside each `body.theme-*` block in `css/themes.css`. The Minimalist theme's values also sit in the `:root, body.theme-minimalist` block and serve as the cascade fallback.
 
 | Role | Property |
 |------|----------|
 | Primary coach accent: button active state, cause-cell border, target-cell outline, overlay arrows, panel heading text, auto-revealed pencil marks | `--coach` |
 | Pale tint: cause-cell fill, coached-target fill, Simple Coloring Group B fill, coaching button tint background | `--coach-light` |
 | Mid tone: cause-cell border (softer than `--coach`), coaching button pulse ring at mid-phase | `--coach-mid` |
+| Pencil mark color inside Simple Coloring Group A cells (`.coached-sc-a`) | `--pencil-on-coach` |
+| Pencil mark color inside Simple Coloring Group B cells (`.coached-sc-b`) | `--pencil-on-coach-light` |
 
 **Per-theme values:**
 
-| Theme | `--coach` | `--coach-light` | `--coach-mid` | Rationale |
-|-------|-----------|-----------------|---------------|-----------|
-| Minimalist | `#7c3aed` | `#ede9fe` | `#c4b5fd` | Vivid violet — cohesive with the neutral blue-white palette |
-| Coffee Shop | `#c2410c` | `#ffedd5` | `#fb923c` | Rust/terracotta — warm, fits the brown-and-cream palette |
-| School | `#1d4ed8` | `#dbeafe` | `#93c5fd` | Royal blue / ink — pen-on-paper feel |
-| Mountain | `#0f766e` | `#ccfbf1` | `#5eead4` | Jade teal — cool, fits the alpine blue palette |
-| Digital Terminal | `#0e7490` | `#0a1f28` | `#155e75` | Dark cyan — stays in the cool-neon family without competing with the phosphor-green `--accent` |
+| Theme | `--coach` | `--coach-light` | `--coach-mid` | `--pencil-on-coach` | `--pencil-on-coach-light` |
+|-------|-----------|-----------------|---------------|---------------------|---------------------------|
+| Minimalist | `#7c3aed` | `#ede9fe` | `#c4b5fd` | `#ffffff` | `var(--pencil)` |
+| Coffee Shop | `#c2410c` | `#ffedd5` | `#fb923c` | `#ffffff` | `var(--pencil)` |
+| School | `#1d4ed8` | `#dbeafe` | `#93c5fd` | `#ffffff` | `var(--pencil)` |
+| Mountain | `#0f766e` | `#ccfbf1` | `#5eead4` | `#ffffff` | `var(--pencil)` |
+| Digital Terminal | `#0e7490` | `#0a1f28` | `#155e75` | `#b0ffb0` | `#b0ffb0` |
 
-**Terminal note:** `--coach-light` is a *dark* tint (`#0a1f28`) rather than a light one, appropriate for the near-black surface. Coached cell backgrounds will appear as a subtle blue-black rather than a pale fill.
+**Terminal note:** `--coach-light` is a *dark* tint (`#0a1f28`) rather than a light one, appropriate for the near-black surface. Coached cell backgrounds will appear as a subtle blue-black rather than a pale fill. Both pencil-mark color variables are set to `#b0ffb0` (the terminal's standard dim-text color) to remain readable on dark coach backgrounds.
 
 ---
 
@@ -149,6 +151,7 @@ The "filled" group: cells that form one pole of the coloring chain.
 - `color: #ffffff` — white digit on the coach-accent background
 - `outline: 2px solid var(--coach)` — solid matching border
 - `z-index: 2`
+- Pencil marks inside: `color: var(--pencil-on-coach)` — ensures readability on the saturated background
 
 ### 4.6 Simple Coloring — Group B (`.coached-sc-b`)
 
@@ -157,6 +160,7 @@ The "outlined" group: cells forming the other pole.
 - `background: var(--coach-light) !important` — pale lavender tint (same as cause cells)
 - `outline: 2.5px dashed var(--coach)` — dashed coach-accent border (slightly heavier than elimination targets to distinguish the group role)
 - `z-index: 2`
+- Pencil marks inside: `color: var(--pencil-on-coach-light)` — needed for Terminal where `--coach-light` is near-black
 
 ---
 
