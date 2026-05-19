@@ -1088,7 +1088,7 @@ The `coach:panel-opened` event carries `detail.step` so `coachOverlay.js` does n
   <defs>
     <marker id="coach-arrowhead" markerWidth="6" markerHeight="4"
             refX="5" refY="2" orient="auto">
-      <polygon points="0 0, 6 2, 0 4" fill="#7c3aed" opacity="0.7" />
+      <polygon points="0 0, 6 2, 0 4" fill="currentColor" opacity="0.7" />
     </marker>
   </defs>
   <g id="coach-overlay-content"></g>
@@ -1151,7 +1151,7 @@ case 'straight-arrow': {
   const { x: x1, y: y1, x: x2, y: y2 } = _shortenLine(a, b, 16, 20);
   // 16 px back from peer center, 20 px short of target center
   return _line(x1, y1, x2, y2, {
-    stroke: '#7c3aed', strokeOpacity: 0.6, strokeWidth: 1.5,
+    stroke: 'currentColor', strokeOpacity: 0.6, strokeWidth: 1.5,
     markerEnd: 'url(#coach-arrowhead)',
   });
 }
@@ -1165,7 +1165,7 @@ case 'dashed-arrow': {
   const b = _cellCenter(arrow.to);
   const { x: x1, y: y1, x: x2, y: y2 } = _shortenLine(a, b, 18, 18);
   return _line(x1, y1, x2, y2, {
-    stroke: '#7c3aed', strokeOpacity: 0.5, strokeWidth: 1.5,
+    stroke: 'currentColor', strokeOpacity: 0.5, strokeWidth: 1.5,
     strokeDasharray: '4 3',
     markerEnd: 'url(#coach-arrowhead)',
   });
@@ -1184,7 +1184,7 @@ case 'bezier-arc': {
   const { startX, startY, endX, endY } = _shortenAlongCurve(a, b, cx, cy, 18, 18);
   const d = `M ${startX} ${startY} Q ${cx} ${cy} ${endX} ${endY}`;
   return _path(d, {
-    stroke: '#7c3aed', strokeOpacity: 0.8, strokeWidth: 2, fill: 'none',
+    stroke: 'currentColor', strokeOpacity: 0.8, strokeWidth: 2, fill: 'none',
     markerEnd: 'url(#coach-arrowhead)',
   });
 }
@@ -1203,7 +1203,7 @@ case 'connector-chain': {
   const firstC = _cellCenter(first);
   const closed = `${points} ${firstC.x},${firstC.y}`;
   return _polyline(closed, {
-    stroke: '#7c3aed', strokeOpacity: 0.5, strokeWidth: 1.5, fill: 'none',
+    stroke: 'currentColor', strokeOpacity: 0.5, strokeWidth: 1.5, fill: 'none',
   });
 }
 ```
@@ -1219,7 +1219,7 @@ case 'chain-edge': {
   const { x: x1, y: y1, x: x2, y: y2 } = _shortenLine(a, b, 16, 16);
   const strong = arrow.strong === true;
   return _line(x1, y1, x2, y2, {
-    stroke: '#7c3aed',
+    stroke: 'currentColor',
     strokeOpacity: strong ? 0.7 : 0.5,
     strokeWidth: strong ? 2 : 1.5,
     strokeDasharray: strong ? null : '4 3',
@@ -1239,7 +1239,7 @@ case 'elim-line': {
   const a = _cellCenter(arrow.from);
   const end = _cellFarBoundary(arrow.from, arrow.to);
   return _line(a.x, a.y, end.x, end.y, {
-    stroke: '#7c3aed', strokeOpacity: 0.45, strokeWidth: 1.5,
+    stroke: 'currentColor', strokeOpacity: 0.45, strokeWidth: 1.5,
   });
 }
 ```
@@ -1314,7 +1314,7 @@ A `.visually-hidden` utility class (per common a11y pattern) is added to `base.c
   <defs>
     <marker id="coach-arrowhead" markerWidth="6" markerHeight="4"
             refX="5" refY="2" orient="auto">
-      <polygon points="0 0, 6 2, 0 4" fill="#7c3aed" opacity="0.7" />
+      <polygon points="0 0, 6 2, 0 4" fill="currentColor" opacity="0.7" />
     </marker>
   </defs>
   <g id="coach-overlay-content"></g>
@@ -1440,17 +1440,47 @@ To avoid duplicate work, `numpad.js`'s `_update` does not touch `#btn-coach` at 
 
 ## 11. CSS Additions
 
-### 11.1 `:root` custom properties — added to `css/themes.css` or `css/base.css`
+### 11.1 Per-theme coach custom properties — added to `css/themes.css`
+
+The three coach variables are defined inside each theme block (not at a shared `:root`). Per `vspec-002-coach.md` §1:
 
 ```css
-:root {
-  --coach: #7c3aed;
-  --coach-light: #ede9fe;
-  --coach-mid: #c4b5fd;
+:root,
+body.theme-minimalist {
+  /* ... existing theme vars ... */
+  --coach:         #7c3aed;
+  --coach-light:   #ede9fe;
+  --coach-mid:     #c4b5fd;
+}
+
+body.theme-coffee {
+  /* ... existing theme vars ... */
+  --coach:         #c2410c;
+  --coach-light:   #ffedd5;
+  --coach-mid:     #fb923c;
+}
+
+body.theme-school {
+  /* ... existing theme vars ... */
+  --coach:         #1d4ed8;
+  --coach-light:   #dbeafe;
+  --coach-mid:     #93c5fd;
+}
+
+body.theme-mountain {
+  /* ... existing theme vars ... */
+  --coach:         #0f766e;
+  --coach-light:   #ccfbf1;
+  --coach-mid:     #5eead4;
+}
+
+body.theme-terminal {
+  /* ... existing theme vars ... */
+  --coach:         #0e7490;
+  --coach-mid:     #155e75;
+  --coach-light:   #0a1f28;
 }
 ```
-
-Place these in `css/themes.css` immediately after the existing `:root` block (or at the top of the file if no `:root` block exists). They are theme-invariant per `vspec-002-coach.md` §1 and must not be overridden by any `body.theme-*` selector.
 
 ### 11.2 Numpad layout — added to `css/controls.css`
 
@@ -1587,6 +1617,7 @@ User pencil marks remain `color: var(--pencil); font-weight: 500;` as defined in
   pointer-events: none;
   z-index: 5;
   display: none;
+  color: var(--coach);
 }
 
 #coach-overlay.visible {
@@ -2112,7 +2143,6 @@ This spec explicitly does not:
 - **Track coach use in stats.** Coach is not counted (`fspec-002-coach.md` §13). Statistics infrastructure is untouched.
 - **Provide a technique reference panel.** Out of scope per fspec §13.
 - **Implement mobile breakpoints.** Mobile is deferred per vspec §13. The `width: 414px` constants in CSS remain hardcoded; mobile support is a future spec.
-- **Add per-theme overrides for coach colors.** The accent is theme-invariant per vspec §1. Cross-theme legibility is verified at implementation time; if any theme requires an override, it is added as an addendum to vspec, not this aspec.
 - **Re-architect the UI module pattern.** `coach.js` and `coachOverlay.js` deviate slightly from the "single-root mount" pattern (§6.1, §7.1) because they coordinate DOM nodes across multiple containers. This deviation is bounded to these two modules and documented; it is not a precedent for new UI modules.
 
 ---

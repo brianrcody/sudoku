@@ -199,7 +199,7 @@ function _renderArrow(arrow) {
       const b = _cellCenter(arrow.to);
       const s = _shortenLine(a, b, 16, 20);
       return _line(s.x, s.y, s.x2, s.y2, {
-        stroke: '#7c3aed', strokeOpacity: 0.6, strokeWidth: 1.5,
+        stroke: 'currentColor', strokeOpacity: 0.6, strokeWidth: 1.5,
         markerEnd: 'url(#coach-arrowhead)',
       });
     }
@@ -209,7 +209,7 @@ function _renderArrow(arrow) {
       const b = _cellCenter(arrow.to);
       const s = _shortenLine(a, b, 18, 18);
       return _line(s.x, s.y, s.x2, s.y2, {
-        stroke: '#7c3aed', strokeOpacity: 0.5, strokeWidth: 1.5,
+        stroke: 'currentColor', strokeOpacity: 0.5, strokeWidth: 1.5,
         strokeDasharray: '4 3',
         markerEnd: 'url(#coach-arrowhead)',
       });
@@ -224,7 +224,7 @@ function _renderArrow(arrow) {
       const { startX, startY, endX, endY } = _shortenAlongCurve(a, b, cx, cy, 18, 18);
       const d = `M ${startX} ${startY} Q ${cx} ${cy} ${endX} ${endY}`;
       return _path(d, {
-        stroke: '#7c3aed', strokeOpacity: 0.8, strokeWidth: 2, fill: 'none',
+        stroke: 'currentColor', strokeOpacity: 0.8, strokeWidth: 2, fill: 'none',
         markerEnd: 'url(#coach-arrowhead)',
       });
     }
@@ -236,7 +236,7 @@ function _renderArrow(arrow) {
       const first = centers[0];
       const closed = `${pts} ${first.x},${first.y}`;
       return _polyline(closed, {
-        stroke: '#7c3aed', strokeOpacity: 0.5, strokeWidth: 1.5, fill: 'none',
+        stroke: 'currentColor', strokeOpacity: 0.5, strokeWidth: 1.5, fill: 'none',
       });
     }
 
@@ -244,7 +244,7 @@ function _renderArrow(arrow) {
       const a = _cellCenter(arrow.from);
       const end = _cellFarBoundary(arrow.from, arrow.to);
       return _line(a.x, a.y, end.x, end.y, {
-        stroke: '#7c3aed', strokeOpacity: 0.45, strokeWidth: 1.5,
+        stroke: 'currentColor', strokeOpacity: 0.45, strokeWidth: 1.5,
       });
     }
 
@@ -254,7 +254,7 @@ function _renderArrow(arrow) {
       const s = _shortenLine(a, b, 16, 16);
       const strong = arrow.strong === true;
       return _line(s.x, s.y, s.x2, s.y2, {
-        stroke: '#7c3aed',
+        stroke: 'currentColor',
         strokeOpacity: strong ? 0.7 : 0.5,
         strokeWidth: strong ? 2 : 1.5,
         strokeDasharray: strong ? null : '4 3',

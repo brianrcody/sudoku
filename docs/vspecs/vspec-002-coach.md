@@ -10,15 +10,25 @@
 
 ## 1. Coach Accent Color System
 
-Coach Mode introduces a single accent color — vivid violet — that is theme-invariant. It does not vary by theme class. It is injected at `:root` alongside, but independent of, all per-theme custom properties.
+Coach Mode uses three CSS custom properties — `--coach`, `--coach-light`, and `--coach-mid` — that are defined **per theme** inside each `body.theme-*` block in `css/themes.css`. The Minimalist theme's values also sit in the `:root, body.theme-minimalist` block and serve as the cascade fallback.
 
-| Property        | Value      | Role                                                              |
-|-----------------|------------|-------------------------------------------------------------------|
-| `--coach`       | `#7c3aed`  | Primary coach accent: button active state, cause-cell border, target-cell outline, overlay arrows, panel heading text, auto-revealed pencil marks |
-| `--coach-light` | `#ede9fe`  | Pale lavender: cause-cell fill, coached-target fill, Simple Coloring Group B fill, coaching button tint background |
-| `--coach-mid`   | `#c4b5fd`  | Medium lavender: cause-cell border (softer than `--coach`), coaching button pulse ring at mid-phase |
+| Role | Property |
+|------|----------|
+| Primary coach accent: button active state, cause-cell border, target-cell outline, overlay arrows, panel heading text, auto-revealed pencil marks | `--coach` |
+| Pale tint: cause-cell fill, coached-target fill, Simple Coloring Group B fill, coaching button tint background | `--coach-light` |
+| Mid tone: cause-cell border (softer than `--coach`), coaching button pulse ring at mid-phase | `--coach-mid` |
 
-**Color selection rationale:** `#7c3aed` was selected because vivid violet sits outside the hue ranges used by all five existing themes (blues, browns, greens, near-blacks). It provides sufficient contrast against all per-theme surface colors and does not require per-theme adjustment. Cross-theme visual validation is required during implementation — in particular, ensure the violet reads clearly against Terminal's near-black background and Coffee's warm-cream surface.
+**Per-theme values:**
+
+| Theme | `--coach` | `--coach-light` | `--coach-mid` | Rationale |
+|-------|-----------|-----------------|---------------|-----------|
+| Minimalist | `#7c3aed` | `#ede9fe` | `#c4b5fd` | Vivid violet — cohesive with the neutral blue-white palette |
+| Coffee Shop | `#c2410c` | `#ffedd5` | `#fb923c` | Rust/terracotta — warm, fits the brown-and-cream palette |
+| School | `#1d4ed8` | `#dbeafe` | `#93c5fd` | Royal blue / ink — pen-on-paper feel |
+| Mountain | `#0f766e` | `#ccfbf1` | `#5eead4` | Jade teal — cool, fits the alpine blue palette |
+| Digital Terminal | `#0e7490` | `#0a1f28` | `#155e75` | Dark cyan — stays in the cool-neon family without competing with the phosphor-green `--accent` |
+
+**Terminal note:** `--coach-light` is a *dark* tint (`#0a1f28`) rather than a light one, appropriate for the near-black surface. Coached cell backgrounds will appear as a subtle blue-black rather than a pale fill.
 
 ---
 
@@ -177,21 +187,23 @@ An SVG element (`#coach-overlay`) is absolutely positioned above the grid within
 
 **Arrow and connector styles:**
 
+**Color:** All arrow strokes and the arrowhead marker fill use `currentColor`. The `#coach-overlay` SVG element carries `color: var(--coach)` in CSS, so `currentColor` resolves to the active theme's coach accent at all times. No hardcoded color values appear in the SVG or JS.
+
 *Naked Single — arrows from peers to target:*
 - Straight `<line>` elements from each filled peer cell center to the target cell center
-- `stroke: #7c3aed` (hardcoded coach accent), `stroke-opacity: 0.6`, `stroke-width: 1.5`
+- `stroke: currentColor`, `stroke-opacity: 0.6`, `stroke-width: 1.5`
 - Lines start 16px from the peer center, end 20px from the target center (to clear cell content)
-- Arrowhead: `<marker>` with `markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto"`, filled `<polygon points="0 0, 6 2, 0 4">` at `fill: #7c3aed`, `opacity: 0.7`
+- Arrowhead: `<marker>` with `markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto"`, filled `<polygon points="0 0, 6 2, 0 4">` at `fill="currentColor"`, `opacity: 0.7`
 
 *Hidden Single — elimination crossing lines:*
 - Straight `<line>` elements from each cause cell center to the far boundary of the
   eliminated cell (the line passes through the eliminated cell and stops at its exit edge)
-- `stroke: #7c3aed`, `stroke-opacity: 0.45`, `stroke-width: 1.5`
+- `stroke: currentColor`, `stroke-opacity: 0.45`, `stroke-width: 1.5`
 - No arrowhead; no shortening — the line starts at the cause cell center and terminates
   exactly at the eliminated cell's far boundary in the direction of travel
 
 *Naked Pair — arc between cause cells, dashed lines to elimination targets:*
-- Cause-to-cause: quadratic Bézier `<path>` with control point raised 18px above the midpoint. `stroke: #7c3aed`, `stroke-opacity: 0.8`, `stroke-width: 2`, `fill: none`. Arrowhead on the end point; marker `opacity: 0.85`
+- Cause-to-cause: quadratic Bézier `<path>` with control point raised 18px above the midpoint. `stroke: currentColor`, `stroke-opacity: 0.8`, `stroke-width: 2`, `fill: none`. Arrowhead on the end point; marker `opacity: 0.85`
 - Cause-to-target: `<line>` elements with `stroke-dasharray: "4 3"`, `stroke-opacity: 0.5`, `stroke-width: 1.5`, same arrowhead marker
 - Lines start/end 18px from each cell center
 
@@ -316,17 +328,15 @@ Displayed when Coach is pressed but cannot find a applicable technique, the puzz
 
 ## 11. Theme Compatibility
 
-The coach accent (`#7c3aed`) is theme-invariant and intentionally sits outside each theme's hue range:
+Coach accent colors are per-theme (see §1). Each theme's values were selected to be cohesive with its palette and to maintain legibility of pencil marks and digits over coach-highlighted cell backgrounds.
 
-| Theme      | Theme accent hue | Coach accent contrast notes                             |
-|------------|------------------|---------------------------------------------------------|
-| Minimalist | Blue `#2c5282`   | Violet clearly distinct; lavender reads on white surface |
-| Coffee     | Brown `#8b4513`  | Violet distinct; validate on warm-cream `#f5ede0`        |
-| School     | Slate `#4a5568`  | Violet distinct; validate on off-white `#fdfaf0`         |
-| Mountain   | Teal `#1a6b8a`   | Violet distinct; validate on light-blue `#f7fafc`        |
-| Terminal   | Phosphor `#39ff14` | Violet on near-black `#111111` — validate contrast; ensure `#7c3aed` is legible against dark backgrounds; coach-light tint `#ede9fe` will appear pale grey-purple, which is acceptable |
-
-Implementation requirement: verify `#7c3aed` coach cell borders and button states are visually distinguishable in all five themes before shipping. No per-theme override is expected to be necessary, but it must be confirmed.
+| Theme | Coach accent | Legibility notes |
+|-------|-------------|-----------------|
+| Minimalist | Violet `#7c3aed` | Lavender `--coach-light` reads clearly on white `#ffffff` surface |
+| Coffee Shop | Rust `#c2410c` | Warm peach `--coach-light` (`#ffedd5`) is distinct from the cream `#f5ede0` surface; brown pencil marks readable over it |
+| School | Royal blue `#1d4ed8` | Blue `--coach-light` (`#dbeafe`) distinct from the grayish `--accent-light`; slate pencil marks readable |
+| Mountain | Teal `#0f766e` | Mint `--coach-light` (`#ccfbf1`) contrasts the cool-white `#f7fafc` surface; green pencil marks readable |
+| Digital Terminal | Dark cyan `#0e7490` | `--coach-light` is a dark tint (`#0a1f28`) — coached backgrounds are subtly blue-black over the near-black `#111111` surface; bright green text and pencil marks remain readable |
 
 The coached-cell focus ring when a coached cell has keyboard focus uses `outline-color: var(--coach)` rather than `var(--accent)`, ensuring the coach context is preserved regardless of theme.
 

@@ -1,10 +1,3 @@
-/* ── Coach accent colors (theme-invariant) ────────────────────────────── */
-:root {
-  --coach: #7c3aed;
-  --coach-light: #ede9fe;
-  --coach-mid: #c4b5fd;
-}
-
 /* ── Default / Minimalist theme values ───────────────────────────────── */
 :root,
 body.theme-minimalist {
@@ -31,6 +24,9 @@ body.theme-minimalist {
   --modal-bg:      var(--surface);
   --win-banner-bg: rgba(255,255,255,0.92);
   --primary-hover: #1e3a6e;
+  --coach:         #7c3aed;
+  --coach-light:   #ede9fe;
+  --coach-mid:     #c4b5fd;
 }
 
 /* ── Coffee Shop ──────────────────────────────────────────────────────── */
@@ -58,6 +54,9 @@ body.theme-coffee {
   --modal-bg:      #f5ede0;
   --win-banner-bg: rgba(245,237,224,0.93);
   --primary-hover: #6b3410;
+  --coach:         #c2410c;
+  --coach-light:   #ffedd5;
+  --coach-mid:     #fb923c;
 }
 
 /* ── School ───────────────────────────────────────────────────────────── */
@@ -85,6 +84,9 @@ body.theme-school {
   --modal-bg:      #fdfaf0;
   --win-banner-bg: rgba(253,250,240,0.93);
   --primary-hover: #2d3748;
+  --coach:         #1d4ed8;
+  --coach-light:   #dbeafe;
+  --coach-mid:     #93c5fd;
 }
 
 /* ── Mountain ─────────────────────────────────────────────────────────── */
@@ -112,6 +114,9 @@ body.theme-mountain {
   --modal-bg:      #f7fafc;
   --win-banner-bg: rgba(247,250,252,0.93);
   --primary-hover: #145a75;
+  --coach:         #0f766e;
+  --coach-light:   #ccfbf1;
+  --coach-mid:     #5eead4;
 }
 
 /* ── Digital Terminal ─────────────────────────────────────────────────── */
@@ -139,4 +144,7 @@ body.theme-terminal {
   --modal-bg:      #111111;
   --win-banner-bg: rgba(11,11,11,0.95);
   --primary-hover: #22cc00;
+  --coach:         #0e7490;
+  --coach-mid:     #155e75;
+  --coach-light:   #0a1f28;
 }

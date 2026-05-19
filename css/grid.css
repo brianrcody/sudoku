@@ -334,6 +334,7 @@ body.theme-mountain .pencil-mark {
   pointer-events: none;
   z-index: 5;
   display: none;
+  color: var(--coach);
 }
 
 #coach-overlay.visible {
