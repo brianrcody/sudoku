@@ -30,6 +30,9 @@ let _errorTimer = null;   // setTimeout handle for 3s error toast auto-dismiss
 let _prevSelected = null; // last seen state.selected for focus tracking
 let _renderedStep = null; // last step reference passed to _renderPanelContent
 
+// Set when an 'error' recap fires; enables context-aware error toast on the next press.
+let _lastSessionHadErrorRecap = false;
+
 const RELEVANT_KEYS = new Set(['coachSession', 'selected', 'puzzle', 'won']);
 
 // ---------------------------------------------------------------------------
@@ -52,6 +55,7 @@ export function mount(root, gameState) {
   _wireButton();
 
   gameState.on('changed', ({ changed }) => {
+    if (changed.has('puzzle')) _lastSessionHadErrorRecap = false;
     if ([...changed].some(k => RELEVANT_KEYS.has(k))) {
       _render(gameState.getState());
     }
@@ -96,6 +100,7 @@ function _onCoachPressed() {
     return;
   }
 
+  _lastSessionHadErrorRecap = false;
   _gameState.dispatch({ type: 'COACH_START', result });
 
   // Announce after dispatch so we can read the derived coachedCells count.
@@ -233,11 +238,16 @@ function _renderRecap(state) {
  * @param {'complete'|'inconsistent'|'error'} reason
  */
 function _showErrorToast(reason) {
+  const useContextMessage = reason === 'error' && _lastSessionHadErrorRecap;
+  _lastSessionHadErrorRecap = false;
+
   const text = reason === 'complete'
     ? 'The puzzle is already solved.'
-    : reason === 'error'
-      ? 'The board has an error. Use Check or Erase to fix it before coaching.'
-      : 'The board has a contradiction. Use Erase to fix it.';
+    : useContextMessage
+      ? 'That suggestion didn\'t work out. A mistaken pencil erasure elsewhere on the board may have led the coach astray. Try using Erase All Pencil and asking the coach again.'
+      : reason === 'error'
+        ? 'The board has an error. Use Check or Erase to fix it before coaching.'
+        : 'The board has a contradiction. Use Erase to fix it.';
 
   _recap.classList.add('error', 'visible');
   _recap.innerHTML = `
@@ -249,7 +259,7 @@ function _showErrorToast(reason) {
   _errorTimer = setTimeout(() => {
     _errorTimer = null;
     _hideRecap();
-  }, 3000);
+  }, 5000);
 }
 
 /**
@@ -261,6 +271,8 @@ function _showErrorToast(reason) {
 function _showRecap(step, variant) {
   _recap.classList.add('visible');
   _recap.classList.toggle('error', variant === 'error');
+
+  if (variant === 'error') _lastSessionHadErrorRecap = true;
 
   if (variant === 'elim') {
     const detail = _composeElimRecapDetail(step);
