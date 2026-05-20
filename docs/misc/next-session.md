@@ -51,6 +51,16 @@ press Coach, assert the recap element is visible with `.error` class and text in
 value of CT-NT3 is confirming the end-to-end wiring of the new `reason === 'error'`
 branch through the live DOM.
 
+### Integration test gap — CT-NT4: context-aware coach error toast
+
+The context-aware error message (added 2026-05-19) has no integration test coverage.
+
+**CT-NT4 (to add):** Load a puzzle; trigger an `'error'` recap by following a coach
+suggestion and filling the wrong digit; wait for the recap to auto-dismiss; press Coach
+again; assert the error toast text includes "That suggestion didn't work out". This
+confirms the `_lastSessionHadErrorRecap` flag is set and read correctly through the live
+DOM, end-to-end.
+
 ### Coverage gate plumbing
 
 The documented `npm test` → `npx c8 report` flow doesn't work because
