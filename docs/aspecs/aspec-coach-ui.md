@@ -1542,26 +1542,19 @@ Verify after implementation that the Terminal-theme `.btn` override is sufficien
 
 ### 11.4 Cell-state classes — added to `css/grid.css`
 
-Per `vspec-002-coach.md` §4, with `outline-offset: -2px` on each (so the outline hugs the cell border rather than extending outside):
+Per `vspec-002-coach.md` §4. Solid-ring coach classes use `box-shadow: inset` so the selection `outline` (which CSS paints last) remains visible on top when a coached cell is also selected. Dashed-ring classes must keep `outline` (box-shadow has no dashed mode) and instead use an explicit `.selected` override to show the accent ring.
 
 ```css
 .cell.coached-cause {
   background: var(--coach-light) !important;
-  outline: 2px solid var(--coach-mid);
-  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px var(--coach-mid);
   z-index: 2;
 }
 
 .cell.coached-target {
   background: var(--coach-light) !important;
-  outline: 2px solid var(--coach);
-  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px var(--coach);
   z-index: 2;
-}
-
-.cell.coached-target.selected {
-  outline: 2.5px solid var(--coach);
-  outline-offset: -2px;
 }
 
 .cell.coached-elim-target {
@@ -1569,6 +1562,13 @@ Per `vspec-002-coach.md` §4, with `outline-offset: -2px` on each (so the outlin
   outline-offset: -2px;
   z-index: 2;
   /* No background override */
+}
+
+/* Dashed-ring classes can't use box-shadow, so show the accent ring explicitly on selection */
+.cell.coached-elim-target.selected,
+.cell.coached-sc-b.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .cell.coached-unit-member {
@@ -1579,8 +1579,7 @@ Per `vspec-002-coach.md` §4, with `outline-offset: -2px` on each (so the outlin
 .cell.coached-sc-a {
   background: var(--coach) !important;
   color: #ffffff;
-  outline: 2px solid var(--coach);
-  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px var(--coach);
   z-index: 2;
 }
 

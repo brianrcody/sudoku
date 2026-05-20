@@ -104,14 +104,16 @@ Theme-specific button overrides from v1 apply here too: Terminal renders the Coa
 
 ## 4. Grid Cell Highlight States
 
-Coach Mode adds five cell-state classes. All use `!important` on background overrides to take precedence over selection and conflict states. All set `z-index: 2` and `outline-offset: -2px`.
+Coach Mode adds five cell-state classes. All use `!important` on background overrides to take precedence over selection and conflict states. All set `z-index: 2`.
+
+Solid-ring classes use `box-shadow: inset` for their coach ring so the selection `outline` (painted last by CSS) remains visible on top when the cell is also selected. Dashed-ring classes (`coached-elim-target`, `coached-sc-b`) cannot use box-shadow and instead use an explicit `.selected` override to show the accent ring.
 
 ### 4.1 Cause Cell (`.coached-cause`)
 
 Used for: the source cell(s) of a logical pattern (e.g., the pair cells in a Naked Pair, the filled peers in a Naked Single).
 
 - `background: var(--coach-light) !important` — solid pale lavender fill
-- `outline: 2px solid var(--coach-mid)` — medium-lavender solid border (softer than the target outline)
+- `box-shadow: inset 0 0 0 2px var(--coach-mid)` — medium-lavender solid ring (softer than the target ring)
 - `z-index: 2`
 
 When focused: `outline-color: var(--coach)` (via `.coached-cause:focus-visible`).
@@ -121,10 +123,10 @@ When focused: `outline-color: var(--coach)` (via `.coached-cause:focus-visible`)
 Used for: the cell the player should fill (Naked Single, Hidden Single placement techniques).
 
 - `background: var(--coach-light) !important` — same pale lavender fill as cause
-- `outline: 2px solid var(--coach)` — full coach-accent solid border (stronger than cause)
+- `box-shadow: inset 0 0 0 2px var(--coach)` — full coach-accent solid ring (stronger than cause)
 - `z-index: 2`
 
-When also selected (`.coached-target.selected`): retains `background: var(--coach-light)`, outline strengthens to `2.5px solid var(--coach)`.
+When also selected (`.coached-target.selected`): retains `background: var(--coach-light)`; the selection `outline: 2px solid var(--accent)` is visible on top of the coach box-shadow ring.
 
 When focused: `outline-color: var(--coach)`.
 
@@ -135,6 +137,8 @@ Used for: cells from which a candidate should be eliminated (elimination techniq
 - `background`: no override — cell retains its current background
 - `outline: 2px dashed var(--coach)` — dashed coach-accent outline
 - `z-index: 2`
+
+When also selected (`.coached-elim-target.selected`): dashed ring replaced by `outline: 2px solid var(--accent)` to show selection clearly.
 
 ### 4.4 Hidden Single Unit Members (`.coached-unit-member`)
 
@@ -149,7 +153,7 @@ The "filled" group: cells that form one pole of the coloring chain.
 
 - `background: var(--coach) !important` — solid full coach-accent fill
 - `color: #ffffff` — white digit on the coach-accent background
-- `outline: 2px solid var(--coach)` — solid matching border
+- `box-shadow: inset 0 0 0 2px var(--coach)` — solid matching ring
 - `z-index: 2`
 - Pencil marks inside: `color: var(--pencil-on-coach)` — ensures readability on the saturated background
 
@@ -161,6 +165,8 @@ The "outlined" group: cells forming the other pole.
 - `outline: 2.5px dashed var(--coach)` — dashed coach-accent border (slightly heavier than elimination targets to distinguish the group role)
 - `z-index: 2`
 - Pencil marks inside: `color: var(--pencil-on-coach-light)` — needed for Terminal where `--coach-light` is near-black
+
+When also selected (`.coached-sc-b.selected`): dashed ring replaced by `outline: 2px solid var(--accent)` to show selection clearly.
 
 ---
 

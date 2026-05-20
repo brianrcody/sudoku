@@ -274,21 +274,14 @@ body.theme-mountain .pencil-mark {
 /* ── Coached cell states ──────────────────────────────────────────────── */
 .cell.coached-cause {
   background: var(--coach-light) !important;
-  outline: 2px solid var(--coach-mid);
-  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px var(--coach-mid);
   z-index: 2;
 }
 
 .cell.coached-target {
   background: var(--coach-light) !important;
-  outline: 2px solid var(--coach);
-  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px var(--coach);
   z-index: 2;
-}
-
-.cell.coached-target.selected {
-  outline: 2.5px solid var(--coach);
-  outline-offset: -2px;
 }
 
 .cell.coached-elim-target {
@@ -296,6 +289,12 @@ body.theme-mountain .pencil-mark {
   outline-offset: -2px;
   z-index: 2;
   /* No background override */
+}
+
+.cell.coached-elim-target.selected,
+.cell.coached-sc-b.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .cell.coached-unit-member {
@@ -306,8 +305,7 @@ body.theme-mountain .pencil-mark {
 .cell.coached-sc-a {
   background: var(--coach) !important;
   color: #ffffff;
-  outline: 2px solid var(--coach);
-  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px var(--coach);
   z-index: 2;
 }
 
