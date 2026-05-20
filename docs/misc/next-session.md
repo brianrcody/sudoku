@@ -8,38 +8,6 @@ addressed. Sign-off artifacts in `docs/misc/`:
 
 ---
 
-## Up next
-
-### Coach error toast — context-aware message after a bad suggestion
-
-**Background.** The coach trusts pencil erasures as authoritative eliminations (necessary
-to avoid re-suggesting the same elimination technique — see `aspec-coach-analyzer.md`
-§9.1). A mistaken pencil erasure can corrupt the coach's candidate view, leading it to
-suggest a wrong placement. When the user follows that suggestion, the `COACH_FILL_RECAP`
-variant `'error'` fires immediately ("That's not the right digit — suggestion still
-stands"). After the recap auto-dismisses, if the user presses Coach again, they get the
-generic error toast: "The board has an error. Use Check or Erase to fix it before
-coaching." This is confusing: the user did exactly what the coach said.
-
-**Desired behavior.** If the error toast fires immediately after a session that ended
-with an `'error'` recap, show a more helpful message — something like: "That suggestion
-didn't work out. A mistaken pencil erasure elsewhere on the board may have led the coach
-astray. Use Check or Erase to find the error."
-
-**Why the detection is reliable.** An `'error'` recap only fires when the user fills
-the coach's suggested target cell with the wrong digit. If the board had a pre-existing
-pen error, the coach would have refused to start (pre-flight error check). So if an
-`'error'` recap fired, the wrong pen entry was definitively introduced by following the
-coach's suggestion. The context-aware message can be stated with confidence, not hedged.
-
-**Implementation sketch.** No game state changes required. In `js/ui/coach.js`, add a
-module-level flag `_lastSessionHadErrorRecap`. Set it to `true` when
-`_showRecap(step, 'error')` runs; clear it on any subsequent `COACH_START` (successful
-next coach press) or on puzzle change. In `_showErrorToast`, check the flag and
-substitute the context-aware message when set.
-
----
-
 ## Backlog
 
 ### Rank fixtures (incremental, ongoing into V3)

@@ -256,7 +256,7 @@ If a previous session is active (`state.coachSession !== null`), the reducer fir
 - `'puzzle-replaced'` — `NEW_PUZZLE` / `RESET_PUZZLE` / `CHANGE_DIFFICULTY` / `PUZZLE_LOADED`
 - `'won'` — `ON_COMPLETION_EVALUATE` produced a win
 - `'recap-timeout'` — fired by `coach.js` 2.5s after the recap opened
-- `'error-toast-timeout'` — fired by `coach.js` 3s after no-technique result
+- `'error-toast-timeout'` — fired by `coach.js` 5s after no-technique result
 
 **Guards:** none — the action is always allowed; the handler short-circuits when `coachSession === null`.
 
@@ -629,10 +629,11 @@ let _gameState = null;
 let _btn = null;            // #btn-coach
 let _panelWrap = null;      // #coach-panel-wrap
 let _recap = null;          // #coach-recap
-let _recapTimer = null;     // setTimeout handle for 2.5s recap dismiss
-let _errorTimer = null;     // setTimeout handle for 3s error toast dismiss
-let _prevSessionRef = null; // last seen coachSession reference (object identity)
-let _prevSelected = null;   // last seen state.selected
+let _recapTimer = null;              // setTimeout handle for 2.5s recap dismiss
+let _errorTimer = null;              // setTimeout handle for 5s error toast dismiss
+let _lastSessionHadErrorRecap = false; // set when 'error' recap fires; enables context-aware toast
+let _prevSessionRef = null;          // last seen coachSession reference (object identity)
+let _prevSelected = null;            // last seen state.selected
 ```
 
 ### 6.3 `RELEVANT_KEYS`
@@ -838,11 +839,16 @@ The error toast does not flow through `coachSession.recap`; it is `coach.js`-int
 
 ```js
 function _showErrorToast(reason) {
+  const useContextMessage = reason === 'error' && _lastSessionHadErrorRecap;
+  _lastSessionHadErrorRecap = false;
+
   const text = reason === 'complete'
     ? 'The puzzle is already solved.'
-    : reason === 'error'
-      ? 'The board has an error. Use Check or Erase to fix it before coaching.'
-      : 'The board has a contradiction. Use Erase to fix it.';
+    : useContextMessage
+      ? 'That suggestion didn\'t work out. A mistaken pencil erasure elsewhere on the board may have led the coach astray. Try using Erase All Pencil and asking the coach again.'
+      : reason === 'error'
+        ? 'The board has an error. Use Check or Erase to fix it before coaching.'
+        : 'The board has a contradiction. Use Erase to fix it.';
 
   _recap.classList.add('error', 'visible');
   _recap.innerHTML = `
@@ -854,7 +860,7 @@ function _showErrorToast(reason) {
   _errorTimer = setTimeout(() => {
     _errorTimer = null;
     _hideRecap();
-  }, 3000);
+  }, 5000);
 }
 ```
 
@@ -1888,7 +1894,7 @@ Three timers are involved across the coach feature:
 | Timer | Duration | Owner | Source |
 |---|---|---|---|
 | Recap auto-dismiss | 2.5 s | `coach.js` (module-level `_recapTimer`) | `fspec-002-coach.md` §2.5 |
-| No-technique error toast auto-dismiss | 3.0 s | `coach.js` (module-level `_errorTimer`) | `fspec-002-coach.md` §4.2 |
+| No-technique error toast auto-dismiss | 5.0 s | `coach.js` (module-level `_errorTimer`) | `fspec-002-coach.md` §4.2 |
 | Pulse animation | 2 s loop | CSS `@keyframes coach-pulse` | `vspec-002-coach.md` §3.3 |
 
 The first two are JavaScript `setTimeout` handles. The third is purely CSS and self-managing.
@@ -2093,7 +2099,7 @@ These tests boot the real app and drive it through the coach flow.
 6. Press Coach during recap; assert recap dismisses immediately and a fresh session begins.
 
 **No-technique tests:**
-1. Solve the puzzle (via hints or fixtures); press Coach; assert error toast `"The puzzle is already solved."` with `.error`; auto-dismiss after 3s.
+1. Solve the puzzle (via hints or fixtures); press Coach; assert error toast `"The puzzle is already solved."` with `.error`; auto-dismiss after 5s.
 2. Create an inconsistent board (manually); press Coach; assert error toast `"The board has a contradiction. Use Erase to fix it."`.
 
 **Pencil revert tests:**

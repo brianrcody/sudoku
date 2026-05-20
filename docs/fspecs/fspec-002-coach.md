@@ -76,7 +76,7 @@ entered one or more incorrect digits. This covers two sub-cases — a visible co
 (contradicts the solution but shares no unit with the same digit elsewhere). The coach
 detects both before running the solver.
 
-The message appears for 3 seconds then dismisses automatically. No highlights are drawn.
+The message appears for 5 seconds then dismisses automatically. No highlights are drawn.
 No coach session begins. The Coach button remains enabled (the user can press it again
 after correcting the board).
 
@@ -261,12 +261,18 @@ When the user presses the Coach button:
 When the Coach button is pressed and no technique can be offered:
 
 - If the puzzle is complete: the status message "The puzzle is already solved." appears
-  adjacent to the Coach button for 3 seconds, then auto-dismisses.
-- If a non-conflicting wrong digit is detected: the status message "The board has an
-  error. Use Check or Erase to fix it before coaching." appears for 3 seconds, then
-  auto-dismisses. (The coach detects this before running the solver — see §2.1.)
+  adjacent to the Coach button for 5 seconds, then auto-dismisses.
+- If a non-conflicting wrong digit is detected: the status message depends on whether
+  the prior coach session ended with an error recap (user followed a coach suggestion
+  that turned out wrong):
+  - First press after an error recap: "That suggestion didn't work out. A mistaken
+    pencil erasure elsewhere on the board may have led the coach astray. Try using
+    Erase All Pencil and asking the coach again."
+  - Otherwise: "The board has an error. Use Check or Erase to fix it before coaching."
+  Either message appears for 5 seconds, then auto-dismisses. (The coach detects this
+  before running the solver — see §2.1.)
 - If the board is inconsistent (no logical progress possible): the status message "The
-  board has a contradiction. Use Erase to fix it." appears for 3 seconds, then
+  board has a contradiction. Use Erase to fix it." appears for 5 seconds, then
   auto-dismisses.
 
 No coach highlights are drawn. No coach session begins. The Coach button does not enter
