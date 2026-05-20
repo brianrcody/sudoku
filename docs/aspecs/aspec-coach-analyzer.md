@@ -682,7 +682,7 @@ The analyzer detects which by inspecting `boxOf`, `rowOf`, `colOf` of the cause 
 | `digits` | `[D]`. |
 | `unit` | `null`. |
 | `arrows` | One `{ from, to, style: 'chain-edge', strong: true }` per chain edge. The chain-edge list comes from the technique module's chain output. |
-| `supportingText` | `"These linked cells must alternate between two values for *[D]*. Two same-color cells see each other — that group can't be *[D]*."` |
+| `supportingText` | Rule 2: `"These linked cells must alternate between two values for *[D]*. Two same-color cells see each other — that group can't be *[D]*."` Rule 4: `"These linked cells must alternate between two values for *[D]*. Any cell that sees one cell of each color can't be *[D]*."` The mapper detects the rule by checking whether the elimination targets are chain cells (Rule 2) or uncolored cells outside the chain (Rule 4). |
 | `complexity` | `{ acknowledged: false, note: null, endpoints: null }` |
 
 **Group A vs. B convention:** Group A is the group containing the lowest-indexed cell in the entire chain. This makes the choice deterministic across runs and makes test fixtures stable.

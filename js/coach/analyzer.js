@@ -1068,6 +1068,14 @@ const MAPPERS = {
     const allChainCells = [...colorChain.groupA, ...colorChain.groupB];
     const edges = deriveChainEdges(allChainCells, D, candidates);
 
+    // Distinguish Rule 2 (elim targets are chain cells of the conflicting color) from
+    // Rule 4 (elim targets are uncolored cells outside the chain that see both colors).
+    const chainSet = new Set(allChainCells);
+    const isRule2 = elimTargets.some(c => chainSet.has(c));
+    const supportingText = isRule2
+      ? `These linked cells must alternate between two values for *${D}*. Two same-color cells see each other — that group can't be *${D}*.`
+      : `These linked cells must alternate between two values for *${D}*. Any cell that sees one cell of each color can't be *${D}*.`;
+
     return {
       roles: {
         target: null,
@@ -1080,7 +1088,7 @@ const MAPPERS = {
       digits: [D],
       unit: null,
       arrows: edges.map(e => ({ from: e.from, to: e.to, style: 'chain-edge', strong: true })),
-      supportingText: `These linked cells must alternate between two values for *${D}*. Two same-color cells see each other — that group can't be *${D}*.`,
+      supportingText,
       complexity: { acknowledged: false, note: null, endpoints: null },
     };
   },
