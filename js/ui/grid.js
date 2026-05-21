@@ -78,14 +78,19 @@ function _buildGrid(state) {
   // Deselect when clicking outside grid (but not when interacting with the
   // numpad — those clicks must preserve cell selection so successive taps apply
   // to the same cell).
+  //
+  // Use composedPath() rather than e.target: the synchronous render triggered
+  // by _handleClick replaces pencil-mark span elements mid-propagation, so
+  // e.target may be detached by the time this handler fires. composedPath() is
+  // captured at dispatch time and is unaffected by DOM mutations.
   document.addEventListener('click', (e) => {
+    const path = e.composedPath();
     if (
-      !_gridEl.contains(e.target) &&
-      !e.target.closest('#dialog-root') &&
-      !e.target.closest('#numpad-root')
-    ) {
-      _gameState.dispatch({ type: 'DESELECT' });
-    }
+      path.includes(_gridEl) ||
+      path.some(n => n?.id === 'dialog-root') ||
+      path.some(n => n?.id === 'numpad-root')
+    ) return;
+    _gameState.dispatch({ type: 'DESELECT' });
   });
 }
 
