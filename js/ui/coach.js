@@ -71,6 +71,14 @@ export function mount(root, gameState) {
 function _wireButton() {
   // mousedown preventDefault is applied by numpad.js's button loop (§10.2).
   _btn.addEventListener('click', _onCoachPressed);
+  document.addEventListener('keydown', (e) => {
+    const tag = document.activeElement?.tagName ?? '';
+    if ((e.key === 'c' || e.key === 'C') &&
+        !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(tag)) {
+      e.preventDefault();
+      _onCoachPressed();
+    }
+  });
 }
 
 function _onCoachPressed() {

@@ -195,6 +195,8 @@ Global `keydown` handler on `document`.
 | P / p | `TOGGLE_MODE` | Only when focus is not in an `input`, `select`, `textarea`, or `button` |
 | Escape | Close dialog | Dismissed via `dialog.close()` |
 
+> **Note:** The `C / c` keyboard shortcut (invoke Coach) is handled in `coach.js`, not `keyboard.js`. Its focus guard is identical to the P-guard above. See `aspec-coach-ui.md` §6.5.
+
 ---
 
 ## 12. Accessibility Implementation

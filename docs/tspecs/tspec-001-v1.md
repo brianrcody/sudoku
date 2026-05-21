@@ -788,6 +788,7 @@ c8 `--include=js/** --exclude=js/tests/**` gate enforced by test runner. `run.js
 | §4.2 wrap right/left/up/down | S5 × 4 directions |
 | §4.2 given-skip | S6 |
 | §5.2 P key input-focus guard | UK7, UK8 |
+| §5.2 C key input-focus guard | CT-KB1, CT-KB2 |
 | §5.2 arrow with no selection | UK6 |
 | §6.2 replace existing pen digit | S13 |
 | §6.2 same-digit no-op | S12 |

@@ -1240,6 +1240,80 @@ describe('integration/coach: elimination completion', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Keyboard shortcut tests
+// ---------------------------------------------------------------------------
+
+describe('integration/coach: keyboard shortcut', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-KB1: pressing C with body focus starts a coach session', async function () {
+    this.timeout(18000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    let rank01;
+    try {
+      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
+      rank01 = fixtures.rank01;
+    } catch (_) {
+      return this.skip();
+    }
+    if (!rank01) return this.skip();
+
+    loadFixturePuzzle(gameState, rank01);
+    await wait(100);
+
+    expect(gameState.getState().coachSession).to.equal(null);
+
+    doc(iframe).body.focus();
+    const e = new iframe.contentWindow.KeyboardEvent('keydown', {
+      key: 'c', bubbles: true, cancelable: true,
+    });
+    doc(iframe).dispatchEvent(e);
+    await wait(100);
+
+    expect(gameState.getState().coachSession).to.not.equal(null);
+  });
+
+  it('CT-KB2: pressing C while a BUTTON is focused does not trigger coach', async function () {
+    this.timeout(18000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    let rank01;
+    try {
+      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
+      rank01 = fixtures.rank01;
+    } catch (_) {
+      return this.skip();
+    }
+    if (!rank01) return this.skip();
+
+    loadFixturePuzzle(gameState, rank01);
+    await wait(100);
+
+    coachBtn(iframe).focus();
+    const e = new iframe.contentWindow.KeyboardEvent('keydown', {
+      key: 'c', bubbles: true, cancelable: true,
+    });
+    doc(iframe).dispatchEvent(e);
+    await wait(100);
+
+    expect(gameState.getState().coachSession).to.equal(null);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // A11y tests
 // ---------------------------------------------------------------------------
 

@@ -171,12 +171,16 @@ On desktop, the following keyboard shortcuts are supported:
 | Backspace or Delete          | Erase selected cell                                |
 | Tab / Shift+Tab              | Move to next/previous focusable element (standard browser tab order) |
 | **P**                        | Toggle Pen/Pencil mode                             |
+| **C**                        | Invoke Coach (see fspec-002-coach)                 |
 | Enter or Space (on a button) | Activate the focused button                        |
 | Ctrl+Z (Win/Linux) or Cmd+Z (Mac) | Undo last move (see §9.7)               |
 
 **Rationale for P as the pen/pencil shortcut:** Single-letter, mnemonic (P for Pencil),
 unambiguous — no browser or OS conflict for an in-game context, and easy to reach
 one-handed.
+
+**Rationale for C as the coach shortcut:** Mirrors the P pattern — single-letter,
+mnemonic (C for Coach), no browser conflict in-game.
 
 If no cell is currently selected, digit keys (1–9), Backspace, and Delete have no effect.
 Arrow keys when no cell is selected select the first available player cell in reading

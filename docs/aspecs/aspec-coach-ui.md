@@ -671,6 +671,14 @@ export function mount(root, gameState) {
 function _wireButton() {
   _btn.addEventListener('mousedown', e => e.preventDefault());  // numpad pattern
   _btn.addEventListener('click', _onCoachPressed);
+  document.addEventListener('keydown', (e) => {
+    const tag = document.activeElement?.tagName ?? '';
+    if ((e.key === 'c' || e.key === 'C') &&
+        !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(tag)) {
+      e.preventDefault();
+      _onCoachPressed();
+    }
+  });
 }
 
 function _onCoachPressed() {
@@ -2124,6 +2132,10 @@ These tests boot the real app and drive it through the coach flow.
 1. Active session + Tab to coached cell → `aria-describedby="sr-coached-desc"` present.
 2. Live region contains the focus announcement after focusing a coached cell.
 3. Elim recap announced: live region contains `"Candidates eliminated."` and the detail sentence.
+
+**Keyboard shortcut tests (CT-KB):**
+1. CT-KB1: Pressing `C` with body focus on a puzzle board starts a coach session (identical to clicking the button).
+2. CT-KB2: Pressing `C` while a `BUTTON` element has focus does not trigger the coach.
 
 ### 16.3 Coverage target
 

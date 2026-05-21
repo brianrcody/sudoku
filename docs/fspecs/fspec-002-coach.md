@@ -207,6 +207,10 @@ The Coach button is added to the number pad control area alongside the Hint butt
 It is visible and enabled at all times during a puzzle, at all difficulty levels (R2).
 It is not shown before a puzzle is loaded (same rule as the Hint button).
 
+**Keyboard shortcut:** `C` (see fspec-001-v1.md §5.2). The shortcut is ignored when
+focus is inside a text input, select, textarea, or button element. It triggers the
+identical logic as clicking the Coach button.
+
 ### 3.2 Coach Button States
 
 See §2.6 for the three-state model. The Coaching state persists from the moment the
