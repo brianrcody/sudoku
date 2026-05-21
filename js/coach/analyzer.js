@@ -834,11 +834,11 @@ const MAPPERS = {
 
     let supportingText;
     if (sameCols && !sameRows) {
-      // Column-locked: base units are columns, cover units are rows
-      supportingText = `*${D}* only appears in these two rows within these two columns — it can't appear elsewhere in those rows.`;
-    } else {
-      // Row-locked (default): base units are rows, cover units are columns
+      // Row-based: base units are rows, cover units are columns
       supportingText = `*${D}* only appears in these two columns within these two rows — it can't appear elsewhere in those columns.`;
+    } else {
+      // Column-based: base units are columns, cover units are rows
+      supportingText = `*${D}* only appears in these two rows within these two columns — it can't appear elsewhere in those rows.`;
     }
 
     const arrows = [
