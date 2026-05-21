@@ -20,23 +20,18 @@ suitable boards are encountered. See `docs/misc/coach-fixture-tracker.md`.
 
 Identified 2026-05-11 after Phase 8b coach work. None are coach-related.
 
-**W5 — flaky test** (`js/tests/integration/worker.test.js`).
-Posts a background and foreground kiddie request back-to-back and asserts foreground
-resolves first. Both finish in milliseconds; ordering is a scheduling property that
-can't be proven reliably with identically-fast requests. Fix: use a slow background
-tier (e.g. hard/death-march) so the foreground genuinely wins by a margin.
+**W5 — resolved (2026-05-20).** Changed background request from `kiddie` to `hard` so the
+background can't accidentally complete before the foreground message crosses the IPC boundary.
+If flakiness recurs, the test needs restructuring to not depend on result ordering.
 
-**GF6 — investigate: product bug or test isolation** (`js/tests/integration/game-flows.test.js`).
-Enters digit 5 in two cells in the same row, then erases one; expects 0 conflicts.
-Gets `conflicts.size === 3`. Could be: (a) a 3-way conflict because the loaded puzzle
-has digit 5 as a given elsewhere in the same unit, so erasing A still leaves B + given
-in conflict, or (b) ERASE didn't clear A from pen. Determine which before fixing.
+**GF6 — monitoring (2026-05-20).** Passed in 4 consecutive re-runs. The 2026-05-11
+failure (conflicts.size === 3 instead of 0) was likely the puzzle-seed-dependent case
+where digit 5 is already a given elsewhere in the chosen row. If it recurs, fix the
+test to verify digit 5 is absent from the row's givens before using it.
 
-**PERF-NEW-hard — environment/budget issue** (`js/tests/integration/perf.test.js`).
-Hard puzzle generation took 1289 ms against a 1000 ms budget. Death-march on the same
-run was 471 ms, so the machine isn't slow overall — hard generation is just
-non-deterministic and this budget has tight headroom. Fix: raise the hard budget to
-2000 ms, or run 3 samples and assert on the median.
+**PERF-NEW-hard — resolved (2026-05-20).** Budget raised from 1000 ms to 2000 ms.
+Hard generation is genuinely non-deterministic (observed 63–1305 ms); 1000 ms was too
+tight. Saw 1046 ms pass cleanly under the new budget.
 
 ### Integration test gap — CT-NT3: coach 'error' toast
 

@@ -200,7 +200,7 @@ describe('generator.worker.js (integration)', function () {
       .then(m => { resolveOrder.push('fg'); return m; });
 
     // Post background first, then foreground immediately after
-    worker.postMessage(makeGenRequest({ id: bgId, tier: 'kiddie', seed: 5001, background: true }));
+    worker.postMessage(makeGenRequest({ id: bgId, tier: 'hard', seed: 5001, background: true }));
     worker.postMessage(makeGenRequest({ id: fgId, tier: 'kiddie', seed: 5002, background: false }));
 
     await Promise.all([fgPromise, bgPromise]);

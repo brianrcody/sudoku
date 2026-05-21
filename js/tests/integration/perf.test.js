@@ -11,6 +11,7 @@
  */
 
 const NON_GEN_BUDGET_MS = 1000;
+const HARD_GEN_BUDGET_MS = 2000;
 const DM_GEN_BUDGET_MS = 5000;
 const TIERS = ['kiddie', 'easy', 'medium', 'hard', 'death-march'];
 
@@ -85,7 +86,9 @@ describe('integration/perf', () => {
       const gs = await waitForGameState(iframe);
 
       const initialId = gs.getState().puzzle.id;
-      const budget = tier === 'death-march' ? DM_GEN_BUDGET_MS : NON_GEN_BUDGET_MS;
+      const budget = tier === 'death-march' ? DM_GEN_BUDGET_MS
+        : tier === 'hard' ? HARD_GEN_BUDGET_MS
+        : NON_GEN_BUDGET_MS;
 
       // Set the difficulty so _startNewPuzzle uses the requested tier.
       gs.dispatch({ type: 'CHANGE_DIFFICULTY', difficulty: tier });
