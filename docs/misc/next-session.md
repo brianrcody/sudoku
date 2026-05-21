@@ -56,6 +56,51 @@ again; assert the error toast text includes "That suggestion didn't work out". T
 confirms the `_lastSessionHadErrorRecap` flag is set and read correctly through the live
 DOM, end-to-end.
 
+### Coach test policy — fixture gate
+
+Do not write coach tests for cases that do not yet have a rank-clean fixture. A test
+written against a missing fixture is speculative and will require rework once the real
+board is captured. The fixture must exist first; the test follows.
+
+See `docs/misc/coach-fixture-tracker.md` for current fixture status.
+
+---
+
+### Coach tests — unblocked work for QE Test Writer
+
+The tspec at `docs/tspecs/tspec-coach.md` identifies work that can proceed without new
+fixtures:
+
+- **SS1–SS18** — session reducer unit tests. Use stub helpers; no board fixtures needed.
+- **CT-NT2 fix** — change wait from 3500 ms to 5500 ms (code uses a 5000 ms timeout);
+  add intermediate assertion that the toast is still visible at 3500 ms.
+- **CT-KB1/KB2** — keyboard shortcut tests (Coach `C` key). Technique-agnostic.
+- **CT-A11y3–CT-A11y6** — ARIA and keyboard accessibility tests. Technique-agnostic.
+- **CT-PERF1** — `analyze()` performance gate. Runs against the existing rank-03 fixture.
+- CT-NT3 and CT-NT4 (already listed below) are also unblocked.
+
+Brief the QE Test Writer on the tspec, instruct it to implement only this unblocked set,
+and explicitly tell it to skip any test whose fixture is listed as Pending in the tracker.
+
+---
+
+### Coach fixtures — Andrew Stuart exploration
+
+Before committing to organic fixture farming for ranks 4–15, explore whether Andrew
+Stuart's Sudoku puzzle site can serve as a source of rank-consistent board states. The
+site categorizes puzzles by solving technique required; if board states can be extracted,
+they would provide controlled rank-clean fixtures without depending on live play.
+
+Evaluate: whether the site allows bulk access or scraping, whether the exported boards
+are actually rank-clean under our solver (different solvers may not agree on technique
+rank), and whether the capture/import workflow is manageable. Compare against the organic
+approach (capture snippet during manual play with `/add-coach-fixture`) on cost,
+reliability, and coverage breadth.
+
+Produce a short recommendation before committing to either strategy.
+
+---
+
 ### Coverage gate plumbing
 
 The documented `npm test` → `npx c8 report` flow doesn't work because
