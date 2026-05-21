@@ -66,18 +66,62 @@ See `docs/misc/coach-fixture-tracker.md` for current fixture status.
 
 ---
 
+### Coach tests — completed 2026-05-21
+
+SS1–SS18 (all active), CT-NT2 fix, CT-NT3, CT-NT4, CT-NT5, CT-HK1, CT-A11y3–CT-A11y6,
+CT-PERF1 implemented and passing. Suite: 538 passing, 0 failing, 37 pending.
+
+**SS16 spec correction:** `tspec-coach.md §3.2` claims `COACH_FILL_RECAP` fires before
+`COACH_END` in the natural win path. This is wrong. `ON_COMPLETION_EVALUATE` is dispatched
+inside `_applyPenEnter` (before PEN_ENTER's own coach block executes), so `COACH_END` fires
+first. `COACH_FILL_RECAP` never runs in the win path. SS16 test asserts actual behavior:
+`won=true`, `coachSession=null`, `COACH_END` in emit sequence.
+
+---
+
+### Coach integration tests — remaining unblocked (no fixture dependency)
+
+Four technique-agnostic integration tests can be written without new fixtures:
+
+- **CT-W1** (P1): Win while a coach fill session is active. Uses a completePuzzle-style board (80 givens, 1 empty); assert win banner visible, recap NOT visible, `coachSession === null`.
+- **CT-SR1** (P1): Second Coach press while session active resets to a fresh session. Uses rank01; verify `COACH_END` emit fires between the two `COACH_START` emits.
+- **CT-SR2** (P2): Coach pressed while error toast is visible dismisses it immediately and runs fresh analysis. Trigger by completing the puzzle then pressing Coach, then pressing Coach again before the toast expires.
+- **CT-HP1** (P2): Hint button dismisses session when coach panel is open. Uses rank01; press Coach, select coached target (opens panel), click Hint; assert `coachSession === null`, panel closed, recap not visible.
+
+---
+
 ### Coach tests — unblocked work for QE Test Writer
 
 The tspec at `docs/tspecs/tspec-coach.md` identifies work that can proceed without new
-fixtures:
+fixtures. **Use tspec IDs throughout** — several IDs below differ from earlier drafts of
+this note; the tspec is authoritative.
 
 - **SS1–SS18** — session reducer unit tests. Use stub helpers; no board fixtures needed.
+  SS18 note: `ERASE_ALL_PENCIL` has a `_hasNoPencil()` guard and is a no-op when pencil
+  is all zeros. Start from an elimination session with auto-reveal (pencil bits set) so
+  the action actually fires.
 - **CT-NT2 fix** — change wait from 3500 ms to 5500 ms (code uses a 5000 ms timeout);
   add intermediate assertion that the toast is still visible at 3500 ms.
-- **CT-KB1/KB2** — keyboard shortcut tests (Coach `C` key). Technique-agnostic.
+- **CT-HK1** — keyboard `C` focus-tag guards for `INPUT`, `SELECT`, `TEXTAREA`. Creates
+  those elements inside the iframe and dispatches keydown events. **CT-KB1 and CT-KB2**
+  (body focus and BUTTON focus) are already implemented — do not re-implement them.
 - **CT-A11y3–CT-A11y6** — ARIA and keyboard accessibility tests. Technique-agnostic.
-- **CT-PERF1** — `analyze()` performance gate. Runs against the existing rank-03 fixture.
-- CT-NT3 and CT-NT4 (already listed below) are also unblocked.
+- **CT-PERF1** — `analyze()` performance gate. Use the **rank-03** fixture (rank03 is
+  Complete in the tracker). The tspec §3.3 says rank04 but that fixture is Pending.
+- **CT-NT3** — wrong non-conflicting pen → error toast. Uses rank01 (Complete).
+- **CT-NT4** — genuinely inconsistent board → contradiction toast. Uses
+  `noTechniqueInconsistent` fixture (already present in fixture file and unit-tested).
+- **CT-NT5** — context-aware error toast after a prior error recap. Uses rank01. Run in
+  its own `describe` with a fresh iframe (per R8 in tspec) to clear `_lastSessionHadErrorRecap`.
+
+**CT-NT4 and CT-NT5 correspond to what an earlier draft of this note called CT-NT4** —
+that draft skipped the inconsistent-board case and mis-numbered the context-aware toast.
+The tspec numbering is correct.
+
+**Fixture status note:** `tspec §5` calls rank04/05/06 "Present", but the fixture tracker
+marks all ranks 4–15 as **Pending** (the tspec uses "Present" loosely to mean data exists
+in the file, not that the boards are rank-clean). The tracker is authoritative. Do not
+uncomment or enable any AN test block for ranks 4–15.
 
 Brief the QE Test Writer on the tspec, instruct it to implement only this unblocked set,
 and explicitly tell it to skip any test whose fixture is listed as Pending in the tracker.

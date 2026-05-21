@@ -31,6 +31,11 @@ function createState() {
  * A minimal valid puzzle where cell 0 is empty with solution digit 5.
  * Row 0 cells 1-8 filled with 1-4,6-9; col 0 rows 1-8 filled; box-0 interior filled.
  * This gives a Naked Single at cell 0.
+ *
+ * NOTE: The board is intentionally incomplete (only ~16 givens). It is NOT a full
+ * 81-cell board, so ON_COMPLETION_EVALUATE never fires on PEN_ENTER. This is the
+ * design — existing cross-action tests depend on the session surviving after PEN_ENTER.
+ * Use completePuzzle() when a win-triggering board is required.
  */
 function nakedSinglePuzzle() {
   const givens = new Uint8Array(81);
@@ -40,19 +45,36 @@ function nakedSinglePuzzle() {
   // Col 0: rows 1-8 = digits 1,2,3,4,6,7,8,9
   const col0digits = [1, 2, 3, 4, 6, 7, 8, 9];
   for (let r = 1; r <= 8; r++) givens[r * 9] = col0digits[r - 1];
-  // Box 0 interior: cells 10,11,19,20 (row 1-2, col 1-2) — already handled by col/row filling
-  // but we need to ensure box 0 has all digits except 5 accounted for.
   // After row 0 (cells 1-8) and col 0 (cells 9,18,27,36,45,54,63,72) are filled,
-  // box 0 interior cells 10,11,19,20 still need filling so 5 is the sole candidate for cell 0.
-  // Actually the Naked Single fires when all 9 peers have the other 8 digits.
-  // We have row0: 1,2,3,4,6,7,8,9 and col0: 1,2,3,4,6,7,8,9 — that covers all digits except 5.
-  // So cell 0's candidate is already forced to 5 without box interior filling.
+  // cell 0's candidate is already forced to 5 without box interior filling.
   const solution = new Uint8Array(81);
   solution[0] = 5;
   for (let c = 1; c <= 8; c++) solution[c] = row0digits[c - 1];
   for (let r = 1; r <= 8; r++) solution[r * 9] = col0digits[r - 1];
   // Fill the rest to satisfy puzzle structure (not validated in these tests).
   return { givens, solution, solveTrace: [], difficulty: 'easy', id: 'test-naked-single' };
+}
+
+/**
+ * A complete 81-cell puzzle where only cell 0 is empty (solution digit = 5).
+ * All 80 other cells are givens. ON_COMPLETION_EVALUATE fires and produces
+ * won=true after PEN_ENTER {digit:5} at cell 0.
+ */
+function completePuzzle() {
+  const sol = new Uint8Array([
+    5,3,4,6,7,8,9,1,2,
+    6,7,2,1,9,5,3,4,8,
+    1,9,8,3,4,2,5,6,7,
+    8,5,9,7,6,1,4,2,3,
+    4,2,6,8,5,3,7,9,1,
+    7,1,3,9,2,4,8,5,6,
+    9,6,1,5,3,7,2,8,4,
+    2,8,7,4,1,9,6,3,5,
+    3,4,5,2,8,6,1,7,9,
+  ]);
+  const givens = new Uint8Array(sol);
+  givens[0] = 0;
+  return { givens, solution: sol, solveTrace: [], difficulty: 'easy', id: 'test-complete' };
 }
 
 /** A CoachStep for Naked Single (rank 1, placement, no auto-reveal). */
@@ -968,5 +990,336 @@ describe('cross-action: ON_COMPLETION_EVALUATE with win during recap', () => {
     // Let's simulate it by dispatching COACH_END directly with reason 'won'.
     gs.dispatch({ type: 'COACH_END', reason: 'won' });
     expect(gs.getState().coachSession).to.equal(null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// New SS tests (tspec-coach §3.2)
+// ---------------------------------------------------------------------------
+
+describe('SS1: COACH_START guarded when puzzle is null', () => {
+  it('SS1: COACH_START guarded when puzzle is null', () => {
+    const gs = createState();
+    const emits = [];
+    gs.on('changed', ({ changed }) => emits.push(changed));
+
+    gs.dispatch({ type: 'COACH_START', result: nakedSingleStep() });
+
+    expect(gs.getState().coachSession).to.equal(null);
+    for (const changed of emits) {
+      expect(changed.has('coachSession')).to.equal(false);
+    }
+  });
+});
+
+describe('SS2: COACH_START guarded when won === true', () => {
+  it('SS2: COACH_START guarded when won === true', () => {
+    // Use completePuzzle() so that entering digit 5 at cell 0 fills the board
+    // and triggers ON_COMPLETION_EVALUATE → won=true.
+    const gs = createState();
+    gs.dispatch({ type: 'PUZZLE_LOADED', puzzle: completePuzzle() });
+    gs.dispatch({ type: 'SELECT_CELL', index: 0 });
+    gs.dispatch({ type: 'PEN_ENTER', digit: 5 });
+
+    expect(gs.getState().won).to.equal(true);
+
+    const emits = [];
+    gs.on('changed', ({ changed }) => emits.push(changed));
+
+    gs.dispatch({ type: 'COACH_START', result: nakedSingleStep() });
+
+    expect(gs.getState().coachSession).to.equal(null);
+    for (const changed of emits) {
+      expect(changed.has('coachSession')).to.equal(false);
+    }
+  });
+});
+
+describe('SS3: COACH_START no-technique emits coachSession change-key', () => {
+  it('SS3: COACH_START no-technique emits coachSession change-key', () => {
+    const gs = stateWithPuzzle();
+    let coachSessionEmitFound = false;
+    gs.on('changed', ({ changed }) => {
+      if (changed.has('coachSession')) coachSessionEmitFound = true;
+    });
+
+    gs.dispatch({ type: 'COACH_START', result: { type: 'no-technique', reason: 'complete' } });
+
+    expect(gs.getState().coachSession).to.equal(null);
+    expect(coachSessionEmitFound).to.equal(true);
+  });
+});
+
+describe('SS4: COACH_START over active session reverts pencil first', () => {
+  it('SS4: COACH_START over active session reverts pencil first', () => {
+    const gs = stateWithPuzzle();
+
+    // Session A: auto-reveal bits into cell 5.
+    const stepA = nakedPairStep({ revealCells: [{ cellIndex: 5, candidates: 0b00010100 }] });
+    gs.dispatch({ type: 'COACH_START', result: stepA });
+    expect(gs.getState().pencil[5]).to.equal(0b00010100);
+
+    // Session B: start another session without ending A first.
+    gs.dispatch({ type: 'COACH_START', result: nakedSingleStep() });
+
+    // A's auto-reveal must have been reverted before B's snapshot was taken.
+    expect(gs.getState().pencil[5]).to.equal(0);
+    // Session B is active.
+    expect(gs.getState().coachSession).to.not.equal(null);
+  });
+});
+
+describe('SS5: COACH_START placement technique → eliminationTargets === null', () => {
+  it('SS5: COACH_START placement technique → eliminationTargets === null', () => {
+    const gs = stateWithPuzzle();
+    gs.dispatch({ type: 'COACH_START', result: nakedSingleStep() });
+    expect(gs.getState().coachSession.eliminationTargets).to.equal(null);
+  });
+});
+
+describe('SS6: COACH_START elimination with roles.elimTarget=[] builds from eliminations', () => {
+  it('SS6: COACH_START elimination with roles.elimTarget=[] builds from eliminations', () => {
+    const gs = stateWithPuzzle();
+    const hiddenPairStep = {
+      type: 'elimination',
+      technique: 'Hidden Pair',
+      rank: 5,
+      digits: [1, 5],
+      roles: {
+        target: null,
+        cause: [10, 11],
+        elimTarget: [],
+        unitMember: [],
+        scA: [],
+        scB: [],
+      },
+      unit: { type: 'row', index: 1 },
+      arrows: [],
+      eliminations: [
+        { cellIndex: 10, digit: 3 },
+        { cellIndex: 11, digit: 3 },
+        { cellIndex: 11, digit: 7 },
+      ],
+      autoReveal: { required: true, cells: [] },
+      supportingText: 'test',
+      complexity: { acknowledged: false, note: null, endpoints: null },
+    };
+    gs.dispatch({ type: 'COACH_START', result: hiddenPairStep });
+
+    const targets = gs.getState().coachSession.eliminationTargets;
+    expect(targets.get(10)).to.equal(1 << 2);
+    expect(targets.get(11)).to.equal((1 << 2) | (1 << 6));
+  });
+});
+
+describe('SS7: COACH_FILL_RECAP no-op when coachSession === null', () => {
+  it('SS7: COACH_FILL_RECAP no-op when coachSession === null', () => {
+    const gs = stateWithPuzzle();
+    let coachSessionEmitted = false;
+    gs.on('changed', ({ changed }) => {
+      if (changed.has('coachSession')) coachSessionEmitted = true;
+    });
+
+    gs.dispatch({ type: 'COACH_FILL_RECAP', variant: 'normal' });
+
+    expect(coachSessionEmitted).to.equal(false);
+  });
+});
+
+describe('SS8: COACH_FILL_RECAP no-op when already in recap (normal then error)', () => {
+  it('SS8: COACH_FILL_RECAP no-op when already in recap (normal then error)', () => {
+    const gs = stateWithPuzzle();
+    gs.dispatch({ type: 'COACH_START', result: nakedSingleStep(0) });
+    gs.dispatch({ type: 'COACH_FILL_RECAP', variant: 'normal' });
+    expect(gs.getState().coachSession.recap).to.equal('normal');
+
+    const emitsBefore = [];
+    gs.on('changed', ({ changed }) => {
+      if (changed.has('coachSession')) emitsBefore.push(true);
+    });
+
+    gs.dispatch({ type: 'COACH_FILL_RECAP', variant: 'error' });
+
+    expect(gs.getState().coachSession.recap).to.equal('normal');
+    expect(emitsBefore.length).to.equal(0);
+  });
+});
+
+describe('SS9: COACH_FILL_RECAP no-op when already in recap (normal then elim)', () => {
+  it('SS9: COACH_FILL_RECAP no-op when already in recap (normal then elim)', () => {
+    const gs = stateWithPuzzle();
+    gs.dispatch({ type: 'COACH_START', result: nakedSingleStep(0) });
+    gs.dispatch({ type: 'COACH_FILL_RECAP', variant: 'normal' });
+    expect(gs.getState().coachSession.recap).to.equal('normal');
+
+    gs.dispatch({ type: 'COACH_FILL_RECAP', variant: 'elim' });
+
+    expect(gs.getState().coachSession.recap).to.equal('normal');
+  });
+});
+
+describe('SS10: COACH_NO_TECHNIQUE emits coachSession change-key', () => {
+  it('SS10: COACH_NO_TECHNIQUE emits coachSession change-key', () => {
+    const gs = stateWithPuzzle();
+    let coachSessionEmitFound = false;
+    gs.on('changed', ({ changed }) => {
+      if (changed.has('coachSession')) coachSessionEmitFound = true;
+    });
+
+    gs.dispatch({ type: 'COACH_NO_TECHNIQUE', reason: 'inconsistent' });
+
+    expect(gs.getState().coachSession).to.equal(null);
+    expect(coachSessionEmitFound).to.equal(true);
+  });
+});
+
+describe('SS11: PEN_ENTER coach block runs AFTER _applyPenEnter mutation', () => {
+  it('SS11: PEN_ENTER coach block runs AFTER _applyPenEnter mutation', () => {
+    const gs = stateWithPuzzle();
+    gs.dispatch({ type: 'SELECT_CELL', index: 0 });
+    gs.dispatch({ type: 'COACH_START', result: nakedSingleStep(0) });
+
+    gs.dispatch({ type: 'PEN_ENTER', digit: 5 });
+
+    expect(gs.getState().pen[0]).to.equal(5);
+    expect(gs.getState().coachSession.recap).to.equal('normal');
+  });
+});
+
+describe('SS12: PEN_ENTER no coach block when coachSession === null', () => {
+  it('SS12: PEN_ENTER no coach block when coachSession === null', () => {
+    const gs = stateWithPuzzle();
+    let coachSessionEmitted = false;
+    gs.on('changed', ({ changed }) => {
+      if (changed.has('coachSession')) coachSessionEmitted = true;
+    });
+
+    gs.dispatch({ type: 'SELECT_CELL', index: 0 });
+    gs.dispatch({ type: 'PEN_ENTER', digit: 5 });
+
+    expect(coachSessionEmitted).to.equal(false);
+  });
+});
+
+describe('SS13: PENCIL_TOGGLE coach hook no-op when eliminationTargets === null', () => {
+  it('SS13: PENCIL_TOGGLE coach hook no-op when eliminationTargets === null (placement session)', () => {
+    const gs = stateWithPuzzle();
+    gs.dispatch({ type: 'COACH_START', result: nakedSingleStep(0) });
+    // Placement session: eliminationTargets is null.
+    expect(gs.getState().coachSession.eliminationTargets).to.equal(null);
+
+    gs.dispatch({ type: 'SELECT_CELL', index: 20 });
+    gs.dispatch({ type: 'SET_MODE', mode: 'pencil' });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 4 });
+
+    // No COACH_FILL_RECAP should have fired; recap remains null.
+    expect(gs.getState().coachSession.recap).to.equal(null);
+  });
+});
+
+describe('SS14: PENCIL_TOGGLE coach hook no-op when recap !== null', () => {
+  it('SS14: PENCIL_TOGGLE coach hook no-op when recap !== null', () => {
+    const gs = stateWithPuzzle();
+
+    // Start an elimination session.
+    function lockedCandidatesElimStep(elimTarget = [20]) {
+      return {
+        type: 'elimination',
+        technique: 'Locked Candidates',
+        rank: 3,
+        digits: [3],
+        roles: { target: null, cause: [10, 11, 12], elimTarget, unitMember: [], scA: [], scB: [] },
+        unit: null,
+        arrows: [],
+        eliminations: elimTarget.map(c => ({ cellIndex: c, digit: 3 })),
+        autoReveal: { required: true, cells: [] },
+        supportingText: 'Locked Candidates eliminates digit *3*.',
+        complexity: { acknowledged: false, note: null, endpoints: null },
+      };
+    }
+
+    gs.dispatch({ type: 'COACH_START', result: lockedCandidatesElimStep([20]) });
+    gs.dispatch({ type: 'COACH_FILL_RECAP', variant: 'elim' });
+    expect(gs.getState().coachSession.recap).to.equal('elim');
+
+    // Track whether another COACH_FILL_RECAP fires.
+    let recapEmitCount = 0;
+    gs.on('changed', ({ action, changed }) => {
+      if (action && action.type === 'COACH_FILL_RECAP') recapEmitCount++;
+    });
+
+    gs.dispatch({ type: 'SELECT_CELL', index: 20 });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 4 });
+
+    expect(recapEmitCount).to.equal(0);
+    // recap still 'elim'.
+    expect(gs.getState().coachSession.recap).to.equal('elim');
+  });
+});
+
+describe('SS15: PENCIL_TOGGLE no coach effect when coachSession === null', () => {
+  it('SS15: PENCIL_TOGGLE no coach effect when coachSession === null', () => {
+    const gs = stateWithPuzzle();
+    let coachSessionEmitted = false;
+    gs.on('changed', ({ changed }) => {
+      if (changed.has('coachSession')) coachSessionEmitted = true;
+    });
+
+    gs.dispatch({ type: 'SELECT_CELL', index: 20 });
+    gs.dispatch({ type: 'SET_MODE', mode: 'pencil' });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+
+    expect(coachSessionEmitted).to.equal(false);
+  });
+});
+
+describe('SS16: ON_COMPLETION_EVALUATE natural win path via PEN_ENTER', () => {
+  it('SS16: ON_COMPLETION_EVALUATE natural win → won=true, coachSession=null, COACH_END fired', () => {
+    // Use completePuzzle() so PEN_ENTER at cell 0 fills the board and triggers a win.
+    const gs = createState();
+    gs.dispatch({ type: 'PUZZLE_LOADED', puzzle: completePuzzle() });
+    gs.dispatch({ type: 'SELECT_CELL', index: 0 });
+    gs.dispatch({ type: 'COACH_START', result: nakedSingleStep(0) });
+
+    const actionSequence = [];
+    gs.on('changed', ({ action }) => {
+      if (action) actionSequence.push(action.type);
+    });
+
+    gs.dispatch({ type: 'PEN_ENTER', digit: 5 });
+
+    expect(gs.getState().won).to.equal(true);
+    expect(gs.getState().coachSession).to.equal(null);
+    // ON_COMPLETION_EVALUATE dispatches COACH_END{reason:'won'} when won && coachSession active.
+    // Note: COACH_FILL_RECAP does NOT fire here because ON_COMPLETION_EVALUATE's COACH_END
+    // runs inside _applyPenEnter before PEN_ENTER's coach block can dispatch it.
+    expect(actionSequence).to.include('COACH_END');
+  });
+});
+
+describe('SS17: UNDO clears coachSession — deferred', () => {
+  it.skip('SS17: UNDO clears coachSession — deferred to tspec-undo S71', () => {});
+});
+
+describe('SS18: ERASE_ALL_PENCIL ends session', () => {
+  it('SS18: ERASE_ALL_PENCIL ends session', () => {
+    const gs = stateWithPuzzle();
+
+    // Start an elimination session with auto-reveal on cell 5. The auto-reveal
+    // sets pencil bits so ERASE_ALL_PENCIL's _hasNoPencil() guard is bypassed.
+    const step = nakedPairStep({ revealCells: [{ cellIndex: 5, candidates: 0b00000110 }] });
+    gs.dispatch({ type: 'COACH_START', result: step });
+    expect(gs.getState().pencil[5]).to.equal(0b00000110);
+
+    let coachSessionEmitted = false;
+    gs.on('changed', ({ changed }) => {
+      if (changed.has('coachSession')) coachSessionEmitted = true;
+    });
+
+    gs.dispatch({ type: 'ERASE_ALL_PENCIL' });
+
+    expect(gs.getState().coachSession).to.equal(null);
+    expect(gs.getState().pencil[5]).to.equal(0);
+    expect(coachSessionEmitted).to.equal(true);
   });
 });

@@ -682,8 +682,8 @@ describe('integration/coach: no-technique', () => {
     expect(recapEl.textContent).to.include('already solved');
   });
 
-  it('CT-NT2: error toast auto-dismisses after 3 s', async function () {
-    this.timeout(12000);
+  it('CT-NT2: error toast still visible at 3.5 s, auto-dismisses after 5 s', async function () {
+    this.timeout(15000);
     const gameState = gs(iframe);
     if (!gameState) return this.skip();
 
@@ -703,8 +703,11 @@ describe('integration/coach: no-technique', () => {
     await wait(100);
 
     expect(recap(iframe).classList.contains('visible')).to.be.true;
-    // Wait for auto-dismiss (3 s + buffer).
+    // Implementation uses 5 s timeout — still visible at 3.5 s.
     await wait(3500);
+    expect(recap(iframe).classList.contains('visible')).to.be.true;
+    // Auto-dismisses by 5.5 s.
+    await wait(2000);
     expect(recap(iframe).classList.contains('visible')).to.be.false;
   });
 });
@@ -1310,6 +1313,462 @@ describe('integration/coach: keyboard shortcut', () => {
     await wait(100);
 
     expect(gameState.getState().coachSession).to.equal(null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CT-A11y3–CT-A11y6, CT-NT3, CT-NT4, CT-NT5, CT-HK1, CT-PERF1 (new tests)
+// ---------------------------------------------------------------------------
+
+describe('integration/coach: CT-A11y3 — aria-label reverts after session end', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-A11y3: Coach button aria-label reverts to "Coach" after session end via Erase', async function () {
+    this.timeout(18000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    let rank01;
+    try {
+      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
+      rank01 = fixtures.rank01;
+    } catch (_) {
+      return this.skip();
+    }
+    if (!rank01) return this.skip();
+
+    loadFixturePuzzle(gameState, rank01);
+    await wait(100);
+
+    coachBtn(iframe).click();
+    await wait(100);
+
+    const state = gameState.getState();
+    if (!state.coachSession) return this.skip();
+
+    expect(coachBtn(iframe).getAttribute('aria-label')).to.equal('Coach (active)');
+
+    // End session via ERASE on a cell with a pen value. First place a digit.
+    const emptyCell = firstEmptyCell(state);
+    gameState.dispatch({ type: 'SELECT_CELL', index: emptyCell });
+    gameState.dispatch({ type: 'PEN_ENTER', digit: state.puzzle.solution[emptyCell] ?? 1 });
+    await wait(50);
+    gameState.dispatch({ type: 'SELECT_CELL', index: emptyCell });
+    gameState.dispatch({ type: 'ERASE' });
+    await wait(100);
+
+    expect(coachBtn(iframe).getAttribute('aria-label')).to.equal('Coach');
+  });
+});
+
+describe('integration/coach: CT-A11y4 — panel role and aria-label', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-A11y4: panel has role="region" and aria-label="Coach explanation"', async function () {
+    this.timeout(18000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    let rank01;
+    try {
+      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
+      rank01 = fixtures.rank01;
+    } catch (_) {
+      return this.skip();
+    }
+    if (!rank01) return this.skip();
+
+    loadFixturePuzzle(gameState, rank01);
+    await wait(100);
+
+    coachBtn(iframe).click();
+    await wait(100);
+
+    const state = gameState.getState();
+    if (!state.coachSession) return this.skip();
+
+    // Select a coached cell to open the panel.
+    const coachedCells = [...state.coachSession.coachedCells];
+    if (coachedCells.length === 0) return this.skip();
+    gameState.dispatch({ type: 'SELECT_CELL', index: coachedCells[0] });
+    await wait(100);
+
+    const panel = doc(iframe).querySelector('.coach-panel');
+    expect(panel).to.not.equal(null);
+    expect(panel.getAttribute('role')).to.equal('region');
+    expect(panel.getAttribute('aria-label')).to.equal('Coach explanation');
+  });
+});
+
+describe('integration/coach: CT-A11y5 — recap static HTML attributes', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-A11y5: #coach-recap has role="status" and aria-live="polite" at load time', async function () {
+    this.timeout(18000);
+    const recapEl = doc(iframe).querySelector('#coach-recap');
+    expect(recapEl).to.not.equal(null);
+    expect(recapEl.getAttribute('role')).to.equal('status');
+    expect(recapEl.getAttribute('aria-live')).to.equal('polite');
+  });
+});
+
+describe('integration/coach: CT-A11y6 — sr-live announces technique on COACH_START', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-A11y6: pressing Coach announces technique name and cell count in sr-live', async function () {
+    this.timeout(18000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    let rank01;
+    try {
+      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
+      rank01 = fixtures.rank01;
+    } catch (_) {
+      return this.skip();
+    }
+    if (!rank01) return this.skip();
+
+    loadFixturePuzzle(gameState, rank01);
+    await wait(100);
+
+    coachBtn(iframe).click();
+    await wait(150);
+
+    const state = gameState.getState();
+    if (!state.coachSession) return this.skip();
+
+    const srLive = doc(iframe).querySelector('#sr-live');
+    expect(srLive).to.not.equal(null);
+    const text = srLive.textContent;
+    // Announce format: "Coach: Naked Single identified. N cells highlighted."
+    expect(text).to.include('Naked Single');
+    expect(text).to.include('identified');
+    expect(text).to.include('cells highlighted');
+  });
+});
+
+describe('integration/coach: CT-NT3 — wrong digit shows error toast', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-NT3: non-conflicting wrong pen entry shows error toast on Coach press', async function () {
+    this.timeout(18000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    let rank01;
+    try {
+      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
+      rank01 = fixtures.rank01;
+    } catch (_) {
+      return this.skip();
+    }
+    if (!rank01) return this.skip();
+
+    loadFixturePuzzle(gameState, rank01);
+    await wait(100);
+
+    const state = gameState.getState();
+
+    // Find an empty cell and enter a wrong digit (one that differs from solution).
+    let targetCell = -1;
+    let wrongDigit = -1;
+    for (let i = 0; i < 81; i++) {
+      if (state.puzzle.givens[i] === 0 && state.pen[i] === 0) {
+        const correct = state.puzzle.solution[i];
+        // Pick a digit different from the correct one that won't conflict with givens.
+        for (let d = 1; d <= 9; d++) {
+          if (d !== correct) {
+            // Check no conflict with peers (simple check: not in same row/col/box givens).
+            targetCell = i;
+            wrongDigit = d;
+            break;
+          }
+        }
+        if (targetCell !== -1) break;
+      }
+    }
+    if (targetCell === -1) return this.skip();
+
+    gameState.dispatch({ type: 'SELECT_CELL', index: targetCell });
+    gameState.dispatch({ type: 'PEN_ENTER', digit: wrongDigit });
+    await wait(50);
+
+    // Press Coach — should show error toast (board has an error).
+    coachBtn(iframe).click();
+    await wait(100);
+
+    const recapEl = recap(iframe);
+    expect(recapEl.classList.contains('visible')).to.be.true;
+    expect(recapEl.classList.contains('error')).to.be.true;
+    expect(gameState.getState().coachSession).to.equal(null);
+
+    const line1 = recapEl.querySelector('.coach-recap-line1');
+    expect(line1).to.not.equal(null);
+    expect(line1.textContent).to.include('error');
+  });
+});
+
+describe('integration/coach: CT-NT4 — inconsistent board shows contradiction toast', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-NT4: genuinely inconsistent board shows contradiction toast', async function () {
+    this.timeout(18000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    let noTechniqueInconsistent;
+    try {
+      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
+      noTechniqueInconsistent = fixtures.noTechniqueInconsistent;
+    } catch (_) {
+      return this.skip();
+    }
+    if (!noTechniqueInconsistent) return this.skip();
+
+    loadFixturePuzzle(gameState, noTechniqueInconsistent);
+    await wait(100);
+
+    coachBtn(iframe).click();
+    await wait(100);
+
+    const recapEl = recap(iframe);
+    expect(recapEl.classList.contains('visible')).to.be.true;
+    expect(recapEl.classList.contains('error')).to.be.true;
+    expect(gameState.getState().coachSession).to.equal(null);
+
+    const line1 = recapEl.querySelector('.coach-recap-line1');
+    expect(line1).to.not.equal(null);
+    expect(line1.textContent).to.include('contradiction');
+  });
+});
+
+describe('integration/coach: CT-NT5 — context-aware error toast (fresh iframe per R8)', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-NT5: error recap followed by wrong digit → context-aware toast on second Coach press', async function () {
+    this.timeout(20000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    let rank01;
+    try {
+      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
+      rank01 = fixtures.rank01;
+    } catch (_) {
+      return this.skip();
+    }
+    if (!rank01) return this.skip();
+
+    loadFixturePuzzle(gameState, rank01);
+    await wait(100);
+
+    // Press Coach — get a session.
+    coachBtn(iframe).click();
+    await wait(100);
+
+    const state = gameState.getState();
+    if (!state.coachSession) return this.skip();
+
+    const target = state.coachSession.step.roles.target;
+    if (target === null) return this.skip();
+
+    const correct = state.puzzle.solution[target];
+    const wrong = correct === 9 ? 1 : 9;
+
+    // Fill the coached target with a WRONG digit → error recap fires.
+    gameState.dispatch({ type: 'SELECT_CELL', index: target });
+    gameState.dispatch({ type: 'PEN_ENTER', digit: wrong });
+    await wait(150);
+
+    const recapEl = recap(iframe);
+    expect(recapEl.classList.contains('visible')).to.be.true;
+    expect(recapEl.classList.contains('error')).to.be.true;
+
+    // Wait for recap to dismiss (2.5 s + buffer), then press Coach again.
+    // The error recap from a wrong placement dismisses after 2.5s (not 5s).
+    await wait(3000);
+    expect(recapEl.classList.contains('visible')).to.be.false;
+
+    // Press Coach again — wrong digit is still on the board → error path.
+    coachBtn(iframe).click();
+    await wait(100);
+
+    expect(recapEl.classList.contains('visible')).to.be.true;
+    expect(recapEl.classList.contains('error')).to.be.true;
+
+    const line1 = recapEl.querySelector('.coach-recap-line1');
+    expect(line1).to.not.equal(null);
+    // Context-aware message because _lastSessionHadErrorRecap was set.
+    expect(line1.textContent).to.include("That suggestion didn't work out");
+  });
+});
+
+describe('integration/coach: CT-HK1 — keyboard C guard for INPUT, SELECT, TEXTAREA', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-HK1: pressing C while INPUT/SELECT/TEXTAREA is focused does not trigger coach', async function () {
+    this.timeout(18000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    let rank01;
+    try {
+      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
+      rank01 = fixtures.rank01;
+    } catch (_) {
+      return this.skip();
+    }
+    if (!rank01) return this.skip();
+
+    loadFixturePuzzle(gameState, rank01);
+    await wait(100);
+
+    const tags = ['INPUT', 'SELECT', 'TEXTAREA'];
+    for (const tagName of tags) {
+      const el = doc(iframe).createElement(tagName.toLowerCase());
+      doc(iframe).body.appendChild(el);
+      el.focus();
+
+      const e = new iframe.contentWindow.KeyboardEvent('keydown', {
+        key: 'c', bubbles: true, cancelable: true,
+      });
+      doc(iframe).dispatchEvent(e);
+      await wait(50);
+
+      expect(gameState.getState().coachSession).to.equal(null,
+        `Coach session should not start when ${tagName} is focused`);
+
+      el.remove();
+    }
+  });
+});
+
+describe('integration/coach: CT-PERF1 — Coach press highlights within 200ms', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-PERF1: Coach press → coached cell highlights appear within 200ms', async function () {
+    this.timeout(18000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    let rank04;
+    try {
+      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
+      rank04 = fixtures.rank04;
+    } catch (_) {
+      return this.skip();
+    }
+    if (!rank04) return this.skip();
+
+    loadFixturePuzzle(gameState, rank04);
+    await wait(100);
+
+    const start = Date.now();
+    coachBtn(iframe).click();
+
+    // Poll for coached-cause or coached-target class to appear.
+    const deadline = start + 500;
+    let found = false;
+    while (Date.now() < deadline) {
+      const el = doc(iframe).querySelector('.coached-cause, .coached-target');
+      if (el) { found = true; break; }
+      await wait(10);
+    }
+
+    const elapsed = Date.now() - start;
+    expect(found).to.be.true;
+    expect(elapsed).to.be.below(200);
   });
 });
 

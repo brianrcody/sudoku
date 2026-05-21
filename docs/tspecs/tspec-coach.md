@@ -101,7 +101,23 @@ Coach Mode splits cleanly into three test surfaces:
 | `CHANGE_DIFFICULTY` ends + pencil reverts / no-op without session | Yes | |
 | Elimination completion: full clear → elim recap; partial → no recap | Yes (Locked Candidates) | |
 | Elimination completion: Hidden Pair `elimTarget=[]` fallback | Yes | |
-| Win-during-recap (via direct `COACH_END {reason:'won'}`) | Yes (proxy) | The actual `ON_COMPLETION_EVALUATE` chain is not exercised directly |
+| Win-during-recap (via direct `COACH_END {reason:'won'}`) | Yes (proxy) | SS16 also exercises the real `ON_COMPLETION_EVALUATE` chain via `_applyPenEnter` |
+| `COACH_START` guarded when `puzzle === null` | Yes | SS1 |
+| `COACH_START` guarded when `won === true` | Yes | SS2 |
+| `COACH_START` no-technique change-key emit | Yes | SS3 |
+| `COACH_START` over active session: defensive pencil revert before new snapshot | Yes | SS4 |
+| `COACH_START` placement → `eliminationTargets === null` | Yes | SS5 |
+| `COACH_START` elimination with `roles.elimTarget = []` builds from `eliminations` | Yes | SS6 |
+| `COACH_FILL_RECAP` no-op when `coachSession === null` | Yes | SS7 |
+| `COACH_FILL_RECAP` no-op when already in recap | Yes | SS8, SS9 |
+| `COACH_NO_TECHNIQUE` emits `coachSession` change-key | Yes | SS10 |
+| `PEN_ENTER` coach block runs after `_applyPenEnter` mutation | Yes | SS11 |
+| `PEN_ENTER` no coach block when session null | Yes | SS12 |
+| `PENCIL_TOGGLE` no-op when session null | Yes | SS15 |
+| `PENCIL_TOGGLE` no-op when placement session (no `eliminationTargets`) | Yes | SS13 |
+| `PENCIL_TOGGLE` no-op when recap active | Yes | SS14 |
+| `ON_COMPLETION_EVALUATE` natural win path (direct `_applyPenEnter` chain) | Yes | SS16 |
+| `ERASE_ALL_PENCIL` ends session + pencil revert | Yes | SS18 |
 
 ### `js/tests/integration/coach.test.js` — current coverage
 
@@ -111,12 +127,21 @@ Coach Mode splits cleanly into three test surfaces:
 | CT-P1–CT-P5 panel open/close, overlay visible, em rendering, technique name | Yes | |
 | CT-R1–CT-R5 recap correct/wrong fill, elim no-recap, 2.5s dismiss, Coach-during-recap | Yes | |
 | CT-NT1 solved-puzzle toast | Yes | |
-| CT-NT2 toast auto-dismiss "after 3 s" | **Inconsistent** | fspec/code agree on 5s; test waits 3.5s. Likely passes spuriously — see R3 |
+| CT-NT2 toast auto-dismiss after 5 s | Yes | Fixed 2026-05-21: asserts still visible at 3.5 s, gone at 5.5 s |
+| CT-NT3 non-conflicting wrong digit → error toast | Yes | |
+| CT-NT4 genuinely inconsistent board → contradiction toast | Yes | |
+| CT-NT5 context-aware error toast after prior error recap | Yes | Fresh iframe per R8 |
 | CT-PR1, CT-PR2 pencil revert / user mark preserved | Yes | |
 | CT-CA1–CT-CA4 Erase / New Puzzle / Reset / Difficulty | Yes | |
 | CT-EC1–CT-EC4 elim completion + pencil retention + pre-cleared candidates | Yes | |
 | CT-KB1, CT-KB2 keyboard `C` with body and BUTTON focus | Yes | |
+| CT-HK1 keyboard `C` — INPUT / SELECT / TEXTAREA focus-tag guards | Yes | |
 | CT-A11y1, CT-A11y2 aria-describedby on coached / not on non-coached | Yes | |
+| CT-A11y3 Coach button aria-label reverts to "Coach" after session end | Yes | |
+| CT-A11y4 panel `role="region"` and `aria-label="Coach explanation"` | Yes | |
+| CT-A11y5 recap `role="status"` and `aria-live="polite"` | Yes | |
+| CT-A11y6 live region announces technique name + cell count | Yes | |
+| CT-PERF1 Coach press → highlights visible within 200 ms | Yes | Uses rank03 fixture |
 
 ---
 
@@ -193,7 +218,7 @@ These tests append to the existing file using the same `stubStats`, `stubHintPro
 | SS13 | `PENCIL_TOGGLE` coach hook no-op when `eliminationTargets === null` (placement session) | unit | `eliminationTargets !== null` false branch | Start a Naked Single session (`eliminationTargets: null`); dispatch `PENCIL_TOGGLE` on any cell | No `COACH_FILL_RECAP` dispatched | P1 |
 | SS14 | `PENCIL_TOGGLE` coach hook no-op when `recap !== null` | unit | `recap === null` false branch | Start elim session; dispatch `COACH_FILL_RECAP {variant:'elim'}` (enters recap); dispatch `PENCIL_TOGGLE` | No further `COACH_FILL_RECAP` dispatch | P1 |
 | SS15 | `PENCIL_TOGGLE` coach hook no-op when `coachSession === null` | unit | `coachSession !== null` false branch | No session; dispatch `PENCIL_TOGGLE` | No coach effect; no coach-related emit | P1 |
-| SS16 | `ON_COMPLETION_EVALUATE` natural win path: `won && winHandled && coachSession !== null` → `COACH_END {reason:'won'}` | unit | Real win chain via `_applyPenEnter` (existing test only proxies via direct `COACH_END`) | Construct `nakedSinglePuzzle` (cell 0 is only empty); start placement session at cell 0; dispatch `PEN_ENTER {digit:5}` | `state.won === true`; `coachSession === null`; both `COACH_FILL_RECAP` and `COACH_END {reason:'won'}` fired (verify via emit-capture); no recap toast | P1 |
+| SS16 | `ON_COMPLETION_EVALUATE` natural win path: `won && winHandled && coachSession !== null` → `COACH_END {reason:'won'}` | unit | Real win chain via `_applyPenEnter` (existing test only proxies via direct `COACH_END`) | Construct a complete puzzle (80 givens, cell 0 empty, solution[0]=5); start placement session at cell 0; dispatch `PEN_ENTER {digit:5}` | `state.won === true`; `coachSession === null`; `COACH_END {reason:'won'}` fired (verify via emit-capture). **Note:** `COACH_FILL_RECAP` does NOT fire in the win path — `ON_COMPLETION_EVALUATE` is dispatched inside `_applyPenEnter` before PEN_ENTER's own coach block executes, so `COACH_END` preempts it. | P1 |
 | SS17 | `UNDO` clears coachSession and reverts pencil | unit | `case 'UNDO'` coach hook (cross-feature dependency with tspec-undo) | Start rank-4 session (auto-reveal); dispatch a pen entry to create undo snapshot; dispatch `UNDO` | `coachSession === null`; pencil reverted | P3 (deferred to tspec-undo S71) |
 | SS18 | `ERASE_ALL_PENCIL` ends session | unit | `case 'ERASE_ALL_PENCIL'` coach hook | Start any session; dispatch `ERASE_ALL_PENCIL` | `coachSession === null`; pencil reverted; emit includes `'coachSession'` | P1 |
 
