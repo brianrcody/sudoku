@@ -52,7 +52,7 @@ Strict order — no step may be reordered:
      4. Restore saved `pen[]`: for each non-given cell with a non-zero saved pen value, `dispatch SELECT_CELL` then `dispatch PEN_ENTER` with `fromHint: true` (bypasses stats side-effects).
      5. Restore saved `pencil[]`: for each non-given cell with non-zero bits, `dispatch SELECT_CELL` then `dispatch PENCIL_TOGGLE` for each set bit.
      6. `dispatch({ type: 'DESELECT' })`.
-     7. `dispatch({ type: 'RESTORE_SESSION', attemptRecorded, hintsRemaining })` — restores session flags that `PUZZLE_LOADED` reset to defaults.
+     7. `dispatch({ type: 'RESTORE_SESSION', attemptRecorded, hintsRemaining })` — restores session flags that `PUZZLE_LOADED` reset to defaults, and clears `undoSnapshot` (the PEN_ENTER restore loop above sets it as a side-effect; RESTORE_SESSION resets it so moves from a prior session cannot be undone).
    - If absent: `dispatch SET_GENERATING` true, call `puzzleProvider.requestPuzzle({ difficulty: currentDifficulty })`, dispatch `PUZZLE_LOADED` on resolution; on error log and `dispatch SET_GENERATING false`.
 8. Mount UI modules in order: `srLive`, `themes` (select control), `controls`, `grid`, `numpad`, `stats`, `winBanner`, `dialog`, `keyboard`.
 9. Subscribe the persistence writer (`aspec-persistence.md` §5) to state `'changed'` events.

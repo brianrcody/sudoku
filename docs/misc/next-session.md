@@ -8,12 +8,24 @@ addressed. Sign-off artifacts in `docs/misc/`:
 
 ---
 
-## Next up (2026-05-22): V2 Reviewer pass
+## Next up: Flaky test remediation — remaining lower-priority items
 
-Run the Reviewer agent against all V2 features: Coach Mode (Phase 8b),
-One-Level Undo (Phase 9), Erase All Pencil (Phase 10), and the Home-key shortcut
-(added 2026-05-21). After sign-off, do a UX review with the user to complete V2
-iteration exit criteria.
+Items 1–3 completed 2026-05-22. Suite: 579 passing, 0 failing, 36 pending.
+
+**Completed:**
+1. ~~`state.js` — `RESTORE_SESSION` now clears `undoSnapshot` (production bug fix).~~
+2. ~~GF6 — digit derived from board; row-selection loop strengthened.~~
+3. ~~GF19 — readiness poll strengthened; unconditional assertion; iframe1 removed before seed.~~
+
+**Remaining (lower-priority preventive):**
+
+4. **GF10, GF16 digit derivation (Class A).** Derive digits from board instead of
+   hardcoding. See `docs/misc/flaky-test-remediation.md §5`.
+
+5. **GF2 event-based wait (Class B).** Replace fixed 3.5 s sleep with event-based
+   wait on the `incorrect` emit.
+
+After remediation, continue to the **V2 Reviewer pass** (below).
 
 ---
 
@@ -25,29 +37,25 @@ The 37 pending tests are coach analyzer rank fixtures awaiting rank-clean board
 collection. Progress is necessarily incremental — add fixtures opportunistically as
 suitable boards are encountered. See `docs/misc/coach-fixture-tracker.md`.
 
-### Persistent test failures (3 open)
+### Flaky test diagnosis — completed 2026-05-22
 
-Identified 2026-05-11 after Phase 8b coach work. None are coach-related.
+Full remediation plan: `docs/misc/flaky-test-remediation.md`. Summary:
 
-**W5 — resolved (2026-05-20).** Changed background request from `kiddie` to `hard` so the
-background can't accidentally complete before the foreground message crosses the IPC boundary.
-If flakiness recurs, the test needs restructuring to not depend on result ordering.
-
-**GF6 — monitoring (2026-05-20).** Passed in 4 consecutive re-runs. The 2026-05-11
-failure (conflicts.size === 3 instead of 0) was likely the puzzle-seed-dependent case
-where digit 5 is already a given elsewhere in the chosen row. If it recurs, fix the
-test to verify digit 5 is absent from the row's givens before using it.
+**W5 — patched (2026-05-20), not structurally fixed.** See plan §3.
 
 **PERF-NEW-hard — resolved (2026-05-20).** Budget raised from 1000 ms to 2000 ms.
-Hard generation is genuinely non-deterministic (observed 63–1305 ms); 1000 ms was too
-tight. Saw 1046 ms pass cleanly under the new budget.
 
-**GF19 — monitoring (2026-05-22).** One observed failure: "expected Object{ …(4) } to be
-null" on `restored.undoSnapshot`. Passed on immediate re-run; likely a timing issue in
-the fresh-iframe load path. The test uses a polling loop with `setTimeout` delays to wait
-for the iframe to load — if the puzzle restores and dispatches events before the assertion
-runs, `undoSnapshot` could be non-null. If it recurs, audit the iframe-ready check to
-ensure it waits until after all restore side-effects settle.
+**GF6 — diagnosed (2026-05-22), fix queued.** Root cause confirmed: hardcoded `digit: 5`
+collides with givens probabilistically. Fix: derive a unit-free digit from the board.
+
+**GF19 — diagnosed (2026-05-22), has production bug.** Root cause confirmed: the restore
+path (`main.js`) dispatches `PEN_ENTER` with `fromHint: true`, which still sets
+`undoSnapshot`. `RESTORE_SESSION` does not clear it. After a successful restore,
+`undoSnapshot` is non-null — meaning users can Undo a restored move from a previous
+session. The test was passing falsely (iframe1's debounced persistence writer was racing
+the localStorage seed, causing iframe2 to generate a fresh puzzle instead of restoring).
+Fix: `RESTORE_SESSION` in `state.js` must clear `undoSnapshot`. Test also needs
+hardening. See plan items 1 and 3 in "Next up" above.
 
 ### Integration test gap — CT-NT3: coach 'error' toast
 

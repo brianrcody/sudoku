@@ -190,22 +190,40 @@ describe('integration/game-flows', () => {
     const state = gameState.getState();
     if (!state.puzzle) return this.skip();
 
-    // Find two non-given cells in the same row.
-    let a = -1, b = -1;
+    // Find two non-given cells in the same row and a digit absent from all
+    // their units (row, col, box), so the only conflict is the intentional pair.
+    let a = -1, b = -1, digit = -1;
+    const pen0 = gameState.getState().pen;
     outer: for (let r = 0; r < 9; r++) {
       const row = [];
       for (let c = 0; c < 9; c++) {
         const i = r * 9 + c;
         if (state.puzzle.givens[i] === 0) row.push(i);
       }
-      if (row.length >= 2) { a = row[0]; b = row[1]; break outer; }
+      if (row.length < 2) continue;
+      const ca = row[0], cb = row[1];
+      const ra = Math.floor(ca / 9), cola = ca % 9;
+      const rb = Math.floor(cb / 9), colb = cb % 9;
+      const boxa = Math.floor(ra / 3) * 3 + Math.floor(cola / 3);
+      const boxb = Math.floor(rb / 3) * 3 + Math.floor(colb / 3);
+      const used = new Set();
+      for (let i = 0; i < 81; i++) {
+        if (!pen0[i]) continue;
+        const ri = Math.floor(i / 9), ci = i % 9;
+        const boxi = Math.floor(ri / 3) * 3 + Math.floor(ci / 3);
+        if (ri === ra || ci === cola || boxi === boxa ||
+            ri === rb || ci === colb || boxi === boxb) used.add(pen0[i]);
+      }
+      for (let d = 1; d <= 9; d++) {
+        if (!used.has(d)) { a = ca; b = cb; digit = d; break outer; }
+      }
     }
     if (a === -1) return this.skip();
 
     gameState.dispatch({ type: 'SELECT_CELL', index: a });
-    gameState.dispatch({ type: 'PEN_ENTER', digit: 5 });
+    gameState.dispatch({ type: 'PEN_ENTER', digit });
     gameState.dispatch({ type: 'SELECT_CELL', index: b });
-    gameState.dispatch({ type: 'PEN_ENTER', digit: 5 });
+    gameState.dispatch({ type: 'PEN_ENTER', digit });
     await new Promise(r => setTimeout(r, 100));
 
     expect(gameState.getState().conflicts.has(a)).to.be.true;
@@ -811,8 +829,11 @@ describe('integration/game-flows', () => {
       attemptRecorded: gs1.getState().attemptRecorded,
     });
 
-    // Pre-seed localStorage in the first iframe's window (same origin as the new iframe).
-    iframe1.contentWindow.localStorage.setItem('sudoku.state.v1', blob);
+    // Remove iframe1 before seeding so its debounced persistence writer cannot
+    // race and overwrite the hand-crafted blob.
+    const storage = iframe1.contentWindow.localStorage;
+    iframe1.remove();
+    storage.setItem('sudoku.state.v1', blob);
 
     // Load a fresh iframe — it will restore from localStorage.
     const iframe2 = document.createElement('iframe');
@@ -828,8 +849,9 @@ describe('integration/game-flows', () => {
         if (!doc) return setTimeout(check, 100);
         const cellsReady = doc.querySelectorAll('.cell').length === 81;
         const gs2 = iframe2.contentWindow?.gameState;
-        const puzzleLoaded = gs2 && gs2.getState().puzzle !== null;
-        if (cellsReady && puzzleLoaded) return resolve();
+        const s2 = gs2?.getState();
+        const restored = s2?.puzzle?.id === puzzleId && s2?.pen[idx] === digit;
+        if (cellsReady && restored) return resolve();
         setTimeout(check, 100);
       }
       setTimeout(check, 300);
@@ -846,10 +868,8 @@ describe('integration/game-flows', () => {
     const undoBtn2 = iframe2.contentDocument.getElementById('btn-undo');
     if (undoBtn2) expect(undoBtn2.disabled).to.be.true;
 
-    // Verify the pen entry was actually restored (confirms localStorage was read).
-    if (restored.puzzle?.id === puzzleId) {
-      expect(restored.pen[idx]).to.equal(digit);
-    }
+    // Verify the pen entry was actually restored (the poll already guarantees this).
+    expect(restored.pen[idx]).to.equal(digit);
 
     iframe2.remove();
   });

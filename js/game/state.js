@@ -673,9 +673,12 @@ export function createGameState({ stats, hintProvider }) {
         // Applied once after restoring persisted pen/pencil entries. Avoids
         // treating a resumed puzzle as unattempted and restores the exact hint
         // count that was saved rather than resetting to the tier maximum.
+        // undoSnapshot is cleared here because restored moves are not undoable
+        // across sessions — they belong to the prior session's history.
         state.attemptRecorded = action.attemptRecorded ?? state.attemptRecorded;
         state.hintsRemaining = action.hintsRemaining ?? state.hintsRemaining;
-        _emit(action, 'attemptRecorded', 'hintsRemaining');
+        state.undoSnapshot = null;
+        _emit(action, 'attemptRecorded', 'hintsRemaining', 'undoSnapshot');
         break;
       }
 

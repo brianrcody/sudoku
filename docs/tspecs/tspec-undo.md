@@ -76,7 +76,7 @@ Append GF15–GF19, following the existing skip-if-no-gameState pattern.
 | GF16 | Auto-clear undo end-to-end (DOM) | Critical case: rendered grid after pencil restore | Pencil-mark several peers (verify pencil DOM present), pen a digit (verify peer pencil DOM removed), click Undo → peer pencil marks reappear in rendered cell DOM |
 | GF17 | Coach + Ctrl+Z keyboard undo | keyboard `ctrlKey` path + coach teardown | Open Coach (panel/overlay in DOM), make coached pen entry, synthesize `keydown {key:'z', ctrlKey:true}` on document → coach panel/overlay removed, board reverted |
 | GF18 | Keyboard guards: Ctrl/Cmd/focus/won/Shift/Alt | keyboard.js all branches | (a) `metaKey` z → undo dispatched; (b) focus inside a `BUTTON` then Ctrl+Z → no undo; (c) after win, Ctrl+Z → inert, win banner stays; (d) Ctrl+Shift+Z and Ctrl+Alt+Z → not matched; (e) snapshot null → Ctrl+Z no preventDefault, no dispatch; **also:** snapshot present + `SET_GENERATING true` + Ctrl+Z → no dispatch |
-| GF19 | Session-only across fresh mount | `undoSnapshot` not persisted | Pre-seed `localStorage['sudoku.state.v1']` with pen/pencil; fresh iframe mount → board restored but `undoSnapshot===null` and `#btn-undo` disabled |
+| GF19 | Session-only across fresh mount | `undoSnapshot` not persisted; `RESTORE_SESSION` clears it | Remove seeding iframe from DOM before writing localStorage (eliminates debounced-write race). Poll until `puzzle.id === seededId && pen[idx] === seededDigit` (proves restore happened). Assert `undoSnapshot===null`, `#btn-undo` disabled, and pen entry restored — all unconditionally. |
 
 ### A11y test — `js/tests/integration/a11y.test.js`
 
@@ -124,6 +124,7 @@ Append A21, following the A13/A15 pattern.
 | `NEW_PUZZLE` `undoSnapshot=null` + emit | S74 |
 | `RESET_PUZZLE` `undoSnapshot=null` + emit | S74 |
 | `CHANGE_DIFFICULTY` `undoSnapshot=null` + emit | S74 |
+| `RESTORE_SESSION` `undoSnapshot=null` + emit | GF19 |
 
 ### `js/ui/numpad.js`
 
