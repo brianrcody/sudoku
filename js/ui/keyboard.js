@@ -2,7 +2,7 @@
  * @fileoverview Global keyboard shortcut handler.
  *
  * Handles: digits 1–9, Backspace/Delete, arrow keys, P (pen/pencil toggle),
- * Escape (close dialogs). All dispatched via GameState.
+ * Home (focus first non-given cell), Escape (close dialogs). All dispatched via GameState.
  */
 
 import { close as closeDialog } from './dialog.js';
@@ -19,6 +19,21 @@ export function mount(root, gameState) {
 
     if (e.key === 'Escape') {
       closeDialog();
+      return;
+    }
+
+    // Home focuses the first non-given cell.
+    if (e.key === 'Home') {
+      if (inInput || tag === 'BUTTON') return;
+      e.preventDefault();
+      gameState.dispatch({ type: 'SELECT_FIRST_CELL' });
+      requestAnimationFrame(() => {
+        const sel = gameState.getState().selected;
+        if (sel !== null) {
+          const grid = document.getElementById('grid-root')?.querySelector('.sudoku-grid');
+          grid?.querySelector(`.cell[data-index="${sel}"]`)?.focus();
+        }
+      });
       return;
     }
 

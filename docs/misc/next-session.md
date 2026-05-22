@@ -8,6 +8,15 @@ addressed. Sign-off artifacts in `docs/misc/`:
 
 ---
 
+## Next up (2026-05-22): V2 Reviewer pass
+
+Run the Reviewer agent against all V2 features: Coach Mode (Phase 8b),
+One-Level Undo (Phase 9), Erase All Pencil (Phase 10), and the Home-key shortcut
+(added 2026-05-21). After sign-off, do a UX review with the user to complete V2
+iteration exit criteria.
+
+---
+
 ## Backlog
 
 ### Rank fixtures (incremental, ongoing into V3)

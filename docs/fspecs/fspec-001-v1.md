@@ -174,6 +174,7 @@ On desktop, the following keyboard shortcuts are supported:
 | **C**                        | Invoke Coach (see fspec-002-coach)                 |
 | Enter or Space (on a button) | Activate the focused button                        |
 | Ctrl+Z (Win/Linux) or Cmd+Z (Mac) | Undo last move (see §9.7)               |
+| **Home**                     | Focus the first non-given cell                     |
 
 **Rationale for P as the pen/pencil shortcut:** Single-letter, mnemonic (P for Pencil),
 unambiguous — no browser or OS conflict for an in-game context, and easy to reach

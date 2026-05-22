@@ -193,6 +193,7 @@ Global `keydown` handler on `document`.
 | Backspace / Delete | `ERASE` | No-op if no cell selected |
 | Arrow keys | `ARROW_NAV { direction }` | Only when focus is inside `.sudoku-grid` OR `state.selected !== null` |
 | P / p | `TOGGLE_MODE` | Only when focus is not in an `input`, `select`, `textarea`, or `button` |
+| Home | `SELECT_FIRST_CELL` | Focuses first non-given cell; same focus guard as P |
 | Escape | Close dialog | Dismissed via `dialog.close()` |
 
 > **Note:** The `C / c` keyboard shortcut (invoke Coach) is handled in `coach.js`, not `keyboard.js`. Its focus guard is identical to the P-guard above. See `aspec-coach-ui.md` §6.5.

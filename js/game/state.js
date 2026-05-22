@@ -263,6 +263,15 @@ export function createGameState({ stats, hintProvider }) {
         break;
       }
 
+      case 'SELECT_FIRST_CELL': {
+        if (!state.puzzle) break;
+        const idx = state.puzzle.givens.findIndex(g => g === 0);
+        if (idx === -1) break;
+        state.selected = idx;
+        _emit(action, 'selected');
+        break;
+      }
+
       case 'ARROW_NAV': {
         const { direction } = action;
         // Find starting position: if no cell selected, begin at 0 and pick first player cell.

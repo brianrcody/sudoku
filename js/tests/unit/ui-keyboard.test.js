@@ -176,4 +176,23 @@ describe('ui/keyboard.js', () => {
     const e = keydown({ key: 'Tab', shiftKey: true });
     expect(e.defaultPrevented).to.be.false;
   });
+
+  // UK11: Home dispatches SELECT_FIRST_CELL
+  it('UK11: pressing Home dispatches SELECT_FIRST_CELL and prevents default', () => {
+    const e = keydown({ key: 'Home' });
+    const call = fakeGs.dispatch.calls.find(a => a.type === 'SELECT_FIRST_CELL');
+    expect(call).to.exist;
+    expect(e.defaultPrevented).to.be.true;
+  });
+
+  // UK12: Home ignored when focus is in a form control
+  it('UK12: pressing Home with an input focused does not dispatch SELECT_FIRST_CELL', () => {
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    keydown({ key: 'Home' });
+    const call = fakeGs.dispatch.calls.find(a => a.type === 'SELECT_FIRST_CELL');
+    expect(call).to.not.exist;
+    input.remove();
+  });
 });

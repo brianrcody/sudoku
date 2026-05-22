@@ -801,6 +801,19 @@ describe('game/state.js', () => {
     expect(emitCount).to.equal(1);
   });
 
+  // S87: SELECT_FIRST_CELL
+  it('S87: SELECT_FIRST_CELL selects the first non-given cell', () => {
+    const puzzle = makeEasyPuzzle(); // givens[0] = 5; first non-given is index 1
+    loadPuzzle(gs, puzzle);
+    gs.dispatch({ type: 'SELECT_FIRST_CELL' });
+    expect(gs.getState().selected).to.equal(1);
+  });
+
+  it('S87b: SELECT_FIRST_CELL is a no-op before puzzle is loaded', () => {
+    gs.dispatch({ type: 'SELECT_FIRST_CELL' });
+    expect(gs.getState().selected).to.be.null;
+  });
+
   // ── UNDO tests (S55–S77) ─────────────────────────────────────────────────
 
   describe('UNDO', () => {
