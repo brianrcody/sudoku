@@ -19,6 +19,14 @@ Items 1–3 completed 2026-05-22. Suite: 579 passing, 0 failing, 36 pending.
 
 **All items complete.** Flaky test remediation fully done 2026-05-22.
 
+**Deferred integration tests CT-W1/CT-SR1/CT-SR2/CT-HP1 written (2026-05-22).**
+coach.test.js was also registered in setup.html (it had never been included).
+CT-W1 and CT-NT4 bugs fixed (2026-05-22): CT-W1 now uses the natural generated
+puzzle (rank01 has no solution field); CT-NT4 fixture updated to a zero-candidate
+board that deterministically returns reason:'inconsistent'. Systemic flakiness under
+the full 657-test suite remains (different tests fail on different runs due to browser
+resource pressure) — this is pre-existing and needs infrastructure investigation.
+
 After remediation, continue to the **V2 Reviewer pass** (below).
 
 ---

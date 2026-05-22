@@ -1427,17 +1427,20 @@ export const noTechniqueComplete = {
 // ===========================================================================
 // No-technique: Inconsistent
 // ===========================================================================
+// Cell (0,0) is empty. Row 0 already contains 2–9 (cols 1–8) and col 0
+// already contains 1 (row 1), so (0,0) has zero candidates. This guarantees
+// solveLogically returns an empty trace and analyze returns reason:'inconsistent'.
 export const noTechniqueInconsistent = {
   givens: board([
+    0,2,3,4,5,6,7,8,9,
     1,0,0,0,0,0,0,0,0,
-    0,2,0,0,0,0,0,0,0,
-    0,0,3,0,0,0,0,0,0,
-    0,0,0,4,0,0,0,0,0,
-    0,0,0,0,5,0,0,0,0,
-    0,0,0,0,0,6,0,0,0,
-    0,0,0,0,0,0,7,0,0,
-    0,0,0,0,0,0,0,8,0,
-    0,0,0,0,0,0,0,0,9,
+    0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,
   ]),
   playerPen: null,
   expected: {

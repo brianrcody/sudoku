@@ -1773,6 +1773,256 @@ describe('integration/coach: CT-PERF1 — Coach press highlights within 200ms', 
 });
 
 // ---------------------------------------------------------------------------
+// CT-W1, CT-SR1, CT-SR2, CT-HP1
+// ---------------------------------------------------------------------------
+
+describe('integration/coach: CT-W1 — win during active coach fill session', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-W1: completing the puzzle while a coach session is active shows win banner but not recap', async function () {
+    this.timeout(18000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    // Use the naturally generated puzzle (has a real solution array).
+    // loadFixturePuzzle(rank01) would fail here because rank01 has no solution
+    // field, causing checkOnComplete to compare pen against zeros → won never true.
+    const state = gameState.getState();
+    if (!state.puzzle || !state.puzzle.solution) return this.skip();
+    if (!state.puzzle.solution.some(v => v !== 0)) return this.skip();
+
+    // Collect all empty cells; leave the first one as the final coached fill.
+    const emptyCells = [];
+    for (let i = 0; i < 81; i++) {
+      if (state.puzzle.givens[i] === 0) emptyCells.push(i);
+    }
+    if (emptyCells.length < 1) return this.skip();
+    const lastCell = emptyCells[0];
+
+    // Fill every empty cell except lastCell with the correct solution digit.
+    for (const idx of emptyCells) {
+      if (idx === lastCell) continue;
+      gameState.dispatch({ type: 'SELECT_CELL', index: idx });
+      gameState.dispatch({ type: 'PEN_ENTER', digit: state.puzzle.solution[idx] });
+    }
+    await wait(50);
+
+    // Board now has exactly one empty cell — press Coach.
+    coachBtn(iframe).click();
+    await wait(100);
+
+    if (!gameState.getState().coachSession) return this.skip();
+
+    // Fill the last cell — ON_COMPLETION_EVALUATE fires inside PEN_ENTER, which
+    // dispatches COACH_END before COACH_FILL_RECAP can run.
+    gameState.dispatch({ type: 'SELECT_CELL', index: lastCell });
+    gameState.dispatch({ type: 'PEN_ENTER', digit: state.puzzle.solution[lastCell] });
+
+    await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
+    await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
+
+    expect(gameState.getState().won).to.be.true;
+    expect(gameState.getState().coachSession).to.equal(null);
+
+    const winBanner = doc(iframe).querySelector('#win-banner');
+    expect(winBanner).to.not.equal(null);
+    expect(winBanner.classList.contains('show')).to.be.true;
+
+    expect(recap(iframe).classList.contains('visible')).to.be.false;
+  });
+});
+
+describe('integration/coach: CT-SR1 — second Coach press resets session', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-SR1: pressing Coach a second time ends the old session and starts a fresh one', async function () {
+    this.timeout(18000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    let rank01;
+    try {
+      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
+      rank01 = fixtures.rank01;
+    } catch (_) {
+      return this.skip();
+    }
+    if (!rank01) return this.skip();
+
+    loadFixturePuzzle(gameState, rank01);
+    await wait(100);
+
+    // Capture action types from both Coach presses.
+    const actionLog = [];
+    const unsub = gameState.on('changed', ({ action }) => actionLog.push(action.type));
+
+    coachBtn(iframe).click();   // first press — starts session A
+    await wait(100);
+
+    expect(gameState.getState().coachSession).to.not.equal(null);
+
+    coachBtn(iframe).click();   // second press — ends A, starts B
+    await wait(100);
+
+    unsub();
+
+    const finalState = gameState.getState();
+    expect(finalState.coachSession).to.not.equal(null);
+    expect(finalState.coachSession.recap).to.equal(null);
+    expect(recap(iframe).classList.contains('visible')).to.be.false;
+
+    // COACH_END must appear in the log between the first and second COACH_START.
+    const starts = actionLog.reduce((acc, t, i) => t === 'COACH_START' ? [...acc, i] : acc, []);
+    const ends   = actionLog.reduce((acc, t, i) => t === 'COACH_END'   ? [...acc, i] : acc, []);
+    expect(starts.length).to.be.at.least(2);
+    expect(ends.length).to.be.at.least(1);
+    const lastEnd   = ends[ends.length - 1];
+    const lastStart = starts[starts.length - 1];
+    expect(lastEnd).to.be.above(starts[0]);
+    expect(lastEnd).to.be.below(lastStart);
+  });
+});
+
+describe('integration/coach: CT-SR2 — second Coach press dismisses error toast', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-SR2: pressing Coach while an error toast is showing clears the timer and re-runs analysis', async function () {
+    this.timeout(18000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    let rank01;
+    try {
+      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
+      rank01 = fixtures.rank01;
+    } catch (_) {
+      return this.skip();
+    }
+    if (!rank01) return this.skip();
+
+    loadFixturePuzzle(gameState, rank01);
+    await wait(100);
+
+    const state = gameState.getState();
+
+    // Enter a wrong digit so the board is in an error state.
+    const targetIdx = firstEmptyCell(state);
+    if (targetIdx === -1) return this.skip();
+    const wrongDigit = state.puzzle.solution[targetIdx] === 9 ? 1 : 9;
+    gameState.dispatch({ type: 'SELECT_CELL', index: targetIdx });
+    gameState.dispatch({ type: 'PEN_ENTER', digit: wrongDigit });
+    await wait(50);
+
+    // First Coach press → error toast appears; no session started.
+    coachBtn(iframe).click();
+    await wait(100);
+
+    const recapEl = recap(iframe);
+    expect(recapEl.classList.contains('visible')).to.be.true;
+    expect(gameState.getState().coachSession).to.equal(null);
+
+    // Second Coach press well within the 5 s error timer — clears the old timer
+    // via the _errorTimer !== null branch, hides the toast, re-analyzes, and since
+    // the wrong digit is still present shows a fresh error toast.
+    coachBtn(iframe).click();
+    await wait(100);
+
+    expect(recapEl.classList.contains('visible')).to.be.true;
+    expect(recapEl.classList.contains('error')).to.be.true;
+    expect(gameState.getState().coachSession).to.equal(null);
+  });
+});
+
+describe('integration/coach: CT-HP1 — hint dismisses session with panel open', () => {
+  let iframe;
+
+  beforeEach(async function () {
+    this.timeout(18000);
+    iframe = await loadIframe();
+  });
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('CT-HP1: clicking Hint while the coach explanation panel is open closes the session and panel', async function () {
+    this.timeout(18000);
+    const gameState = gs(iframe);
+    if (!gameState) return this.skip();
+
+    let rank01;
+    try {
+      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
+      rank01 = fixtures.rank01;
+    } catch (_) {
+      return this.skip();
+    }
+    if (!rank01) return this.skip();
+
+    loadFixturePuzzle(gameState, rank01);
+    await wait(100);
+
+    coachBtn(iframe).click();
+    await wait(100);
+
+    const state = gameState.getState();
+    if (!state.coachSession) return this.skip();
+
+    // Select the coached target — it is a non-given empty cell, so HINT can act on it.
+    const target = state.coachSession.step.roles.target;
+    if (target === null) return this.skip();
+    gameState.dispatch({ type: 'SELECT_CELL', index: target });
+    await wait(100);
+
+    expect(panelWrap(iframe).classList.contains('open')).to.be.true;
+
+    // Click Hint — HINT handler dispatches COACH_END {reason:'hint'} when a session
+    // is active, which sets coachSession to null and closes the panel.
+    const hintBtn = doc(iframe).querySelector('#btn-hint');
+    if (!hintBtn || hintBtn.disabled) return this.skip();
+    hintBtn.click();
+
+    await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
+    await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
+
+    expect(gameState.getState().coachSession).to.equal(null);
+    expect(panelWrap(iframe).classList.contains('open')).to.be.false;
+    expect(recap(iframe).classList.contains('visible')).to.be.false;
+  });
+});
+
+// ---------------------------------------------------------------------------
 // A11y tests
 // ---------------------------------------------------------------------------
 
