@@ -875,9 +875,8 @@ describe('integration/game-flows', () => {
 
     // Remove iframe1 before seeding so its debounced persistence writer cannot
     // race and overwrite the hand-crafted blob.
-    const storage = iframe1.contentWindow.localStorage;
     iframe1.remove();
-    storage.setItem('sudoku.state.v1', blob);
+    window.localStorage.setItem('sudoku.state.v1', blob);
 
     // Load a fresh iframe — it will restore from localStorage.
     const iframe2 = document.createElement('iframe');
