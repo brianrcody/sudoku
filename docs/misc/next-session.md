@@ -8,7 +8,39 @@ addressed. Sign-off artifacts in `docs/misc/`:
 
 ---
 
-## Next up: Flaky test remediation — remaining lower-priority items
+## TOP PRIORITY (next session): Systemic full-suite test flakiness
+
+The single thing standing between us and a reliably-green suite for **V2
+sign-off**. The ~657-test suite runs in one Playwright browser session;
+under that load a *rotating* set of ~0–4 coach-session integration tests
+fail per run (observed: CT-CA3, CT-S1, CT-SR1/SR2, and others — the set
+moves run-to-run). All are `coachSession`-shaped assertions ("expected
+null to not equal null" etc.), i.e. the coach session doesn't initialize
+in time, not a product defect. Single runs have ranged 598–627 passing
+with 1–5 failures and 25–56 pending; the *deterministic* failures are all
+fixed (see V2 cleanup below).
+
+Likely directions to investigate:
+- Reset/teardown browser state between `describe` blocks (fresh context),
+  or chunk the coach integration tests into a separate page/run.
+- Reduce per-test resource pressure (iframe churn) in coach.test.js.
+- Add explicit readiness polling for coach-session setup instead of fixed
+  `wait()` delays.
+Goal: a deterministically green full run so the V2 iteration exit
+criterion ("all tests pass") can be met.
+
+### V2 Reviewer pass — COMPLETE (2026-05-22)
+
+Five-agent spec-fidelity review done; reports in `docs/misc/review-*-v2.md`.
+Two findings fixed (B1 analyzer text regression, D1 C-shortcut spec
+amendment) + doc nits, all committed. Post-review suite cleanup also
+committed: won-state Coach reconciliation (disabled on win), a genuinely
+inconsistent fixture (analyzer:515/CT-NT4), and the GF19 detached-iframe
+storage fix. Only the systemic flakiness above remains before sign-off.
+
+---
+
+## Flaky test remediation — remaining lower-priority items
 
 Items 1–3 completed 2026-05-22. Suite: 579 passing, 0 failing, 36 pending.
 
