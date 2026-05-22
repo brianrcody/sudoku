@@ -53,7 +53,7 @@ times during play; none are hidden behind navigation or modals except where this
 explicitly calls for a confirmation dialog:
 
 - The 9×9 puzzle grid
-- The custom number pad (digits 1–9, Erase, Pen/Pencil toggle, Hint button with remaining
+- The custom number pad (digits 1–9, Clear, Pen/Pencil toggle, Hint button with remaining
   count)
 - The difficulty selector
 - The New Puzzle and Reset controls
@@ -121,7 +121,7 @@ selected. A cell becomes selected on first tap/click or first arrow key press.
 
 **Deselection:** Tapping or clicking outside the grid deselects the current cell. There
 is no keyboard deselection shortcut. Exception: interacting with the number pad (digit
-buttons, Erase, mode toggle, Hint, Check) does not deselect — the cell remains selected
+buttons, Clear, mode toggle, Hint, Check) does not deselect — the cell remains selected
 so the player can enter multiple candidates or digits in sequence without re-selecting.
 
 ### 4.3 Cell State Summary
@@ -152,7 +152,7 @@ A custom on-screen number pad is always visible. It is the primary input device 
 players. The system keyboard is never triggered. The pad contains:
 
 - Digit buttons: 1–9
-- Erase button
+- Clear button
 - Pen/Pencil mode toggle (see §6.1)
 - Hint button (see §8)
 - Undo button (see §9.7)
@@ -168,7 +168,7 @@ On desktop, the following keyboard shortcuts are supported:
 |------------------------------|----------------------------------------------------|
 | 1–9                          | Enter digit in selected cell (respects active mode)|
 | Arrow keys                   | Navigate between cells (see §4.2)                  |
-| Backspace or Delete          | Erase selected cell                                |
+| Backspace or Delete          | Clear selected cell                                |
 | Tab / Shift+Tab              | Move to next/previous focusable element (standard browser tab order) |
 | **P**                        | Toggle Pen/Pencil mode                             |
 | **C**                        | Invoke Coach (see fspec-002-coach)                 |
@@ -241,17 +241,17 @@ When the active mode is Pencil and a digit is entered in a selected player cell:
 Pencil marks in a cell are not mutually exclusive — a cell may hold any subset of {1–9}
 as candidates simultaneously.
 
-### 6.4 Erase Behavior
+### 6.4 Clear Behavior
 
-The Erase button and the Backspace/Delete keys clear the selected cell:
+The Clear button and the Backspace/Delete keys clear the selected cell:
 
 - If the cell contains a pen digit, the pen digit is removed. The cell becomes empty.
   Conflict detection is re-evaluated for the affected row, column, and box.
   Auto-clear state is not reversed (previously auto-cleared pencil marks are not
-  restored on erase).
+  restored on clear).
 - If the cell contains pencil marks, all pencil marks in that cell are removed.
-- If the cell is empty, erase has no effect.
-- Given cells are not affected by erase.
+- If the cell is empty, clear has no effect.
+- Given cells are not affected by clear.
 
 ### 6.5 Auto-clear of Related Pencil Marks
 
@@ -496,11 +496,11 @@ any cell contents.
 
 Keyboard shortcut: **P** (see §5.2).
 
-### 9.6 Erase
+### 9.6 Clear
 
 Clears the selected cell. See §6.4 for the full behavior specification.
 
-If no cell is selected, Erase has no effect.
+If no cell is selected, Clear has no effect.
 
 ### 9.7 Undo
 
@@ -666,7 +666,7 @@ in tab order.
 Within the grid, arrow keys navigate between cells (§4.2). Tab/Shift+Tab moves focus
 out of the grid to the next/previous focusable element in page order.
 
-The number pad buttons (1–9, Erase, Pen/Pencil, Hint, Undo), difficulty selector, New Puzzle,
+The number pad buttons (1–9, Clear, Pen/Pencil, Hint, Undo), difficulty selector, New Puzzle,
 Reset, Check, and theme selector are all focusable and operable via keyboard.
 
 ### 14.2 ARIA Roles and Labels

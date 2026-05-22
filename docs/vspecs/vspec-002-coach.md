@@ -330,7 +330,7 @@ Displayed when Coach is pressed but cannot find a applicable technique, the puzz
 - Line 1: Error message (e.g., "The puzzle is already solved." or "The board has a contradiction. Use Erase to fix it.")
 - Line 2: Empty (no second line for simple error cases)
 
-**Auto-dismiss:** After 3 seconds (per fspec §4.2 — 3s for error toasts, slightly longer than the 2.5s recap).
+**Auto-dismiss:** After 5 seconds (per fspec §4.2 — 5s for error toasts, longer than the 2.5s recap).
 
 **ARIA:** Same `role="status"`, `aria-live="polite"` as the recap element.
 
