@@ -354,6 +354,8 @@ The recap auto-dismiss timer (2.5s) is started by `coach.js` on observing `coach
 
 `coach.js` mounts the error toast itself in response to this dispatch (it does not need to re-read state — it already has the result in hand). The reducer's role is informational: this action exists so cross-cutting subscribers (logging, future telemetry) see a coherent action stream.
 
+**Note — `reason: 'complete'` is not reachable via the Coach button.** A fully-correct board is always in the won state, and the Coach button is disabled when `state.won` is true (`_onCoachPressed` also no-ops on `won`). Since `analyze()` only returns `reason: 'complete'` for a fully-filled board, the `'complete'` branch in `_showErrorToast` and its live-region announcement (§6.14) are unreachable through the UI; they are retained defensively and would only surface if the won-state disable policy changes. The no-technique reasons actually reachable via the button are `'error'` and `'inconsistent'`.
+
 ### 3.7 Internal-dispatch rule
 
 The reducer is allowed to dispatch `COACH_END` and `COACH_FILL_RECAP` from inside other action handlers (e.g., `PEN_ENTER` calls `dispatch({ type: 'COACH_END', reason: 'fill-non-coached' })`). The existing reducer already dispatches internally (`PEN_ENTER` chains to `ON_COMPLETION_EVALUATE` per `aspec-game-state.md` §5). The pattern is permitted.
@@ -2106,8 +2108,8 @@ These tests boot the real app and drive it through the coach flow.
 6. Press Coach during recap; assert recap dismisses immediately and a fresh session begins.
 
 **No-technique tests:**
-1. Solve the puzzle (via hints or fixtures); press Coach; assert error toast `"The puzzle is already solved."` with `.error`; auto-dismiss after 5s.
-2. Create an inconsistent board (manually); press Coach; assert error toast `"The board has a contradiction. Use Erase to fix it."`.
+1. Solve the puzzle (via hints or fixtures); assert the Coach button is disabled (`won` state); assert clicking it is a no-op (no recap appears, `coachSession` stays `null`). The "already solved" toast is not reachable via the button — see §3.6.
+2. Create an inconsistent board (a near-full fixture with one zero-candidate empty cell); press Coach; assert error toast `"The board has a contradiction. Use Erase to fix it."`.
 
 **Pencil revert tests:**
 1. Press Coach (rank 4 fixture); assert pencil marks added with `.coach-reveal`.

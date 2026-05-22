@@ -134,8 +134,8 @@ Coach Mode splits cleanly into three test surfaces:
 | CT-S1–CT-S3 smoke (rank 1 + rank 4 classes, coachRevealedBits zero for rank 1) | Yes | |
 | CT-P1–CT-P5 panel open/close, overlay visible, em rendering, technique name | Yes | |
 | CT-R1–CT-R5 recap correct/wrong fill, elim no-recap, 2.5s dismiss, Coach-during-recap | Yes | |
-| CT-NT1 solved-puzzle toast | Yes | |
-| CT-NT2 toast auto-dismiss after 5 s | Yes | Fixed 2026-05-21: asserts still visible at 3.5 s, gone at 5.5 s |
+| CT-NT1 Coach disabled on win + click no-op | Yes | Rewritten 2026-05-22: Coach button is disabled once won; clicking is a no-op (no recap, coachSession null) |
+| CT-NT2 toast auto-dismiss after 5 s | Removed | Premise obsolete — Coach is disabled on win, so the "already solved" toast is unreachable. 5 s error-toast timing remains covered by CT-NT3 |
 | CT-NT3 non-conflicting wrong digit → error toast | Yes | |
 | CT-NT4 genuinely inconsistent board → contradiction toast | Yes | |
 | CT-NT5 context-aware error toast after prior error recap | Yes | Fresh iframe per R8 |

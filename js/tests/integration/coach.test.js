@@ -655,7 +655,7 @@ describe('integration/coach: no-technique', () => {
     iframe = null;
   });
 
-  it('CT-NT1: solved puzzle → error toast "The puzzle is already solved."', async function () {
+  it('CT-NT1: Coach button is disabled on win and clicking is a no-op', async function () {
     this.timeout(18000);
     const gameState = gs(iframe);
     if (!gameState) return this.skip();
@@ -672,43 +672,15 @@ describe('integration/coach: no-technique', () => {
     }
     await wait(200);
 
-    // Press Coach.
+    // The Coach button is disabled once the puzzle is won.
+    expect(coachBtn(iframe).disabled).to.be.true;
+
+    // Clicking the disabled button is a no-op: no recap, no coach session.
     coachBtn(iframe).click();
     await wait(100);
 
-    const recapEl = recap(iframe);
-    expect(recapEl.classList.contains('visible')).to.be.true;
-    expect(recapEl.classList.contains('error')).to.be.true;
-    expect(recapEl.textContent).to.include('already solved');
-  });
-
-  it('CT-NT2: error toast still visible at 3.5 s, auto-dismisses after 5 s', async function () {
-    this.timeout(15000);
-    const gameState = gs(iframe);
-    if (!gameState) return this.skip();
-
-    const state = gameState.getState();
-    if (!state.puzzle) return this.skip();
-
-    // Solve the puzzle.
-    for (let i = 0; i < 81; i++) {
-      if (state.puzzle.givens[i] === 0) {
-        gameState.dispatch({ type: 'SELECT_CELL', index: i });
-        gameState.dispatch({ type: 'PEN_ENTER', digit: state.puzzle.solution[i] });
-      }
-    }
-    await wait(200);
-
-    coachBtn(iframe).click();
-    await wait(100);
-
-    expect(recap(iframe).classList.contains('visible')).to.be.true;
-    // Implementation uses 5 s timeout — still visible at 3.5 s.
-    await wait(3500);
-    expect(recap(iframe).classList.contains('visible')).to.be.true;
-    // Auto-dismisses by 5.5 s.
-    await wait(2000);
     expect(recap(iframe).classList.contains('visible')).to.be.false;
+    expect(gameState.getState().coachSession).to.equal(null);
   });
 });
 

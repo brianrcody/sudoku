@@ -58,17 +58,19 @@ chosen for each.
 
 **Resolution:** The Coach button shows an inline status message and takes no other action.
 
-When the Coach button is pressed and no technique is applicable — because the puzzle is
-already complete, because the board contains an error, or because the board is in an
-inconsistent state (no logical solution reachable from the current position) — the button
-does not enter an active coaching state. Instead, a brief status message appears near the
-Coach button:
+When the Coach button is pressed and no technique is applicable — because the board
+contains an error, or because the board is in an inconsistent state (no logical solution
+reachable from the current position) — the button does not enter an active coaching
+state. Instead, a brief status message appears near the Coach button:
 
-- Puzzle complete: "The puzzle is already solved."
 - Board error (any visible conflict, or a non-conflicting wrong digit detected): "The
   board has an error. Use Check or Erase to fix it before coaching."
 - Inconsistent state (solver cannot progress): "The board has a contradiction. Use Erase
   to fix it."
+
+A completed puzzle is not handled by a status message: a fully-correct board is always
+in the won state, and the Coach button is disabled in that state (§3.2, §11.3). The
+"already solved" outcome is therefore not reachable by pressing the Coach button.
 
 The error case is distinct from the inconsistent case: an error means the player has
 entered one or more incorrect digits. This covers two sub-cases — a visible conflict
@@ -83,7 +85,8 @@ after correcting the board).
 **Rationale:** A silent no-op on the Coach button would be confusing — the user expects
 something to happen. A 3-second inline message matches the pattern already established by
 the Check button's correctness feedback (fspec-001-v1 §7.2.2) and keeps the interaction
-non-intrusive. Separate messages for all three states give the user actionable information.
+non-intrusive. Separate messages for the two reachable states give the user actionable
+information.
 The error message specifically directs the user to Check (which will locate the wrong
 cell) rather than requiring them to find the mistake manually.
 
@@ -186,10 +189,12 @@ long enough to read a two-line message at a comfortable pace.
 | Coaching | Coach session active (highlights drawn, user has not yet filled) | Visually distinguished — "active" treatment (Visual Designer's responsibility) |
 | Error-feedback | No-applicable-technique message showing | Visually unchanged; message appears adjacent |
 
-There is no permanently disabled state for the Coach button. Coach is always available
-regardless of difficulty, hint budget, or selected cell (R2, R3). If a coach session is
-already active and the user presses Coach again, the current session resets: highlights
-and panels clear, and a fresh coaching analysis runs immediately on the current board state.
+The Coach button is disabled in exactly one case: once the puzzle is won, Coach is
+disabled (the win state supersedes coaching — there is nothing to coach on a solved
+puzzle; see §11.3). It is never disabled based on difficulty, hint budget, or selected
+cell (R2, R3). If a coach session is already active and the user presses Coach again, the
+current session resets: highlights and panels clear, and a fresh coaching analysis runs
+immediately on the current board state.
 
 **Rationale:** Unlike the Hint button (which is disabled when the budget is zero or when
 the selected cell is filled), Coach has no preconditions that would meaningfully be
@@ -979,7 +984,8 @@ is discarded. Auto-revealed candidates are irrelevant (the board is cleared or r
 
 If filling the coached cell completes the puzzle (win condition met), the win state takes
 precedence (fspec-001-v1 §10). The recap does not appear. The win animation and
-statistics update proceed normally. The coach session is considered concluded.
+statistics update proceed normally. The coach session is considered concluded. The Coach
+button is disabled in the won state (§3.2): there is nothing to coach on a solved puzzle.
 
 ### 11.4 Conflict Detection and Correctness Checking
 
