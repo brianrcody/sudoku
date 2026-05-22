@@ -116,7 +116,7 @@ Used for: the source cell(s) of a logical pattern (e.g., the pair cells in a Nak
 - `box-shadow: inset 0 0 0 2px var(--coach-mid)` — medium-lavender solid ring (softer than the target ring)
 - `z-index: 2`
 
-When focused: `outline-color: var(--coach)` (via `.coached-cause:focus-visible`).
+When focused but not selected: `outline-color: var(--coach)` (via `.coached-cause:not(.selected):focus-visible`). When focused and selected, the accent outline from `.selected` is retained so the "you are here" indicator remains distinct from the coach ring.
 
 ### 4.2 Placement Target Cell (`.coached-target`)
 
@@ -126,9 +126,9 @@ Used for: the cell the player should fill (Naked Single, Hidden Single placement
 - `box-shadow: inset 0 0 0 2px var(--coach)` — full coach-accent solid ring (stronger than cause)
 - `z-index: 2`
 
-When also selected (`.coached-target.selected`): retains `background: var(--coach-light)`; the selection `outline: 2px solid var(--accent)` is visible on top of the coach box-shadow ring.
+When also selected (`.coached-target.selected`): retains `background: var(--coach-light)`; the selection `outline: 2px solid var(--accent)` is visible on top of the coach box-shadow ring — regardless of whether focus arrived via mouse or keyboard.
 
-When focused: `outline-color: var(--coach)`.
+When focused but not selected: `outline-color: var(--coach)` (via `.coached-target:not(.selected):focus-visible`).
 
 ### 4.3 Elimination Target Cell (`.coached-elim-target`)
 
@@ -348,7 +348,7 @@ Coach accent colors are per-theme (see §1). Each theme's values were selected t
 | Mountain | Teal `#0f766e` | Mint `--coach-light` (`#ccfbf1`) contrasts the cool-white `#f7fafc` surface; green pencil marks readable |
 | Digital Terminal | Dark cyan `#0e7490` | `--coach-light` is a dark tint (`#0a1f28`) — coached backgrounds are subtly blue-black over the near-black `#111111` surface; bright green text and pencil marks remain readable |
 
-The coached-cell focus ring when a coached cell has keyboard focus uses `outline-color: var(--coach)` rather than `var(--accent)`, ensuring the coach context is preserved regardless of theme.
+The coached-cell focus ring uses `outline-color: var(--coach)` when a coached cell has keyboard focus and is **not** selected, ensuring the coach context is preserved regardless of theme. When the cell is also selected, the accent outline is retained so the selection state remains visually distinct from the coach highlight.
 
 ---
 
@@ -375,13 +375,13 @@ Delivered via the existing `aria-live="assertive"` `#sr-live` region. Coach-spec
 ### 12.3 Focus Ring Override for Coached Cells
 
 ```css
-.cell.coached-target:focus-visible,
-.cell.coached-cause:focus-visible {
+.cell.coached-target:not(.selected):focus-visible,
+.cell.coached-cause:not(.selected):focus-visible {
   outline-color: var(--coach);
 }
 ```
 
-This overrides the default `var(--accent)` focus ring so coached cells maintain visual context when keyboard-navigated.
+This overrides the default `var(--accent)` focus ring so coached cells maintain visual context when keyboard-navigated. The `:not(.selected)` guard ensures that when a coached cell is also the currently selected cell, the accent-colored selection outline is preserved — without it, the keyboard focus ring would match the coach box-shadow color, making the selection state invisible.
 
 ---
 

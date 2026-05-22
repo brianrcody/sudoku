@@ -1599,8 +1599,8 @@ Per `vspec-002-coach.md` §4. Solid-ring coach classes use `box-shadow: inset` s
 }
 
 /* Focus ring overrides — coached cells use the coach accent color */
-.cell.coached-target:focus-visible,
-.cell.coached-cause:focus-visible {
+.cell.coached-target:not(.selected):focus-visible,
+.cell.coached-cause:not(.selected):focus-visible {
   outline-color: var(--coach);
 }
 ```

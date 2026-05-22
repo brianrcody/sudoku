@@ -325,8 +325,8 @@ body.theme-mountain .pencil-mark {
 }
 
 /* Focus ring overrides — coached cells use the coach accent color */
-.cell.coached-target:focus-visible,
-.cell.coached-cause:focus-visible {
+.cell.coached-target:not(.selected):focus-visible,
+.cell.coached-cause:not(.selected):focus-visible {
   outline-color: var(--coach);
 }
 
