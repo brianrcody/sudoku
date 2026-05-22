@@ -150,6 +150,10 @@ Coach Mode splits cleanly into three test surfaces:
 | CT-A11y5 recap `role="status"` and `aria-live="polite"` | Yes | |
 | CT-A11y6 live region announces technique name + cell count | Yes | |
 | CT-PERF1 Coach press → highlights visible within 200 ms | Yes | Uses rank03 fixture |
+| CT-W1 win during coach fill: win banner shows, recap hidden | Yes | Uses natural generated puzzle (rank01 has no solution field — see R5 note) |
+| CT-SR1 second Coach press resets session, COACH_END between COACH_STARTs | Yes | |
+| CT-SR2 Coach press while error toast showing clears timer, fresh analysis fires | Yes | |
+| CT-HP1 Hint with panel open closes session + panel | Yes | |
 
 ---
 
