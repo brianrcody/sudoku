@@ -1427,20 +1427,23 @@ export const noTechniqueComplete = {
 // ===========================================================================
 // No-technique: Inconsistent
 // ===========================================================================
-// Cell (0,0) is empty. Row 0 already contains 2–9 (cols 1–8) and col 0
-// already contains 1 (row 1), so (0,0) has zero candidates. This guarantees
-// solveLogically returns an empty trace and analyze returns reason:'inconsistent'.
+// Near-full board with exactly one empty cell (index 0). That cell sees 2–9 in
+// its row, so it has zero candidates — the genuinely-inconsistent case. Because
+// the board is otherwise full, the solver finds no applicable technique and
+// analyze() deterministically returns reason:'inconsistent'. (The duplicate 5
+// in column 8 is intentional; computeConflicts only inspects the pen array, not
+// givens, so it is not flagged as a conflict.)
 export const noTechniqueInconsistent = {
   givens: board([
-    0,2,3,4,5,6,7,8,9,
-    1,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,
+    0,3,4,6,7,8,9,1,5,
+    6,7,2,1,9,5,3,4,8,
+    1,9,8,3,4,2,5,6,7,
+    8,5,9,7,6,1,4,2,3,
+    4,2,6,8,5,3,7,9,1,
+    7,1,3,9,2,4,8,5,6,
+    9,6,1,5,3,7,2,8,4,
+    2,8,7,4,1,9,6,3,5,
+    3,4,5,2,8,6,1,7,9,
   ]),
   playerPen: null,
   expected: {
