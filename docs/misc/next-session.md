@@ -128,20 +128,23 @@ and explicitly tell it to skip any test whose fixture is listed as Pending in th
 
 ---
 
-### Coach fixtures — Andrew Stuart exploration
+### Coach fixtures — Andrew Stuart extraction (completed 2026-05-21)
 
-Before committing to organic fixture farming for ranks 4–15, explore whether Andrew
-Stuart's Sudoku puzzle site can serve as a source of rank-consistent board states. The
-site categorizes puzzles by solving technique required; if board states can be extracted,
-they would provide controlled rank-clean fixtures without depending on live play.
+Built `js/tests/fixtures/puzzles/coach/_extract.js` — a dev CLI that advances an AS
+puzzle string to the rank-N floor and verifies rank-cleanliness against our analyzer.
+Sourced puzzles from sudokuwiki.org and filled 13 of 18 pending slots.
 
-Evaluate: whether the site allows bulk access or scraping, whether the exported boards
-are actually rank-clean under our solver (different solvers may not agree on technique
-rank), and whether the capture/import workflow is manageable. Compare against the organic
-approach (capture snippet during manual play with `/add-coach-fixture`) on cost,
-reliability, and coverage breadth.
+**Complete:** ranks 4, 5, 8 (row + col orientations), 9/9Row, 10, 11, 12 (Rule 2 +
+Rule 4), 13, 14Short, 14Long.
 
-Produce a short recommendation before committing to either strategy.
+**Still pending:** rank06, rank07, rank09Col, rank15, rank05OneElimCell. The rank06/07
+AS candidates were solved before reaching those ranks; rank09Col only fired row-locked
+in all tested puzzles; rank15 AS URL was not found. The `rank06`, `rank07`, `rank15`
+exports in `index.js` are invalid placeholders (fire at ranks 3, 1, 1 respectively) —
+do not uncomment those AN test blocks until real fixtures replace them.
+
+See `docs/misc/fixture-sourcing-strategy.md` for the full AS puzzle catalog and
+`docs/misc/coach-fixture-tracker.md` for per-slot status.
 
 ---
 
