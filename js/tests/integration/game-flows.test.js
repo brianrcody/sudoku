@@ -79,7 +79,7 @@ describe('integration/game-flows', () => {
 
   // GF2: Easy puzzle: Check flags incorrect, auto-clear after 3 s
   it('GF2: Check flags incorrect cell, auto-clears after 3 s', async function () {
-    this.timeout(10000);
+    this.timeout(15000);
     const gameState = gs(iframe);
     if (!gameState) return this.skip();
 
@@ -94,8 +94,16 @@ describe('integration/game-flows', () => {
     await new Promise(r => setTimeout(r, 100));
     expect(gameState.getState().incorrect.has(idx)).to.be.true;
 
-    // Wait for auto-clear (3 s + buffer).
-    await new Promise(r => setTimeout(r, 3500));
+    // Poll until auto-clear fires (app uses a 3 s timer).
+    await new Promise((resolve, reject) => {
+      const deadline = Date.now() + 8000;
+      function check() {
+        if (gameState.getState().incorrect.size === 0) return resolve();
+        if (Date.now() > deadline) return reject(new Error('Timed out waiting for incorrect auto-clear'));
+        setTimeout(check, 100);
+      }
+      setTimeout(check, 100);
+    });
     expect(gameState.getState().incorrect.size).to.equal(0);
   });
 
@@ -322,26 +330,45 @@ describe('integration/game-flows', () => {
     const state = gameState.getState();
     if (!state.puzzle) return this.skip();
 
-    let cellA = -1, cellB = -1;
+    // Find two non-given cells in the same row and a digit absent from all
+    // their units, so auto-clear is the only thing that touches the pencil bit.
+    let cellA = -1, cellB = -1, digit = -1;
+    const pen0 = gameState.getState().pen;
     outer: for (let r = 0; r < 9; r++) {
       const row = [];
       for (let c = 0; c < 9; c++) {
         const i = r * 9 + c;
         if (state.puzzle.givens[i] === 0) row.push(i);
       }
-      if (row.length >= 2) { cellA = row[0]; cellB = row[1]; break outer; }
+      if (row.length < 2) continue;
+      const ca = row[0], cb = row[1];
+      const ra = Math.floor(ca / 9), cola = ca % 9;
+      const rb = Math.floor(cb / 9), colb = cb % 9;
+      const boxa = Math.floor(ra / 3) * 3 + Math.floor(cola / 3);
+      const boxb = Math.floor(rb / 3) * 3 + Math.floor(colb / 3);
+      const used = new Set();
+      for (let i = 0; i < 81; i++) {
+        if (!pen0[i]) continue;
+        const ri = Math.floor(i / 9), ci = i % 9;
+        const boxi = Math.floor(ri / 3) * 3 + Math.floor(ci / 3);
+        if (ri === ra || ci === cola || boxi === boxa ||
+            ri === rb || ci === colb || boxi === boxb) used.add(pen0[i]);
+      }
+      for (let d = 1; d <= 9; d++) {
+        if (!used.has(d)) { cellA = ca; cellB = cb; digit = d; break outer; }
+      }
     }
     if (cellA === -1) return this.skip();
 
     gameState.dispatch({ type: 'SELECT_CELL', index: cellB });
-    gameState.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+    gameState.dispatch({ type: 'PENCIL_TOGGLE', digit });
     await new Promise(r => setTimeout(r, 50));
-    expect(gameState.getState().pencil[cellB] & (1 << 2)).to.not.equal(0);
+    expect(gameState.getState().pencil[cellB] & (1 << (digit - 1))).to.not.equal(0);
 
     gameState.dispatch({ type: 'SELECT_CELL', index: cellA });
-    gameState.dispatch({ type: 'PEN_ENTER', digit: 3 });
+    gameState.dispatch({ type: 'PEN_ENTER', digit });
     await new Promise(r => setTimeout(r, 100));
-    expect(gameState.getState().pencil[cellB] & (1 << 2)).to.equal(0);
+    expect(gameState.getState().pencil[cellB] & (1 << (digit - 1))).to.equal(0);
   });
 
   // GF11: Arrow navigation wraps and skips givens
@@ -483,20 +510,37 @@ describe('integration/game-flows', () => {
     const state = gameState.getState();
     if (!state.puzzle) return this.skip();
 
-    // Find two non-given cells in the same row to use as peerCell and penCell.
-    let penCell = -1, peerCell = -1;
+    // Find two non-given cells in the same row and a digit that is absent from
+    // all their units (avoids accidental conflicts) and ≠ solution[penCell]
+    // (avoids triggering a win).
+    let penCell = -1, peerCell = -1, penDigit = -1;
+    const pen0 = gameState.getState().pen;
     outer: for (let r = 0; r < 9; r++) {
       const row = [];
       for (let c = 0; c < 9; c++) {
         const i = r * 9 + c;
         if (state.puzzle.givens[i] === 0) row.push(i);
       }
-      if (row.length >= 2) { penCell = row[0]; peerCell = row[1]; break outer; }
+      if (row.length < 2) continue;
+      const ca = row[0], cb = row[1];
+      const ra = Math.floor(ca / 9), cola = ca % 9;
+      const rb = Math.floor(cb / 9), colb = cb % 9;
+      const boxa = Math.floor(ra / 3) * 3 + Math.floor(cola / 3);
+      const boxb = Math.floor(rb / 3) * 3 + Math.floor(colb / 3);
+      const used = new Set();
+      for (let i = 0; i < 81; i++) {
+        if (!pen0[i]) continue;
+        const ri = Math.floor(i / 9), ci = i % 9;
+        const boxi = Math.floor(ri / 3) * 3 + Math.floor(ci / 3);
+        if (ri === ra || ci === cola || boxi === boxa ||
+            ri === rb || ci === colb || boxi === boxb) used.add(pen0[i]);
+      }
+      used.add(state.puzzle.solution[ca]); // exclude winning digit
+      for (let d = 1; d <= 9; d++) {
+        if (!used.has(d)) { penCell = ca; peerCell = cb; penDigit = d; break outer; }
+      }
     }
     if (penCell === -1) return this.skip();
-
-    // Choose a digit that won't trigger a win (use wrong digit).
-    const penDigit = state.puzzle.solution[penCell] === 9 ? 1 : 9;
 
     // Set a pencil mark for penDigit in peerCell.
     gameState.dispatch({ type: 'SELECT_CELL', index: peerCell });

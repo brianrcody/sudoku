@@ -17,13 +17,7 @@ Items 1–3 completed 2026-05-22. Suite: 579 passing, 0 failing, 36 pending.
 2. ~~GF6 — digit derived from board; row-selection loop strengthened.~~
 3. ~~GF19 — readiness poll strengthened; unconditional assertion; iframe1 removed before seed.~~
 
-**Remaining (lower-priority preventive):**
-
-4. **GF10, GF16 digit derivation (Class A).** Derive digits from board instead of
-   hardcoding. See `docs/misc/flaky-test-remediation.md §5`.
-
-5. **GF2 event-based wait (Class B).** Replace fixed 3.5 s sleep with event-based
-   wait on the `incorrect` emit.
+**All items complete.** Flaky test remediation fully done 2026-05-22.
 
 After remediation, continue to the **V2 Reviewer pass** (below).
 
