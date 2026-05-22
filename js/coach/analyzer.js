@@ -492,7 +492,7 @@ const MAPPERS = {
         const b = rowBoxes[0];
         const exp = dCandCells.filter(c => boxOf(c) === b && rowOf(c) !== r);
         if (exp.length === elimTargets.length && exp.every(e => elimSet.has(e))) {
-          variantText = `*${D}* in this *row* is confined to this box — eliminate it from the rest of that box.`;
+          variantText = `*${D}* in this *row* only appears within this box — eliminate it from the rest of the box.`;
           causeCells = inRow;
           found = true;
         }
@@ -507,7 +507,7 @@ const MAPPERS = {
         const b = colBoxes[0];
         const exp = dCandCells.filter(c => boxOf(c) === b && colOf(c) !== col);
         if (exp.length === elimTargets.length && exp.every(e => elimSet.has(e))) {
-          variantText = `*${D}* in this *column* is confined to this box — eliminate it from the rest of that box.`;
+          variantText = `*${D}* in this *column* only appears within this box — eliminate it from the rest of the box.`;
           causeCells = inCol;
           found = true;
         }

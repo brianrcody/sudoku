@@ -25,7 +25,7 @@ let _panelWrap = null;    // #coach-panel-wrap
 let _recap = null;        // #coach-recap
 
 let _recapTimer = null;   // setTimeout handle for 2.5s recap auto-dismiss
-let _errorTimer = null;   // setTimeout handle for 3s error toast auto-dismiss
+let _errorTimer = null;   // setTimeout handle for 5s error toast auto-dismiss
 
 let _prevSelected = null; // last seen state.selected for focus tracking
 let _renderedStep = null; // last step reference passed to _renderPanelContent
