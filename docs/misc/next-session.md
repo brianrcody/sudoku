@@ -146,6 +146,12 @@ do not uncomment those AN test blocks until real fixtures replace them.
 See `docs/misc/fixture-sourcing-strategy.md` for the full AS puzzle catalog and
 `docs/misc/coach-fixture-tracker.md` for per-slot status.
 
+**Next step:** uncomment the AN test blocks in `js/tests/unit/coach/analyzer.test.js`
+for the 13 slots now marked Complete in the tracker (AN1–AN2 rank04/05, AN6–AN8
+rank08/transpose, AN9–AN10 rank09, AN11 rank10, AN13 rank11, AN14–AN15 rank12/Rule4,
+AN16 rank13, AN17–AN18 rank14Short/Long). Brief the QE Test Writer with the tspec and
+tracker; instruct it to skip any AN block whose fixture is still Pending.
+
 ---
 
 ### Coverage gate plumbing
