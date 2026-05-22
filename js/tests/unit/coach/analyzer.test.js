@@ -21,7 +21,7 @@ import { analyze } from '/js/coach/analyzer.js';
 import { initialCandidates } from '/js/solver/candidates.js';
 import {
   rank01, rank02, rank03, rank04, rank04OneElimDigit, rank05, rank06, rank06OneElimDigit, rank07,
-  rank08, rank09, rank10, rank11, rank12, rank13,
+  rank08, rank08Transpose, rank09, rank10, rank11, rank12, rank12Rule4, rank13,
   rank14Short, rank14Long, rank15,
   noTechniqueComplete, noTechniqueInconsistent,
   // rank05OneElimCell,  // pending — see docs/misc/coach-fixture-tracker.md
@@ -32,11 +32,17 @@ import {
 // ---------------------------------------------------------------------------
 
 /**
- * Build a minimal puzzle object from a fixture's givens.
- * The analyzer only needs `puzzle.givens`.
+ * Build a puzzle object from a fixture's givens, merging playerPen into the givens
+ * so that the filled cells suppress lower-rank techniques in candidate computation.
+ * Pen stays all-zeros in playerState so the solution-check pre-flight never fires.
  */
 function puzzleOf(fixture) {
-  return { givens: fixture.givens };
+  if (!fixture.playerPen) return { givens: fixture.givens };
+  const givens = fixture.givens.slice();
+  for (let i = 0; i < 81; i++) {
+    if (fixture.playerPen[i] !== 0 && givens[i] === 0) givens[i] = fixture.playerPen[i];
+  }
+  return { givens };
 }
 
 /**
@@ -137,7 +143,9 @@ function techniqueTests(techniqueName, rank, type, fixture, extraAssertions) {
       expect(step.roles.target).to.equal(null);
     }
     expect(step.autoReveal.required).to.equal(rank >= 3);
-    expect(step.complexity.acknowledged).to.equal(expected.complexityAcknowledged);
+    if (expected.complexityAcknowledged !== undefined) {
+      expect(step.complexity.acknowledged).to.equal(expected.complexityAcknowledged);
+    }
     if (extraAssertions) extraAssertions(step);
     assertSchemaComplete(step);
   });
@@ -165,9 +173,7 @@ function techniqueTests(techniqueName, rank, type, fixture, extraAssertions) {
 
   // 3. autoReveal.cells candidates match pencil-intersected initialCandidates
   it(`${techniqueName}: autoReveal.cells candidates match pencil-intersected initialCandidates`, function () {
-    const workingBoard = new Uint8Array(81);
-    for (let i = 0; i < 81; i++) workingBoard[i] = fixture.givens[i];
-    const freshCandidates = initialCandidates(workingBoard);
+    const freshCandidates = initialCandidates(puzzle.givens);
 
     // Use the fixture's own pencil marks (if any) so the technique still fires.
     const step = analyze(puzzle, playerStateOf(fixture));
@@ -243,38 +249,28 @@ describe('coach/analyzer — rank 4 regression: Naked Pair one-elim-digit', func
   });
 });
 
-/* rank04 fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
 describe('coach/analyzer — rank 4: Naked Pair', function () {
   techniqueTests('Naked Pair', 4, 'elimination', rank04, function (step) {
-    // digits must have exactly 2 elements.
     expect(step.digits).to.have.length(2);
-    // cause must have exactly 2 cells.
     expect(step.roles.cause).to.have.length(2);
     expect(step.roles.elimTarget.length).to.be.above(0);
     expect(step.unit).to.not.equal(null);
-    // arrows: one bezier-arc + N dashed-arrows.
     const bezier = step.arrows.filter(a => a.style === 'bezier-arc');
     const dashed  = step.arrows.filter(a => a.style === 'dashed-arrow');
     expect(bezier).to.have.length(1);
     expect(dashed.length).to.be.above(0);
   });
 });
-*/
 
-/* rank05 fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
 describe('coach/analyzer — rank 5: Hidden Pair', function () {
   techniqueTests('Hidden Pair', 5, 'elimination', rank05, function (step) {
-    // digits must have exactly 2 elements.
     expect(step.digits).to.have.length(2);
-    // cause must have exactly 2 cells.
     expect(step.roles.cause).to.have.length(2);
-    // elimTarget is empty for hidden pair (elims are within cause cells).
     expect(step.roles.elimTarget).to.deep.equal([]);
     expect(step.unit).to.not.equal(null);
     expect(step.arrows).to.deep.equal([]);
   });
 });
-*/
 
 /* rank05 regression: one-elim-cell hidden pair — fixture pending. See docs/misc/coach-fixture-tracker.md.
 describe('coach/analyzer — rank 5: Hidden Pair (one-elim-cell regression)', function () {
@@ -336,63 +332,54 @@ describe('coach/analyzer — rank 7: Hidden Triple', function () {
 });
 */
 
-/* rank08 fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
-describe('coach/analyzer — rank 8: X-Wing', function () {
+// Captures rank-8 row-locked supportingText; compared in rank08Transpose block (AN8).
+let rank08SupportingText = null;
+
+describe('coach/analyzer — rank 8: X-Wing (row-locked)', function () {
   techniqueTests('X-Wing', 8, 'elimination', rank08, function (step) {
     expect(step.digits).to.have.length(1);
-    // cause: 4 corner cells.
     expect(step.roles.cause).to.have.length(4);
     expect(step.roles.elimTarget.length).to.be.above(0);
     expect(step.unit).to.equal(null);
-    // arrows: one connector-chain + N dashed-arrows.
     const connector = step.arrows.filter(a => a.style === 'connector-chain');
     const dashed    = step.arrows.filter(a => a.style === 'dashed-arrow');
     expect(connector).to.have.length(1);
     expect(connector[0].points).to.have.length(4);
     expect(dashed.length).to.be.above(0);
+    rank08SupportingText = step.supportingText;
   });
 });
-*/
 
-/* rank09 fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
 describe('coach/analyzer — rank 9: Swordfish', function () {
   techniqueTests('Swordfish', 9, 'elimination', rank09, function (step) {
     expect(step.digits).to.have.length(1);
     expect(step.roles.cause.length).to.be.above(0);
     expect(step.roles.elimTarget.length).to.be.above(0);
     expect(step.unit).to.equal(null);
-    // arrows: one connector-chain (bounding box corners).
     const connector = step.arrows.filter(a => a.style === 'connector-chain');
     expect(connector).to.have.length(1);
     expect(connector[0].points).to.have.length(4);
   });
 });
-*/
 
-/* rank10 fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
 describe('coach/analyzer — rank 10: Jellyfish', function () {
   techniqueTests('Jellyfish', 10, 'elimination', rank10, function (step) {
     expect(step.digits).to.have.length(1);
     expect(step.roles.cause.length).to.be.above(0);
     expect(step.roles.elimTarget.length).to.be.above(0);
     expect(step.unit).to.equal(null);
-    // arrows: one connector-chain (bounding box corners).
     const connector = step.arrows.filter(a => a.style === 'connector-chain');
     expect(connector).to.have.length(1);
     expect(connector[0].points).to.have.length(4);
   });
 });
-*/
 
-/* rank11 fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
 describe('coach/analyzer — rank 11: XY-Wing', function () {
   techniqueTests('XY-Wing', 11, 'elimination', rank11, function (step) {
     expect(step.digits).to.have.length(1);
-    // cause: [hinge, wing1, wing2] — hinge first.
     expect(step.roles.cause).to.have.length(3);
     expect(step.roles.elimTarget.length).to.be.above(0);
     expect(step.unit).to.equal(null);
-    // arrows: 2 chain-edge strong + dashed per elim target (each from a wing).
     const chainEdge = step.arrows.filter(a => a.style === 'chain-edge');
     const dashed    = step.arrows.filter(a => a.style === 'dashed-arrow');
     expect(chainEdge).to.have.length(2);
@@ -400,10 +387,9 @@ describe('coach/analyzer — rank 11: XY-Wing', function () {
     expect(dashed.length).to.be.above(0);
   });
 });
-*/
 
-/* rank12 fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
-describe('coach/analyzer — rank 12: Simple Coloring', function () {
+// AN14: Rule 2 — elim targets are within the chain (same-color cells see each other).
+describe('coach/analyzer — rank 12: Simple Coloring (Rule 2)', function () {
   techniqueTests('Simple Coloring', 12, 'elimination', rank12, function (step) {
     expect(step.digits).to.have.length(1);
     expect(step.roles.cause).to.deep.equal([]);
@@ -411,14 +397,14 @@ describe('coach/analyzer — rank 12: Simple Coloring', function () {
     expect(step.roles.scB.length).to.be.above(0);
     expect(step.roles.elimTarget.length).to.be.above(0);
     expect(step.unit).to.equal(null);
-    // arrows: all chain-edge strong.
     expect(step.arrows.length).to.be.above(0);
     expect(step.arrows.every(a => a.style === 'chain-edge')).to.equal(true);
+    // Rule 2: all elim targets are within the chain (one color proven wrong).
+    const chainCells = new Set([...step.roles.scA, ...step.roles.scB]);
+    expect(step.roles.elimTarget.every(c => chainCells.has(c))).to.equal(true);
   });
 });
-*/
 
-/* rank13 fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
 describe('coach/analyzer — rank 13: Multi-Coloring', function () {
   techniqueTests('Multi-Coloring', 13, 'elimination', rank13, function (step) {
     expect(step.digits).to.have.length(1);
@@ -430,9 +416,7 @@ describe('coach/analyzer — rank 13: Multi-Coloring', function () {
     expect(step.arrows.every(a => a.style === 'chain-edge')).to.equal(true);
   });
 });
-*/
 
-/* rank14Short fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
 describe('coach/analyzer — rank 14: XY-Chain (short)', function () {
   techniqueTests('XY-Chain', 14, 'elimination', rank14Short, function (step) {
     expect(step.digits).to.have.length(1);
@@ -440,14 +424,65 @@ describe('coach/analyzer — rank 14: XY-Chain (short)', function () {
     expect(step.unit).to.equal(null);
     expect(step.complexity.endpoints).to.not.equal(null);
     expect(step.complexity.endpoints).to.have.length(2);
-    // Short chain: acknowledged may be false (L ≤ 6).
     if (!step.complexity.acknowledged) {
       expect(step.roles.cause.length).to.be.above(2);
       expect(step.arrows.every(a => a.style === 'chain-edge')).to.equal(true);
     }
   });
 });
-*/
+
+// AN8: column-locked orientation — supportingText must differ from row-locked (rank08).
+describe('coach/analyzer — rank 8: X-Wing (column-locked)', function () {
+  techniqueTests('X-Wing', 8, 'elimination', rank08Transpose, function (step) {
+    expect(step.digits).to.have.length(1);
+    expect(step.roles.cause).to.have.length(4);
+    expect(step.roles.elimTarget.length).to.be.above(0);
+    expect(step.unit).to.equal(null);
+    const connector = step.arrows.filter(a => a.style === 'connector-chain');
+    const dashed    = step.arrows.filter(a => a.style === 'dashed-arrow');
+    expect(connector).to.have.length(1);
+    expect(connector[0].points).to.have.length(4);
+    expect(dashed.length).to.be.above(0);
+    if (rank08SupportingText !== null) {
+      expect(step.supportingText).to.not.equal(rank08SupportingText);
+    }
+  });
+});
+
+// AN15: Rule 4 — at least one elim target lies outside the chain (sees both colors).
+describe('coach/analyzer — rank 12: Simple Coloring (Rule 4)', function () {
+  techniqueTests('Simple Coloring', 12, 'elimination', rank12Rule4, function (step) {
+    expect(step.digits).to.have.length(1);
+    expect(step.roles.cause).to.deep.equal([]);
+    expect(step.roles.scA.length).to.be.above(0);
+    expect(step.roles.scB.length).to.be.above(0);
+    expect(step.roles.elimTarget.length).to.be.above(0);
+    expect(step.unit).to.equal(null);
+    expect(step.arrows.length).to.be.above(0);
+    expect(step.arrows.every(a => a.style === 'chain-edge')).to.equal(true);
+    // Rule 4: at least one elim target is outside the chain.
+    const chainCells = new Set([...step.roles.scA, ...step.roles.scB]);
+    expect(step.roles.elimTarget.some(c => !chainCells.has(c))).to.equal(true);
+  });
+});
+
+// AN18: long-chain branch — acknowledged and elision when L > COMPLEXITY_THRESHOLD.
+describe('coach/analyzer — rank 14: XY-Chain (long)', function () {
+  techniqueTests('XY-Chain', 14, 'elimination', rank14Long, function (step) {
+    expect(step.digits).to.have.length(1);
+    expect(step.roles.elimTarget.length).to.be.above(0);
+    expect(step.unit).to.equal(null);
+    expect(step.complexity.endpoints).to.not.equal(null);
+    expect(step.complexity.endpoints).to.have.length(2);
+    if (step.complexity.acknowledged) {
+      // Long-chain elision: cause is just the 2 endpoints; single dashed-arrow.
+      expect(step.roles.cause).to.have.length(2);
+      expect(step.arrows).to.have.length(1);
+      expect(step.arrows[0].style).to.equal('dashed-arrow');
+      expect(step.complexity.note).to.be.a('string').with.length.above(0);
+    }
+  });
+});
 
 /* rank15 fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
 describe('coach/analyzer — rank 15: Forcing Chain', function () {

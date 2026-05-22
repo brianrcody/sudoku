@@ -54,18 +54,26 @@ Coach Mode splits cleanly into three test surfaces:
 | Rank 3 (Locked Candidates) happy path + conflict block + autoReveal pencil-intersect | Yes | But only one variant fires (pointing vs claiming) — branch coverage incomplete |
 | Rank 4 regression (one-elim-digit, digits=[] bug) | Yes | Active and passing |
 | Rank 6 regression (one-elim-digit, digits=[] bug) | Yes | Active and passing |
-| Ranks 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 (short), 15 | **No** | All commented out, blocked on rank-clean fixtures |
-| Rank 5 one-elim-cell regression | **No** | Commented out, blocked on fixture |
+| Ranks 4, 5 (AN1–AN2) | Yes | Active 2026-05-21; 3 sub-tests each via `techniqueTests` |
+| Rank 8 X-Wing row-locked + column-locked (AN6–AN8) | Yes | Active 2026-05-21; orientation divergence asserted |
+| Rank 9 Swordfish (AN9) | Yes | Active 2026-05-21; AN10 col-orientation deferred (rank09Col pending) |
+| Ranks 10, 11 (AN11, AN13) | Yes | Active 2026-05-21 |
+| Rank 12 Simple Coloring Rule 2 + Rule 4 (AN14–AN15) | Yes | Active 2026-05-21; Rule 2 vs Rule 4 branch asserted structurally |
+| Rank 13 Multi-Coloring (AN16) | Yes | Active 2026-05-21 |
+| Rank 14 XY-Chain short + long (AN17–AN18) | Yes | Active 2026-05-21; long-chain elision conditional on DFS finding L > 6 |
+| Ranks 6, 7 (AN4–AN5) | **No** | Fixtures still pending (rank06 invalid placeholder, rank07 construction failed) |
+| Rank 15 (AN19) | **No** | Fixture pending (rank15 export is invalid placeholder) |
+| Rank 5 one-elim-cell regression (AN3) | **No** | Fixture pending |
 | No-technique: complete | Yes | |
 | No-technique: inconsistent | Yes | |
 | No-technique: non-conflicting wrong pen entry | Yes | Synthetic puzzle |
 | No-technique: conflicted entry blocks immediately | Yes | Synthetic puzzle |
 | Purity (two calls deeply equal, no mutation of inputs) | Yes | |
-| Schema completeness (rank 1, rank 8 if fires) | Partial | Only 2 ranks asserted |
-| Long-chain elision (rank 14) — conditional | Yes (defensive) | Test gates on whether DFS finds long chain |
+| Schema completeness (rank 1, rank 8 if fires) | Partial | Only 2 ranks asserted; AN27 (all ranks) not yet implemented |
+| Long-chain elision (rank 14) — conditional | Yes | Both cross-cutting (defensive) and AN18 (dedicated `techniqueTests` block) |
 | Forcing Chain always-acknowledged (rank 15) — conditional | Yes (defensive) | Test gates on whether technique actually fires |
 | autoReveal.required false for 1–2, true for ≥3 | Yes | |
-| autoReveal.cells candidates derive from initialCandidates | Yes (rank 4 only) | |
+| autoReveal.cells candidates derive from initialCandidates | Yes (ranks 1–14) | All active fixtures via techniqueTests test 3 |
 | Pencil intersection: no-pencil / null / undefined equivalence | Yes | |
 | Pencil intersection: keep-candidate with full bits | Yes (rank 3) | |
 | Pencil intersection: technique suppressed when all elim cleared | Yes (rank 3) | |

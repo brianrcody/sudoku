@@ -146,11 +146,16 @@ do not uncomment those AN test blocks until real fixtures replace them.
 See `docs/misc/fixture-sourcing-strategy.md` for the full AS puzzle catalog and
 `docs/misc/coach-fixture-tracker.md` for per-slot status.
 
-**Next step:** uncomment the AN test blocks in `js/tests/unit/coach/analyzer.test.js`
-for the 13 slots now marked Complete in the tracker (AN1–AN2 rank04/05, AN6–AN8
-rank08/transpose, AN9–AN10 rank09, AN11 rank10, AN13 rank11, AN14–AN15 rank12/Rule4,
-AN16 rank13, AN17–AN18 rank14Short/Long). Brief the QE Test Writer with the tspec and
-tracker; instruct it to skip any AN block whose fixture is still Pending.
+**Completed 2026-05-21:** Uncommented AN test blocks for all 13 Complete fixtures
+(AN1–AN2 rank04/05, AN6–AN8 rank08/transpose, AN9 rank09, AN11 rank10, AN13 rank11,
+AN14–AN15 rank12/Rule4, AN16 rank13, AN17–AN18 rank14Short/Long). Added new describe
+blocks for rank08Transpose, rank12Rule4, rank14Long. Added `complexityAcknowledged`
+field to fixture expected objects. Fixed `puzzleOf` helper to merge playerPen into
+givens so candidate computation is correct without needing puzzle.solution.
+Suite: 573 passing, 0 failing, 38 pending.
+
+AN3 (rank05OneElimCell), AN4 (rank06), AN5 (rank07), AN10 col-orientation (rank09Col),
+AN12 (rank10 col-orientation), AN19 (rank15) remain blocked on pending fixtures.
 
 ---
 

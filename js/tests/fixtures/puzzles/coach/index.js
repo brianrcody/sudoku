@@ -172,6 +172,7 @@ export const rank04 = {
     technique: 'Naked Pair',
     rank: 4,
     type: 'elimination',
+    complexityAcknowledged: false,
   },
 };
 
@@ -271,6 +272,7 @@ export const rank05 = {
     technique: 'Hidden Pair',
     rank: 5,
     type: 'elimination',
+    complexityAcknowledged: false,
   },
 };
 
@@ -1055,6 +1057,7 @@ export const rank08 = {
     technique: 'X-Wing',
     rank: 8,
     type: 'elimination',
+    complexityAcknowledged: false,
   },
 };
 
@@ -1100,6 +1103,7 @@ export const rank09 = {
     technique: 'Swordfish',
     rank: 9,
     type: 'elimination',
+    complexityAcknowledged: false,
   },
 };
 
@@ -1145,6 +1149,7 @@ export const rank10 = {
     technique: 'Jellyfish',
     rank: 10,
     type: 'elimination',
+    complexityAcknowledged: false,
   },
 };
 
@@ -1190,6 +1195,7 @@ export const rank11 = {
     technique: 'XY-Wing',
     rank: 11,
     type: 'elimination',
+    complexityAcknowledged: false,
   },
 };
 
@@ -1235,6 +1241,7 @@ export const rank12 = {
     technique: 'Simple Coloring',
     rank: 12,
     type: 'elimination',
+    complexityAcknowledged: false,
   },
 };
 
@@ -1280,6 +1287,7 @@ export const rank13 = {
     technique: 'Multi-Coloring',
     rank: 13,
     type: 'elimination',
+    complexityAcknowledged: false,
   },
 };
 
@@ -1480,6 +1488,7 @@ export const rank08Transpose = {
     technique: 'X-Wing',
     rank: 8,
     type: 'elimination',
+    complexityAcknowledged: false,
   },
 };
 
@@ -1531,5 +1540,6 @@ export const rank12Rule4 = {
     technique: 'Simple Coloring',
     rank: 12,
     type: 'elimination',
+    complexityAcknowledged: false,
   },
 };
