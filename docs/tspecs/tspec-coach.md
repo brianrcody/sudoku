@@ -142,7 +142,7 @@ Coach Mode splits cleanly into three test surfaces:
 | CT-PR1, CT-PR2 pencil revert / user mark preserved | Yes | |
 | CT-CA1–CT-CA4 Erase / New Puzzle / Reset / Difficulty | Yes | |
 | CT-EC1–CT-EC4 elim completion + pencil retention + pre-cleared candidates | Yes | |
-| CT-KB1, CT-KB2 keyboard `C` with body and BUTTON focus | Yes | |
+| CT-KB1, CT-KB2 keyboard `C` with body focus / BUTTON focus (both trigger) | Yes | |
 | CT-HK1 keyboard `C` — INPUT / SELECT / TEXTAREA focus-tag guards | Yes | |
 | CT-A11y1, CT-A11y2 aria-describedby on coached / not on non-coached | Yes | |
 | CT-A11y3 Coach button aria-label reverts to "Coach" after session end | Yes | |
@@ -356,7 +356,6 @@ These tests follow the existing `iframe` / `loadIframe` / `wait` pattern in the 
 | `_onCoachPressed` `_errorTimer !== null` reset | CT-SR2 |
 | `_onCoachPressed` `result.type === 'no-technique'` | Existing CT-NT1 |
 | `_onCoachPressed` happy path | Existing CT-S1 |
-| Keydown handler tag guard — BUTTON | Existing CT-KB2 |
 | Keydown handler tag guard — INPUT / SELECT / TEXTAREA | CT-HK1 |
 | `_renderButton` `active` true / false | Existing CT-S1 + CT-A11y3 |
 | `_renderPanel` `focused` true / false | Existing CT-P1, CT-P3 |

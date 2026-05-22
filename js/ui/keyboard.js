@@ -24,7 +24,7 @@ export function mount(root, gameState) {
 
     // Home focuses the first non-given cell.
     if (e.key === 'Home') {
-      if (inInput || tag === 'BUTTON') return;
+      if (inInput) return;
       e.preventDefault();
       gameState.dispatch({ type: 'SELECT_FIRST_CELL' });
       requestAnimationFrame(() => {
@@ -37,8 +37,8 @@ export function mount(root, gameState) {
       return;
     }
 
-    // P toggles pen/pencil only when focus is not on a form control or button.
-    if ((e.key === 'p' || e.key === 'P') && !inInput && tag !== 'BUTTON') {
+    // P toggles pen/pencil only when focus is not on a form control.
+    if ((e.key === 'p' || e.key === 'P') && !inInput) {
       e.preventDefault();
       gameState.dispatch({ type: 'TOGGLE_MODE' });
       return;

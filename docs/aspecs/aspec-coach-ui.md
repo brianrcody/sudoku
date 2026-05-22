@@ -674,7 +674,7 @@ function _wireButton() {
   document.addEventListener('keydown', (e) => {
     const tag = document.activeElement?.tagName ?? '';
     if ((e.key === 'c' || e.key === 'C') &&
-        !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(tag)) {
+        !['INPUT', 'SELECT', 'TEXTAREA'].includes(tag)) {
       e.preventDefault();
       _onCoachPressed();
     }
@@ -2135,7 +2135,7 @@ These tests boot the real app and drive it through the coach flow.
 
 **Keyboard shortcut tests (CT-KB):**
 1. CT-KB1: Pressing `C` with body focus on a puzzle board starts a coach session (identical to clicking the button).
-2. CT-KB2: Pressing `C` while a `BUTTON` element has focus does not trigger the coach.
+2. CT-KB2: Pressing `C` while a `BUTTON` element has focus does trigger the coach (buttons are not form controls).
 
 ### 16.3 Coverage target
 

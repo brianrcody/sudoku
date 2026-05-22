@@ -42,6 +42,13 @@ test to verify digit 5 is absent from the row's givens before using it.
 Hard generation is genuinely non-deterministic (observed 63–1305 ms); 1000 ms was too
 tight. Saw 1046 ms pass cleanly under the new budget.
 
+**GF19 — monitoring (2026-05-22).** One observed failure: "expected Object{ …(4) } to be
+null" on `restored.undoSnapshot`. Passed on immediate re-run; likely a timing issue in
+the fresh-iframe load path. The test uses a polling loop with `setTimeout` delays to wait
+for the iframe to load — if the puzzle restores and dispatches events before the assertion
+runs, `undoSnapshot` could be non-null. If it recurs, audit the iframe-ready check to
+ensure it waits until after all restore side-effects settle.
+
 ### Integration test gap — CT-NT3: coach 'error' toast
 
 The no-technique integration tests (CT-NT1, CT-NT2) cover the `'complete'` path only.
@@ -113,7 +120,7 @@ this note; the tspec is authoritative.
   add intermediate assertion that the toast is still visible at 3500 ms.
 - **CT-HK1** — keyboard `C` focus-tag guards for `INPUT`, `SELECT`, `TEXTAREA`. Creates
   those elements inside the iframe and dispatches keydown events. **CT-KB1 and CT-KB2**
-  (body focus and BUTTON focus) are already implemented — do not re-implement them.
+  (body focus and BUTTON focus — both trigger) are already implemented — do not re-implement them.
 - **CT-A11y3–CT-A11y6** — ARIA and keyboard accessibility tests. Technique-agnostic.
 - **CT-PERF1** — `analyze()` performance gate. Use the **rank-03** fixture (rank03 is
   Complete in the tracker). The tspec §3.3 says rank04 but that fixture is Pending.

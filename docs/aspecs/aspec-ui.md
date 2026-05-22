@@ -192,7 +192,7 @@ Global `keydown` handler on `document`.
 | 1–9 | `PEN_ENTER { digit }` or `PENCIL_TOGGLE { digit }` | Based on `state.activeMode`; no-op if no cell selected |
 | Backspace / Delete | `ERASE` | No-op if no cell selected |
 | Arrow keys | `ARROW_NAV { direction }` | Only when focus is inside `.sudoku-grid` OR `state.selected !== null` |
-| P / p | `TOGGLE_MODE` | Only when focus is not in an `input`, `select`, `textarea`, or `button` |
+| P / p | `TOGGLE_MODE` | Only when focus is not in an `input`, `select`, or `textarea` |
 | Home | `SELECT_FIRST_CELL` | Focuses first non-given cell; same focus guard as P |
 | Escape | Close dialog | Dismissed via `dialog.close()` |
 

@@ -1288,7 +1288,7 @@ describe('integration/coach: keyboard shortcut', () => {
     expect(gameState.getState().coachSession).to.not.equal(null);
   });
 
-  it('CT-KB2: pressing C while a BUTTON is focused does not trigger coach', async function () {
+  it('CT-KB2: pressing C while a BUTTON is focused does trigger coach', async function () {
     this.timeout(18000);
     const gameState = gs(iframe);
     if (!gameState) return this.skip();
@@ -1312,7 +1312,7 @@ describe('integration/coach: keyboard shortcut', () => {
     doc(iframe).dispatchEvent(e);
     await wait(100);
 
-    expect(gameState.getState().coachSession).to.equal(null);
+    expect(gameState.getState().coachSession).to.not.equal(null);
   });
 });
 

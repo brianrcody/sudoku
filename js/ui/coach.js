@@ -74,7 +74,7 @@ function _wireButton() {
   document.addEventListener('keydown', (e) => {
     const tag = document.activeElement?.tagName ?? '';
     if ((e.key === 'c' || e.key === 'C') &&
-        !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(tag)) {
+        !['INPUT', 'SELECT', 'TEXTAREA'].includes(tag)) {
       e.preventDefault();
       _onCoachPressed();
     }
