@@ -86,7 +86,7 @@ Applied via `body.theme-coffee`.
 | `--btn-hover`    | `#e0cead`    |                            |
 | `--btn-border`   | `#c9a97a`    |                            |
 | `--active-mode`  | `#8b4513`    |                            |
-| `--win`          | `#2d6a4f`    |                            |
+| `--win`          | `#a06b1a`    | Warm amber; replaces forest green |
 | `--stats-row-sep`| `#ecdfc8`    |                            |
 | `--header-bg`    | `#2b1d0e`    | Dark header                |
 | `--modal-bg`     | `#f5ede0`    |                            |
