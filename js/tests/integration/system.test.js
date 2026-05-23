@@ -17,7 +17,13 @@ async function waitForPuzzle(iframe, timeoutMs = 12000) {
       if (Date.now() > deadline) return reject(new Error('Timed out'));
       const doc = iframe.contentDocument;
       if (!doc) return setTimeout(check, 100);
-      if (doc.querySelectorAll('.cell').length === 81) return resolve();
+      // The grid renders 81 cells at mount, before the boot-time worker puzzle
+      // lands. Wait for state.puzzle too, so the in-flight PUZZLE_LOADED can't
+      // fire mid-test.
+      const cellsReady = doc.querySelectorAll('.cell').length === 81;
+      const gsObj = iframe.contentWindow?.gameState;
+      const puzzleLoaded = gsObj && gsObj.getState().puzzle !== null;
+      if (cellsReady && puzzleLoaded) return resolve();
       setTimeout(check, 100);
     }
     setTimeout(check, 300);

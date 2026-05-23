@@ -11,6 +11,7 @@
  */
 
 const NON_GEN_BUDGET_MS = 1000;
+const MEDIUM_GEN_BUDGET_MS = 1500;
 const HARD_GEN_BUDGET_MS = 2000;
 const DM_GEN_BUDGET_MS = 5000;
 const TIERS = ['kiddie', 'easy', 'medium', 'hard', 'death-march'];
@@ -22,7 +23,13 @@ async function waitForPuzzle(iframe, timeoutMs = 15000) {
       if (Date.now() > deadline) return reject(new Error('Timed out waiting for puzzle'));
       const doc = iframe.contentDocument;
       if (!doc) return setTimeout(check, 100);
-      if (doc.querySelectorAll('.cell').length === 81) return resolve();
+      // The grid renders 81 cells at mount, before the boot-time worker puzzle
+      // lands. Wait for state.puzzle too, so the in-flight PUZZLE_LOADED can't
+      // fire mid-test.
+      const cellsReady = doc.querySelectorAll('.cell').length === 81;
+      const gsObj = iframe.contentWindow?.gameState;
+      const puzzleLoaded = gsObj && gsObj.getState().puzzle !== null;
+      if (cellsReady && puzzleLoaded) return resolve();
       setTimeout(check, 100);
     }
     setTimeout(check, 300);
@@ -88,6 +95,7 @@ describe('integration/perf', () => {
       const initialId = gs.getState().puzzle.id;
       const budget = tier === 'death-march' ? DM_GEN_BUDGET_MS
         : tier === 'hard' ? HARD_GEN_BUDGET_MS
+        : tier === 'medium' ? MEDIUM_GEN_BUDGET_MS
         : NON_GEN_BUDGET_MS;
 
       // Set the difficulty so _startNewPuzzle uses the requested tier.
