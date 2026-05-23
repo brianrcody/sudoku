@@ -61,6 +61,7 @@ export function mount(root, gameState) {
     if (e.key >= '1' && e.key <= '9') {
       const state = gameState.getState();
       if (state.selected === null) return;
+      if (state.puzzle?.givens[state.selected] !== 0) return;
       e.preventDefault();
       const digit = parseInt(e.key, 10);
       if (state.activeMode === 'pen') {

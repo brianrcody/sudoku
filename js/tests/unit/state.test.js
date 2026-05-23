@@ -153,12 +153,12 @@ describe('game/state.js', () => {
     expect(gs.getState().selected).to.equal(1);
   });
 
-  // S3: SELECT_CELL on given cell ignored
-  it('S3: SELECT_CELL on given cell ignored', () => {
+  // S3: SELECT_CELL accepts given cells (keyboard nav can land on them)
+  it('S3: SELECT_CELL accepts given cells', () => {
     loadPuzzle(gs, makeEasyPuzzle());
     select(gs, 1); // non-given first
     gs.dispatch({ type: 'SELECT_CELL', index: 0 }); // 0 is a given
-    expect(gs.getState().selected).to.equal(1); // unchanged
+    expect(gs.getState().selected).to.equal(0); // given cell is now selectable
   });
 
   // S4: DESELECT clears selected
@@ -212,31 +212,23 @@ describe('game/state.js', () => {
     expect(s.selected).to.not.equal(9);
   });
 
-  // S6: ARROW_NAV skips given cells
-  it('S6: ARROW_NAV skips given cells', () => {
-    // Only cell 0 is a given. From cell 8 going left, should skip nothing unusual.
-    // Use a puzzle where cells 1–3 are all givens to force skipping.
+  // S6: ARROW_NAV moves exactly one step and stops, even on given cells
+  it('S6: ARROW_NAV moves one step and stops on given cells', () => {
     const puzzle = makeEasyPuzzle();
-    puzzle.givens[1] = 2;
-    puzzle.givens[2] = 3;
-    puzzle.givens[3] = 4;
+    puzzle.givens[3] = 4; // make cell 3 a given
     loadPuzzle(gs, puzzle);
     select(gs, 4); // non-given
     gs.dispatch({ type: 'ARROW_NAV', direction: 'left' });
     const s = gs.getState();
-    // Should skip 3, 2, 1 and land on cell 8 (wrapping).
-    // The cell 0 is also a given, so it wraps past 0 to cell 8.
-    expect(s.selected).to.not.be.null;
-    const landed = s.selected;
-    expect(puzzle.givens[landed]).to.equal(0); // not a given
+    // One step left from 4 lands on 3, which is now a given — that's correct.
+    expect(s.selected).to.equal(3);
   });
 
-  // S7: ARROW_NAV with selected=null picks first player cell
-  it('S7: ARROW_NAV with selected=null picks first player cell', () => {
+  // S7: ARROW_NAV with selected=null starts at index 0 (consistent with Home)
+  it('S7: ARROW_NAV with selected=null starts at index 0', () => {
     loadPuzzle(gs, makeEasyPuzzle());
-    // Cell 0 is given, so first player cell is index 1.
     gs.dispatch({ type: 'ARROW_NAV', direction: 'right' });
-    expect(gs.getState().selected).to.equal(1);
+    expect(gs.getState().selected).to.equal(0);
   });
 
   // S8: SET_MODE
@@ -801,12 +793,11 @@ describe('game/state.js', () => {
     expect(emitCount).to.equal(1);
   });
 
-  // S87: SELECT_FIRST_CELL
-  it('S87: SELECT_FIRST_CELL selects the first non-given cell', () => {
-    const puzzle = makeEasyPuzzle(); // givens[0] = 5; first non-given is index 1
-    loadPuzzle(gs, puzzle);
+  // S87: SELECT_FIRST_CELL always selects index 0 (Home behavior)
+  it('S87: SELECT_FIRST_CELL always selects index 0', () => {
+    loadPuzzle(gs, makeEasyPuzzle()); // givens[0] = 5, but Home goes there anyway
     gs.dispatch({ type: 'SELECT_FIRST_CELL' });
-    expect(gs.getState().selected).to.equal(1);
+    expect(gs.getState().selected).to.equal(0);
   });
 
   it('S87b: SELECT_FIRST_CELL is a no-op before puzzle is loaded', () => {

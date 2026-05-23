@@ -180,6 +180,18 @@ function _onDigit(d) {
 
 function _update(state) {
   const difficulty = state.puzzle?.difficulty ?? 'easy';
+  const selectedIsGiven = state.selected !== null &&
+    state.puzzle !== null &&
+    state.puzzle.givens[state.selected] !== 0;
+
+  // Digit buttons.
+  _root.querySelectorAll('.btn-digit').forEach(btn => {
+    btn.disabled = selectedIsGiven;
+  });
+
+  // Clear button.
+  const clearBtn = _root.querySelector('#btn-clear');
+  if (clearBtn) clearBtn.disabled = selectedIsGiven;
 
   // Mode button.
   const modeBtn = _root.querySelector('#btn-mode');
@@ -211,7 +223,7 @@ function _update(state) {
       state.pen[state.selected] !== 0 &&
       (!state.puzzle || state.puzzle.givens[state.selected] === 0);
 
-    hintBtn.disabled = exhausted || selectedHasPen || state.won;
+    hintBtn.disabled = exhausted || selectedHasPen || state.won || selectedIsGiven;
 
     if (exhausted) {
       hintBadge.textContent = '0';

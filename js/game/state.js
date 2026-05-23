@@ -248,7 +248,6 @@ export function createGameState({ stats, hintProvider }) {
 
       case 'SELECT_CELL': {
         const { index } = action;
-        if (state.puzzle && state.puzzle.givens[index] !== 0) break; // givens unselectable
         if (state.won) {
           // Allow selection after win for visual feedback but no editing.
         }
@@ -265,30 +264,22 @@ export function createGameState({ stats, hintProvider }) {
 
       case 'SELECT_FIRST_CELL': {
         if (!state.puzzle) break;
-        const idx = state.puzzle.givens.findIndex(g => g === 0);
-        if (idx === -1) break;
-        state.selected = idx;
+        state.selected = 0;
         _emit(action, 'selected');
         break;
       }
 
       case 'ARROW_NAV': {
         const { direction } = action;
-        // Find starting position: if no cell selected, begin at 0 and pick first player cell.
-        let row, col;
+        // If no cell selected, start at index 0 (consistent with Home).
         if (state.selected === null) {
-          // First arrow press: pick first available player cell in reading order.
-          for (let i = 0; i < 81; i++) {
-            if (!state.puzzle || state.puzzle.givens[i] === 0) {
-              state.selected = i;
-              _emit(action, 'selected');
-              return;
-            }
-          }
+          state.selected = 0;
+          _emit(action, 'selected');
           return;
         }
-        row = rowOf(state.selected);
-        col = colOf(state.selected);
+
+        let row = rowOf(state.selected);
+        let col = colOf(state.selected);
 
         const deltas = {
           left:  [0, -1],
@@ -298,12 +289,8 @@ export function createGameState({ stats, hintProvider }) {
         };
         const [dr, dc] = deltas[direction] ?? [0, 0];
 
-        let attempts = 0;
-        do {
-          row = (row + dr + 9) % 9;
-          col = (col + dc + 9) % 9;
-          attempts++;
-        } while (state.puzzle && state.puzzle.givens[row * 9 + col] !== 0 && attempts < 81);
+        row = (row + dr + 9) % 9;
+        col = (col + dc + 9) % 9;
 
         state.selected = row * 9 + col;
         _emit(action, 'selected');

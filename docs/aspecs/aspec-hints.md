@@ -51,7 +51,7 @@ The UI derives Hint button enabled/disabled state from `GameState` on every rend
 | No hints remaining (`state.hintsRemaining === 0`) | Disabled permanently for this puzzle |
 | Puzzle won (`state.won === true`) | Disabled |
 | No cell selected (`state.selected === null`) | Enabled (but tap has no effect — reducer guards) |
-| Selected cell is a given (`puzzle.givens[state.selected] !== 0`) | Enabled (but tap has no effect — reducer guards) |
+| Selected cell is a given (`puzzle.givens[state.selected] !== 0`) | Disabled |
 | Selected cell contains a pen digit (`state.pen[state.selected] !== 0`) | Disabled |
 | Selected cell contains only pencil marks or is empty | Enabled |
 

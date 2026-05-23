@@ -91,11 +91,12 @@ Each `js/ui/*` module owns exactly one DOM subtree. Mount returns nothing; rende
 ## 4. Grid — `js/ui/grid.js`
 
 - Creates 81 `<div role="gridcell">` elements inside `<div role="grid" aria-label="Sudoku puzzle" tabindex="0">`.
-- Click on a player cell dispatches `SELECT_CELL { index }`. Click on a given has no effect.
-- Arrow keydown dispatches `ARROW_NAV { direction }`.
+- Click on a player cell dispatches `SELECT_CELL { index }` and moves DOM focus to the cell. Click on a given cell has no effect — a `mousedown` handler on each given cell calls `e.preventDefault()` to block pointer-triggered focus transfer (Tab and programmatic `.focus()` calls are unaffected).
+- Arrow keydown on a focused cell dispatches `ARROW_NAV { direction }` and syncs DOM focus to the new cell via `requestAnimationFrame`. Arrow keys can land on given cells.
 - Click outside the grid dispatches `DESELECT`. The outside-click handler excludes `#numpad-root` and `#dialog-root` — see §5 for the rationale.
 - All visual state (conflict, incorrect, pencil marks, pen digit, selection) derived from `getState()` on every relevant re-render.
 - Cell `aria-label` constructed from `[row, col, contents, state]`, updated on every render that touches that cell.
+- All cells carry `aria-selected`; given cells additionally carry `aria-readonly="true"`. When a given cell is keyboard-selected, it receives `aria-selected="true"` like any other selected cell.
 
 ---
 
@@ -107,6 +108,8 @@ Each `js/ui/*` module owns exactly one DOM subtree. Mount returns nothing; rende
 - Mode toggle dispatches `TOGGLE_MODE`; carries `aria-pressed` reflecting current mode.
 - Hint button state derived from `state.hintsRemaining`, `state.selected`, `state.puzzle.givens`, and `state.pen` per `aspec-hints.md` §2.
 - Check button has `display: none` via `.hidden-tier` class for Kiddie, Hard, and Death March (`CHECK_VISIBLE[difficulty] === false`).
+
+**Given-cell disable rule:** When `state.selected` is a given cell (`puzzle.givens[selected] !== 0`), digit buttons 1–9, the Clear button, and the Hint button are all disabled. The mode toggle, Undo, and Erase-all-pencil buttons are unaffected. This state is recomputed in `_update()` on every render triggered by a `'selected'` or `'puzzle'` change.
 
 **Toolbar focus pattern:** Every button in `#numpad-root` registers `mousedown: e => e.preventDefault()`. This prevents the browser from transferring DOM focus to the button on pointer interaction, so the selected cell keeps its focus ring across successive taps. Tab, Enter, and Space activation are unaffected.
 
@@ -189,11 +192,11 @@ Global `keydown` handler on `document`.
 
 | Key | Action | Notes |
 |---|---|---|
-| 1–9 | `PEN_ENTER { digit }` or `PENCIL_TOGGLE { digit }` | Based on `state.activeMode`; no-op if no cell selected |
+| 1–9 | `PEN_ENTER { digit }` or `PENCIL_TOGGLE { digit }` | Based on `state.activeMode`; no-op if no cell selected or selected cell is a given |
 | Backspace / Delete | `ERASE` | No-op if no cell selected |
-| Arrow keys | `ARROW_NAV { direction }` | Only when focus is inside `.sudoku-grid` OR `state.selected !== null` |
+| Arrow keys | `ARROW_NAV { direction }` | Only when focus is inside `.sudoku-grid` OR `state.selected !== null`; can land on given cells |
 | P / p | `TOGGLE_MODE` | Only when focus is not in an `input`, `select`, or `textarea` |
-| Home | `SELECT_FIRST_CELL` | Focuses first non-given cell; same focus guard as P |
+| Home | `SELECT_FIRST_CELL` | Always focuses index 0 (row 1, col 1), regardless of given status; same focus guard as P |
 | Escape | Close dialog | Dismissed via `dialog.close()` |
 
 > **Note:** The `C / c` keyboard shortcut (invoke Coach) is handled in `coach.js`, not `keyboard.js`. Its focus guard is identical to the P-guard above. See `aspec-coach-ui.md` §6.5.
@@ -203,7 +206,7 @@ Global `keydown` handler on `document`.
 ## 12. Accessibility Implementation
 
 - Grid root: `role="grid"`, cells: `role="gridcell"`. All cells have `tabindex="0"`.
-- Given cells: `aria-readonly="true"`.
+- Given cells: `aria-readonly="true"`, `aria-selected` present and updated on every render (same as player cells).
 - Cell `aria-label` constructed from `[row, col, contents, state]`, updated on render. States include conflict and incorrect flags when applicable.
 - Dialogs: focus trap, `role="dialog"`, `aria-modal="true"`, `aria-labelledby`.
 - Win banner: `aria-hidden="true"` when not shown; on show, focus moves to New Puzzle button.
@@ -242,3 +245,4 @@ Behavioral obligations (from fspec §14.4):
 - **Confirmation dialog close:** focus returns to the element that triggered it.
 - **Puzzle completion (win):** focus moves to the New Puzzle button.
 - **Page load with resumed puzzle:** no cell is auto-focused. The player's first Tab or arrow key interaction moves focus into the appropriate area.
+- **Keyboard navigation onto a given cell:** arrow keys and Home may move focus to a given cell. The cell receives DOM focus and `state.selected` is set to its index. Digit buttons, Clear, and Hint are disabled for the duration. Pointer interaction (click/tap) on given cells is blocked via `mousedown: e.preventDefault()` on the given cell element — pointer-triggered focus does not occur.

@@ -67,6 +67,9 @@ function _buildGrid(state) {
     el.setAttribute('role', 'gridcell');
     el.setAttribute('tabindex', '0');
 
+    el.addEventListener('mousedown', (e) => {
+      if (_gameState.getState().puzzle?.givens[i] !== 0) e.preventDefault();
+    });
     el.addEventListener('click', () => _handleClick(i));
     el.addEventListener('focus', () => _gameState.dispatch({ type: 'SELECT_CELL', index: i }));
     el.addEventListener('keydown', (e) => _handleCellKeydown(e, i));
@@ -105,13 +108,12 @@ function _updateCell(el, i, state) {
 
   // Class management.
   el.className = 'cell';
+  el.setAttribute('aria-selected', isSelected ? 'true' : 'false');
   if (isGiven) {
     el.classList.add('given');
     el.setAttribute('aria-readonly', 'true');
-    el.removeAttribute('aria-selected');
   } else {
     el.removeAttribute('aria-readonly');
-    el.setAttribute('aria-selected', isSelected ? 'true' : 'false');
   }
 
   if (!isGiven && penVal !== 0) el.classList.add('pen');

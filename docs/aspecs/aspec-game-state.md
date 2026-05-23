@@ -156,17 +156,17 @@ All state transitions go through `GameState.dispatch(action)`.
 Sets `puzzle`. Initializes `pen` by copying `puzzle.givens` into all 81 cells (given values are stored in `pen[]` so the grid renders them — pen is not zeroed). Clears `pencil`. Resets all flags and counters: `hintsRemaining` set from `HINT_LIMITS[puzzle.difficulty]`, `attemptRecorded = false`, `won = false`, `winHandled = false`, `generating = false`, `generatingMessage = ''`, `completionMessage = ''`. Clears any pending `CLEAR_INCORRECT` timer.
 
 ### `SELECT_CELL` — `{ index: int }`
-Sets `selected = index`. No effect if the cell is a given (`puzzle.givens[index] !== 0`).
+Sets `selected = index`. Given cells are selectable — keyboard navigation (arrow keys, Home) may land on them.
 
 ### `DESELECT`
 Sets `selected = null`.
 
 ### `ARROW_NAV` — `{ direction: 'up' | 'down' | 'left' | 'right' }`
 
-Cell navigation behavioral obligations (from fspec §4.2):
-- Navigation wraps at grid boundaries: pressing right from column 9 moves to column 1 of the same row; pressing down from row 9 moves to row 1 of the same column. Same wrap applies to left (col 1 → col 9) and up (row 1 → row 9).
-- Given cells are skipped — arrow navigation lands on the nearest player cell in the direction of travel.
-- If no cell is currently selected (`state.selected === null`), the first arrow key press selects the first player cell in reading order (top-left to bottom-right).
+Cell navigation behavioral obligations:
+- Moves exactly one step in the given direction. Navigation wraps at grid boundaries: pressing right from column 9 moves to column 1 of the same row; pressing down from row 9 moves to row 1 of the same column. Same wrap applies to left and up.
+- Given cells are **not** skipped — arrow navigation stops on them. Digit input, Clear, and Hint are disabled while a given cell is selected (see `aspec-ui.md` §5).
+- If no cell is currently selected (`state.selected === null`), the first arrow key press selects index 0 (row 1, column 1), consistent with Home.
 
 ### `SET_MODE` — `{ mode: 'pen' | 'pencil' }`
 Sets `activeMode`.

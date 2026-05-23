@@ -377,7 +377,7 @@ describe('integration/game-flows', () => {
     expect(gameState.getState().pencil[cellB] & (1 << (digit - 1))).to.equal(0);
   });
 
-  // GF11: Arrow navigation wraps and skips givens
+  // GF11: Arrow navigation moves one step per keypress and never gets stuck
   it('GF11: arrow navigation can traverse the grid without getting stuck', async function () {
     this.timeout(15000);
     const gameState = gs(iframe);
@@ -386,15 +386,17 @@ describe('integration/game-flows', () => {
     const state = gameState.getState();
     if (!state.puzzle) return this.skip();
 
-    // Navigate right 9 times from a player cell — should always be valid.
-    const startIdx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
-    gameState.dispatch({ type: 'SELECT_CELL', index: startIdx });
+    // Navigate right 9 times from cell 0 — selected must change each time and
+    // may land on given cells (keyboard nav passes through them).
+    gameState.dispatch({ type: 'SELECT_CELL', index: 0 });
+    let prev = 0;
     for (let k = 0; k < 9; k++) {
       gameState.dispatch({ type: 'ARROW_NAV', direction: 'right' });
       await new Promise(r => setTimeout(r, 20));
       const sel = gameState.getState().selected;
       expect(sel).to.not.be.null;
-      expect(state.puzzle.givens[sel]).to.equal(0);
+      expect(sel).to.not.equal(prev);
+      prev = sel;
     }
   });
 
