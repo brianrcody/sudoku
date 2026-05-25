@@ -118,3 +118,36 @@ the user does not need to re-select it each session.
   positional mirroring of the panel sufficient?
 - Are there other asymmetries in the layout (e.g., coach panel placement) that would also
   need to flip?
+
+---
+
+## Puzzle Sharing via URL
+
+**Origin:** Conversation, 2026-05-24
+
+### Background
+
+Players may want to send a specific puzzle to a friend or revisit a puzzle they found
+interesting. Encoding the puzzle into the URL makes this zero-infrastructure — no server
+storage required, just a link.
+
+### Proposal
+
+Encode the puzzle's given cells into a URL query parameter or hash fragment (e.g.,
+`?puzzle=<encoded-string>`). When the app loads and detects this parameter, it
+initializes the board from the encoded puzzle rather than generating a new one. The
+recipient starts from the same given cells with no progress — a fresh attempt at the
+same puzzle.
+
+A "Share" button (or copy-link action) would generate and copy the URL to the clipboard.
+
+### Open Questions for V3 Requirements Analysis
+
+- Hash fragment (`#`) vs. query parameter (`?`): fragment stays client-side and never
+  hits the server; query parameter is more conventional but leaks to server logs.
+- Should the shared URL also encode difficulty tier, so the recipient sees the correct
+  label?
+- What encoding scheme? A simple 81-character string (digit or `.` for empty) is
+  human-readable; base64 or similar is more compact but opaque.
+- Should an in-progress game state (fills, pencil marks) optionally be shareable, or
+  only the givens?
