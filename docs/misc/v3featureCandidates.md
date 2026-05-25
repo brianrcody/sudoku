@@ -88,3 +88,33 @@ can be extended with varying levels of effort depending on the technique class.
   "expert mode" toggle rather than a default difficulty option).
 - Generator retry limits may need revisiting — harder puzzles are rarer and may require
   significantly more generation attempts.
+
+---
+
+## Left-Hand Layout Mode
+
+**Origin:** Conversation, 2026-05-24
+
+### Background
+
+The current layout places the control panel (number pad, mode toggles, action buttons) to
+the right of the board. On a laptop with a touchscreen, a left-handed user reaching for
+the controls with their left hand must cross over the board, obscuring it while interacting.
+
+### Proposal
+
+Add a layout toggle that mirrors the UI — moving the control panel to the left of the
+board. The board itself stays centered within the panel arrangement; only the side on which
+the controls appear changes.
+
+The toggle would be a persistent preference (saved alongside theme and other settings) so
+the user does not need to re-select it each session.
+
+### Open Questions for V3 Requirements Analysis
+
+- Should the toggle live in a settings panel, or be a always-visible button (e.g., in the
+  header)?
+- Does the number pad layout itself need to mirror (right-to-left digit order), or is
+  positional mirroring of the panel sufficient?
+- Are there other asymmetries in the layout (e.g., coach panel placement) that would also
+  need to flip?
