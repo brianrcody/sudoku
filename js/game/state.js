@@ -321,7 +321,9 @@ export function createGameState({ stats, hintProvider }) {
         if (mutated) state.undoSnapshot = pending;
 
         // Coach block — runs before _emit so coachSession changes emit separately.
-        if (state.coachSession !== null && !(action.fromHint ?? false)) {
+        // Gated on `mutated`: a no-op PEN_ENTER (given cell, same-digit, won)
+        // places nothing, so it must not drive coach transitions.
+        if (mutated && state.coachSession !== null && !(action.fromHint ?? false)) {
           const session = state.coachSession;
           const filledCell = state.selected;
           const isCoached = session.coachedCells.has(filledCell);

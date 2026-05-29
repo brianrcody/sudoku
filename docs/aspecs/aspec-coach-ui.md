@@ -1,10 +1,12 @@
 # Architectural Spec — Coach Mode UI and State Integration
 **ID:** aspec-coach-ui
-**Status:** Final (amended 2026-05-04)
+**Status:** Final (amended 2026-05-28)
 **Date:** 2026-05-04
 **Author:** Architect
 
 > **Amendment 2026-05-04:** (1) Added `eliminationTargets` field to `CoachSession` (§2.1). (2) Extended `COACH_START` handler to compute `eliminationTargets` and updated `analyze()` call to pass `pencil` (§3.1). (3) Added `PENCIL_TOGGLE` hook for elimination completion detection (§4.3). (4) Extended `COACH_FILL_RECAP` to accept `variant: 'elim'` with pencil-adoption behavior (§3.3). (5) Added elim recap variant to `_showRecap` and `_composeElimRecapDetail` helper (§6.10). (6) Updated test strategy (§16.1, §16.2).
+
+> **Amendment 2026-05-28:** Gated the `PEN_ENTER` coach block (§4.1) on `_applyPenEnter`'s `mutated` return. A no-op `PEN_ENTER` (given cell, same-digit re-entry, or won board) places no digit and must not fire `COACH_END`/`COACH_FILL_RECAP`. The previous guard (`coachSession !== null && !fromHint`) omitted this, so such a dispatch on an active session would still end the session or show a recap. Latent in the UI (digit input is blocked on givens), but a contract-level reducer invariant. Updated §4.1 pseudocode and added the "No-op fill case" note.
 
 > **Amendment 2026-05-14:** Fixed Hidden Pair / Hidden Triple elimination completion. These techniques set `roles.elimTarget = []` because their eliminations happen within the cause cells, not in external cells. The original `eliminationTargets` construction iterated `roles.elimTarget` and produced an empty Map, causing `Array.every()` on an empty iterable to return `true` immediately — the elim recap fired on the first pencil toggle. Fix: when `roles.elimTarget` is empty, build per-cell bitmasks from `result.eliminations` instead. Updated §2.1 (`eliminationTargets` field description), §3.1 (COACH_START step 3 code), and §6.10 (`_composeElimRecapDetail` cell-count fix).
 
@@ -370,11 +372,11 @@ The reducer is the authoritative location for cross-action coach effects. UI mod
 
 ### 4.1 `PEN_ENTER` — `{ digit: int, fromHint?: bool }`
 
-After the existing `_applyPenEnter` mutation completes (and before the existing emit), the reducer evaluates coach effects:
+After the existing `_applyPenEnter` mutation completes (and before the existing emit), the reducer evaluates coach effects — **but only when `_applyPenEnter` actually mutated** (its `mutated` return is `true`). A no-op `PEN_ENTER` (selected cell is a given, the same digit is re-entered, or the board is already won) places no digit, so it must not drive a coach transition. The block is therefore gated on `mutated`:
 
 ```js
 // pseudocode appended to existing PEN_ENTER handler, BEFORE _emit
-if (state.coachSession !== null && !action.fromHint) {
+if (mutated && state.coachSession !== null && !action.fromHint) {
   const session = state.coachSession;
   const filledCell = state.selected;
   const isCoached = session.coachedCells.has(filledCell);
@@ -394,6 +396,8 @@ if (state.coachSession !== null && !action.fromHint) {
   }
 }
 ```
+
+**No-op fill case (`mutated === false`):** if `_applyPenEnter` placed nothing — the selected cell is a given (`aspec-game-state.md` §5, PEN_ENTER step 1), the same digit was re-entered, or the board is already won — the coach block is skipped entirely. Without the `mutated` guard, such a dispatch on an active session would still fire `COACH_END`/`COACH_FILL_RECAP` (ending the session or showing a recap) even though no digit was placed. The UI guards against reaching this path (`keyboard.js` ignores digit keys on givens; `numpad.js` disables digit buttons when a given is selected), so the `mutated` guard enforces the invariant at the reducer level for any current or future dispatch path.
 
 **Hint-fill case (`action.fromHint === true`):** handled by the `HINT` action separately (§4.3). The `PEN_ENTER` path used by `HINT` skips this block — even though the hint funnels through `_applyPenEnter` indirectly via the `HINT` handler, the `HINT` handler ends the session before the pen mutation, so by the time `PEN_ENTER` runs there is no session to react to. Rather than relying on that ordering, the explicit `!action.fromHint` guard above keeps the cases independent.
 

@@ -98,15 +98,50 @@ function firstEmptyCell(state) {
  * @param {object} fixture - { givens, solution }
  */
 function loadFixturePuzzle(gameState, fixture) {
+  // Contrived analyzer fixtures carry no full solution; synthesize one so the
+  // declared placement digit lands in the target cell. The recap path classifies
+  // a fill via puzzle.solution[target], so this must reflect the real answer.
+  const solution = fixture.solution ?? (() => {
+    const s = new Uint8Array(fixture.givens);
+    const exp = fixture.expected;
+    if (exp?.type === 'placement' && exp.target != null && exp.digit != null) {
+      s[exp.target] = exp.digit;
+    }
+    return s;
+  })();
   const puzzle = {
     id: 'coach-test',
     difficulty: 'easy',
     givens: fixture.givens,
-    solution: fixture.solution ?? fixture.givens,
+    solution,
     solveTrace: [],
   };
   gameState.dispatch({ type: 'PUZZLE_LOADED', puzzle });
   return gameState.getState();
+}
+
+/**
+ * A board with two independent naked singles: cell 0 (=5, row 0 forces it) and
+ * cell 80 (=8, row 8 forces it). The analyzer finds cell 0 first; once it is
+ * filled, cell 80 remains, so a second Coach press starts a fresh session.
+ * `expected` describes the first-found single (drives loadFixturePuzzle's
+ * synthesized solution).
+ */
+function twoNakedSingles() {
+  return {
+    givens: new Uint8Array([
+      0, 1, 2, 3, 4, 6, 7, 8, 9,
+      0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0,
+      1, 2, 3, 4, 5, 7, 6, 9, 0,
+    ]),
+    expected: { type: 'placement', target: 0, digit: 5 },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -610,16 +645,7 @@ describe('integration/coach: recap', () => {
     const gameState = gs(iframe);
     if (!gameState) return this.skip();
 
-    let rank01;
-    try {
-      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
-      rank01 = fixtures.rank01;
-    } catch (_) {
-      return this.skip();
-    }
-    if (!rank01) return this.skip();
-
-    loadFixturePuzzle(gameState, rank01);
+    loadFixturePuzzle(gameState, twoNakedSingles());
     await wait(100);
 
     coachBtn(iframe).click();
@@ -636,11 +662,13 @@ describe('integration/coach: recap', () => {
     await wait(200);
     expect(recap(iframe).classList.contains('visible')).to.be.true;
 
-    // Press Coach again — recap should clear and a new session should start (or no-technique).
+    // Press Coach again — the second naked single starts a fresh session,
+    // which dismisses the recap.
     coachBtn(iframe).click();
     await wait(100);
 
     expect(recap(iframe).classList.contains('visible')).to.be.false;
+    expect(gameState.getState().coachSession).to.not.equal(null);
   });
 });
 
@@ -838,19 +866,11 @@ describe('integration/coach: cross-action', () => {
     const gameState = gs(iframe);
     if (!gameState) return this.skip();
 
-    let rank01;
-    try {
-      const fixtures = await import('/js/tests/fixtures/puzzles/coach/index.js');
-      rank01 = fixtures.rank01;
-    } catch (_) {
-      return this.skip();
-    }
-    if (!rank01) return this.skip();
-
-    loadFixturePuzzle(gameState, rank01);
+    loadFixturePuzzle(gameState, twoNakedSingles());
     await wait(100);
 
-    // Place a digit to erase.
+    // Place a digit to erase. This fills the first naked single (cell 0); the
+    // second single (cell 80) remains, so Coach still starts a session.
     const state = gameState.getState();
     const emptyCell = firstEmptyCell(state);
     gameState.dispatch({ type: 'SELECT_CELL', index: emptyCell });

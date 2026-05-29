@@ -9,6 +9,8 @@
 > **Also load:** `docs/aspecs/aspec-coach-ui.md` — reducer slice, action catalogue, cross-action obligations; branch source for `state.js` coach logic.
 > **Also load:** `docs/fspecs/fspec-002-coach.md` — user-facing behavior (button states, lifecycle, recap content, a11y).
 
+> **Update 2026-05-28:** Added SS19 (no-op `PEN_ENTER` fires no coach block) for the `mutated` gate added to `aspec-coach-ui.md` §4.1. Reworked the recap/cross-action integration fixtures: `loadFixturePuzzle` now synthesizes `solution[target]` from `expected.digit`, and CT-R5/CT-CA1 use a dedicated `twoNakedSingles()` board. Root cause: the analyzer fixtures carry no `solution` field (risk R5), so `loadFixturePuzzle` had aliased `solution = givens`, silently turning several "correct fill" steps into digit-0 no-ops that only passed because of the pre-fix coach-block bug.
+
 ---
 
 ## 1. Overview
@@ -121,6 +123,7 @@ Coach Mode splits cleanly into three test surfaces:
 | `COACH_NO_TECHNIQUE` emits `coachSession` change-key | Yes | SS10 |
 | `PEN_ENTER` coach block runs after `_applyPenEnter` mutation | Yes | SS11 |
 | `PEN_ENTER` no coach block when session null | Yes | SS12 |
+| `PEN_ENTER` no coach block when fill is a no-op (`mutated === false`) | Yes | SS19 |
 | `PENCIL_TOGGLE` no-op when session null | Yes | SS15 |
 | `PENCIL_TOGGLE` no-op when placement session (no `eliminationTargets`) | Yes | SS13 |
 | `PENCIL_TOGGLE` no-op when recap active | Yes | SS14 |
@@ -133,14 +136,14 @@ Coach Mode splits cleanly into three test surfaces:
 |---|---|---|
 | CT-S1–CT-S3 smoke (rank 1 + rank 4 classes, coachRevealedBits zero for rank 1) | Yes | |
 | CT-P1–CT-P5 panel open/close, overlay visible, em rendering, technique name | Yes | |
-| CT-R1–CT-R5 recap correct/wrong fill, elim no-recap, 2.5s dismiss, Coach-during-recap | Yes | |
+| CT-R1–CT-R5 recap correct/wrong fill, elim no-recap, 2.5s dismiss, Coach-during-recap | Yes | `loadFixturePuzzle` now synthesizes `solution[target] = expected.digit` (analyzer fixtures carry no `solution`), so "correct fill" places a real digit and the recap classifies correctly. CT-R5 uses a dedicated two-naked-single board (`twoNakedSingles()`) so the second Coach press starts a genuine fresh session — see 2026-05-28 note |
 | CT-NT1 Coach disabled on win + click no-op | Yes | Rewritten 2026-05-22: Coach button is disabled once won; clicking is a no-op (no recap, coachSession null) |
 | CT-NT2 toast auto-dismiss after 5 s | Removed | Premise obsolete — Coach is disabled on win, so the "already solved" toast is unreachable. 5 s error-toast timing remains covered by CT-NT3 |
 | CT-NT3 non-conflicting wrong digit → error toast | Yes | |
 | CT-NT4 genuinely inconsistent board → contradiction toast | Yes | |
 | CT-NT5 context-aware error toast after prior error recap | Yes | Fresh iframe per R8 |
 | CT-PR1, CT-PR2 pencil revert / user mark preserved | Yes | |
-| CT-CA1–CT-CA4 Erase / New Puzzle / Reset / Difficulty | Yes | |
+| CT-CA1–CT-CA4 Erase / New Puzzle / Reset / Difficulty | Yes | CT-CA1 uses `twoNakedSingles()`: its scratch fill consumes the first single while the second keeps the session alive, so it erases a real digit (rank01's missing `solution` previously made the fill a silent no-op) |
 | CT-EC1–CT-EC4 elim completion + pencil retention + pre-cleared candidates | Yes | |
 | CT-KB1, CT-KB2 keyboard `C` with body focus / BUTTON focus (both trigger) | Yes | |
 | CT-HK1 keyboard `C` — INPUT / SELECT / TEXTAREA focus-tag guards | Yes | |
@@ -226,7 +229,8 @@ These tests append to the existing file using the same `stubStats`, `stubHintPro
 | SS9 | `COACH_FILL_RECAP` no-op when already in recap (elim) | unit | Same guard for elim variant | Start elimination session; dispatch `COACH_FILL_RECAP {variant:'normal'}`; then `COACH_FILL_RECAP {variant:'elim'}` | `recap` remains `'normal'`; second dispatch no-op | P2 |
 | SS10 | `COACH_NO_TECHNIQUE` emits `coachSession` change-key | unit | Reducer informational emit | Dispatch `COACH_NO_TECHNIQUE {reason:'inconsistent'}` | `coachSession` remains `null`; `'changed'` event fires with `changed.has('coachSession') === true` and `action.reason === 'inconsistent'` | P2 |
 | SS11 | `PEN_ENTER` coach block runs AFTER `_applyPenEnter` mutation | unit | Ordering: coach block reads post-mutation `state.pen` | Start placement session at cell 0; dispatch `PEN_ENTER {digit:5}` (correct) | `state.pen[0] === 5` AND `state.coachSession.recap === 'normal'` both true after the dispatch | P2 |
-| SS12 | `PEN_ENTER` no coach block when `coachSession === null` at entry | unit | `if (state.coachSession !== null && !action.fromHint)` false branch | Load puzzle; no session; dispatch `PEN_ENTER {digit:5}` | No `COACH_END` / `COACH_FILL_RECAP` dispatches; standard pen mutation only | P1 |
+| SS12 | `PEN_ENTER` no coach block when `coachSession === null` at entry | unit | `if (mutated && state.coachSession !== null && !action.fromHint)` — `coachSession` false branch | Load puzzle; no session; dispatch `PEN_ENTER {digit:5}` | No `COACH_END` / `COACH_FILL_RECAP` dispatches; standard pen mutation only | P1 |
+| SS19 | `PEN_ENTER` no coach block when the fill is a no-op (`mutated === false`) during an active session | unit | `if (mutated && …)` — `mutated` false branch (given cell / same-digit / won places nothing) | Start a placement session (target cell 0); `SELECT_CELL` a given cell (e.g. cell 1); dispatch `PEN_ENTER {digit:3}` | `_applyPenEnter` returns false (no mutation); session unchanged (`coachSession !== null`, `recap === null`); no `COACH_END` / `COACH_FILL_RECAP` dispatched | P1 |
 | SS13 | `PENCIL_TOGGLE` coach hook no-op when `eliminationTargets === null` (placement session) | unit | `eliminationTargets !== null` false branch | Start a Naked Single session (`eliminationTargets: null`); dispatch `PENCIL_TOGGLE` on any cell | No `COACH_FILL_RECAP` dispatched | P1 |
 | SS14 | `PENCIL_TOGGLE` coach hook no-op when `recap !== null` | unit | `recap === null` false branch | Start elim session; dispatch `COACH_FILL_RECAP {variant:'elim'}` (enters recap); dispatch `PENCIL_TOGGLE` | No further `COACH_FILL_RECAP` dispatch | P1 |
 | SS15 | `PENCIL_TOGGLE` coach hook no-op when `coachSession === null` | unit | `coachSession !== null` false branch | No session; dispatch `PENCIL_TOGGLE` | No coach effect; no coach-related emit | P1 |
@@ -332,7 +336,8 @@ These tests follow the existing `iframe` / `loadIframe` / `wait` pattern in the 
 | `COACH_FOCUS_COACHED_CELL` `!coachedCells.has(index)` break | Existing |
 | `COACH_FOCUS_OFF` guards | Existing |
 | `COACH_NO_TECHNIQUE` emit | SS10 |
-| `PEN_ENTER` `coachSession !== null && !fromHint` true | Existing + SS11 |
+| `PEN_ENTER` `mutated && coachSession !== null && !fromHint` true | Existing + SS11 |
+| `PEN_ENTER` coach block false (no mutation — given/same-digit/won) | SS19 |
 | `PEN_ENTER` coach block false (no session) | SS12 |
 | `PEN_ENTER` coach block false (fromHint) | Existing |
 | `PEN_ENTER` `isCoached` false | Existing |

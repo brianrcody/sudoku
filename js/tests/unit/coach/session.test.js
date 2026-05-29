@@ -1201,6 +1201,31 @@ describe('SS12: PEN_ENTER no coach block when coachSession === null', () => {
   });
 });
 
+describe('SS19: PEN_ENTER no coach block when fill is a no-op (mutated === false)', () => {
+  it('SS19: no-op PEN_ENTER on a given cell during an active session leaves the session unchanged', () => {
+    const gs = stateWithPuzzle();
+    gs.dispatch({ type: 'SELECT_CELL', index: 0 });
+    gs.dispatch({ type: 'COACH_START', result: nakedSingleStep(0) });
+    expect(gs.getState().coachSession).to.not.equal(null);
+    expect(gs.getState().coachSession.recap).to.equal(null);
+
+    let coachSessionEmitted = false;
+    gs.on('changed', ({ changed }) => {
+      if (changed.has('coachSession')) coachSessionEmitted = true;
+    });
+
+    // Cell 1 is a given (nakedSinglePuzzle row 0). _applyPenEnter returns false
+    // and the coach block is gated on `mutated`, so the session must not react.
+    gs.dispatch({ type: 'SELECT_CELL', index: 1 });
+    gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
+
+    const session = gs.getState().coachSession;
+    expect(session).to.not.equal(null);   // session not ended
+    expect(session.recap).to.equal(null); // no recap fired
+    expect(coachSessionEmitted).to.equal(false); // no COACH_END / COACH_FILL_RECAP
+  });
+});
+
 describe('SS13: PENCIL_TOGGLE coach hook no-op when eliminationTargets === null', () => {
   it('SS13: PENCIL_TOGGLE coach hook no-op when eliminationTargets === null (placement session)', () => {
     const gs = stateWithPuzzle();
