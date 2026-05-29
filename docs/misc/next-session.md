@@ -8,49 +8,49 @@ addressed. Sign-off artifacts in `docs/misc/`:
 
 ---
 
-## TOP PRIORITY (next session): Reviewer pass on the post-V2-sign-off diff
+## TOP PRIORITY (next session): V2 UX milestone checkpoint
 
-A batch of changes landed *after* the V2 Reviewer pass (2026-05-22) and
-the V2 sign-off artifacts. They have **not** been through a Reviewer
-pass. Engage the Reviewer (`docs/agents/reviewer.md`) on this scope:
+The Reviewer pass on the post-V2-sign-off diff is **COMPLETE** (see below).
+The sole remaining V2 exit criterion is the **UX milestone checkpoint** —
+the user reviewing the app independently and approving UX. Once that lands,
+V2 closes and we move to V3 planning (`docs/misc/v3featureCandidates.md`).
 
-- **Keyboard navigation through given cells** (commit `15e0954` and
-  follow-ups): arrow/Tab/Home stop on givens; click/tap blocked; digit/
-  Clear/Hint disabled and number keys no-op when a given is selected.
+**Sign-off housekeeping (not blockers):**
+- `CodeCoverageV2.md` is stale (SS19 + the new `mutated` branch). Regenerate
+  as part of closing V2.
+- Non-blocking review Observation B: add an explicit `givens[1] !== 0`
+  precondition assertion to the SS19 test for robustness.
+
+### Post-V2-sign-off Reviewer pass — COMPLETE (2026-05-29)
+
+Engaged the Reviewer (`docs/agents/reviewer.md`) on the diff that landed
+after the V2 Reviewer pass and sign-off artifacts. Report:
+`docs/misc/review-post-v2-signoff-v1.md`. **Full sign-off** on all three:
+
+- **Keyboard navigation through given cells** (`15e0954`): arrow/Tab/Home
+  stop on givens; click/tap blocked; digit/Clear/Hint disabled and number
+  keys no-op when a given is selected.
 - **Win-banner color fix** in Coffee Shop theme (`f654edf`).
-- **Coach-mutation fix** (commit `be7e23d`, this session): the
-  `PEN_ENTER` coach block is now gated on `_applyPenEnter`'s `mutated`
-  return, so a no-op fill (given cell, same-digit, or won board) no
-  longer ends a session or shows a recap. Latent in the UI but a
-  contract-level reducer invariant. Surfaced + fixed three coach
-  integration tests that had encoded the bug (analyzer fixtures carry no
-  `solution` field, so `loadFixturePuzzle` had aliased `solution =
-  givens`, making "correct fill" steps digit-0 no-ops). Added SS19 as a
-  regression guard. Specs updated: `aspec-coach-ui.md` §4.1, `tspec-coach.md`.
+- **Coach-mutation fix** (`be7e23d`): the `PEN_ENTER` coach block is gated
+  on `_applyPenEnter`'s `mutated` return, so a no-op fill (given cell,
+  same-digit, or won board) no longer ends a session or shows a recap.
+  Surfaced + fixed three coach integration tests that had encoded the bug
+  (analyzer fixtures carry no `solution` field, so `loadFixturePuzzle` had
+  aliased `solution = givens`, making "correct fill" steps digit-0 no-ops).
+  Added SS19 as a regression guard. Specs: `aspec-coach-ui.md` §4.1,
+  `tspec-coach.md`.
 
-**Spec-fidelity context for the Reviewer:**
-- `aspec-coach-ui.md` §4.1 and `tspec-coach.md` were updated to match the
-  coach fix (see the 2026-05-28 amendment/notes in each).
-- `fspec-002-coach.md` was **deliberately left unchanged**: it describes
-  the recap in terms of "filling a coached cell," and a no-op places no
-  digit, so the behavioral spec is already consistent with the fix. This
-  was a judgment call, not an oversight — flag if you disagree.
-- `CodeCoverageV2.md` is now slightly stale (SS19 + the new `mutated`
-  branch). Regenerate as part of V2 sign-off, not as a review blocker.
-
-The full suite is green (647 passing, 0 failing, 10 pending). Reverting
-the one-line fix makes SS19 the sole failure — confirming the guard and
-that no other test still leans on the bug. Note: integration tests are
-timing-sensitive and occasionally flake under full-suite load (e.g.
-`PERF-NEW-medium`); re-run once before treating a single failure as real.
-
-Reviewer report goes in `docs/misc/` following the `review-*-v2.md`
-pattern (suggest `review-coach-mutation.md` or a combined post-sign-off
-review).
+Reviewer found **one blocker**, now resolved: `fspec-001-v1.md` was stale
+vs. the keyboard-nav change (§4.2 still said givens are "skipped"; §5.2 Home
+→ "first non-given cell"; §5.2 prose → "first available player cell"). The
+implementation and all three aspecs were correct — only the fspec lagged.
+Resolved same session: §4.2/§5.2/§14.2 updated to match. The Reviewer also
+evaluated and **agreed** with leaving `fspec-002-coach.md` unchanged (a no-op
+places no digit, so the "fills a coached cell" trigger is genuinely not met).
 
 ---
 
-## V2 sign-off — in progress (artifacts + UX checkpoint remain)
+## V2 sign-off — in progress (UX checkpoint remains)
 
 Systemic full-suite flakiness — the last blocker — is **RESOLVED**
 (2026-05-22, commit `f9e69db`, pushed). The "all tests pass" V2 exit
@@ -69,9 +69,11 @@ used), so no in-flight `PUZZLE_LOADED` remains to fire mid-test. Also
 raised PERF-NEW-medium budget 1000→1500ms for generation timing under
 full-suite contention.
 
-**Remaining for V2 sign-off:** sign-off artifacts (V2 equivalents of the
-V1 CodeCoverage/Performance/UXReview docs) and the UX milestone
-checkpoint with the user. The reviewer pass and suite are clean.
+**Remaining for V2 sign-off:** the UX milestone checkpoint with the user.
+Sign-off artifacts shipped (`CodeCoverageV2.md`, `PerformanceV2.md`, commit
+`8732af5`); `CodeCoverageV2.md` needs a regen for SS19 + the `mutated` branch.
+The post-V2-sign-off Reviewer pass is complete (see TOP PRIORITY above) and
+the suite is clean.
 
 ### V2 Reviewer pass — COMPLETE (2026-05-22)
 

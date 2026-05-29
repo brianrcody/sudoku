@@ -111,10 +111,11 @@ Exactly one player cell may be selected at a time. Selection is indicated visual
 **Triggers for selection:**
 - Tapping or clicking any player cell selects it.
 - Arrow key navigation (desktop) moves selection from the currently selected cell to the
-  adjacent player cell in the pressed direction. Navigation wraps: pressing right from
-  column 9 moves to column 1 of the same row; pressing down from row 9 moves to row 1 of
-  the same column. Given cells are skipped — arrow navigation lands on the nearest
-  player cell in the direction of travel.
+  adjacent cell in the pressed direction — exactly one step, regardless of whether the
+  destination is a given. Navigation wraps: pressing right from column 9 moves to column 1
+  of the same row; pressing down from row 9 moves to row 1 of the same column. Given cells
+  are selectable, but digit input, Clear, and Hint are disabled while a given cell is
+  selected.
 
 **No cell selected state:** On page load (new puzzle or resumed puzzle), no cell is
 selected. A cell becomes selected on first tap/click or first arrow key press.
@@ -174,7 +175,7 @@ On desktop, the following keyboard shortcuts are supported:
 | **C**                        | Invoke Coach (see fspec-002-coach)                 |
 | Enter or Space (on a button) | Activate the focused button                        |
 | Ctrl+Z (Win/Linux) or Cmd+Z (Mac) | Undo last move (see §9.7)               |
-| **Home**                     | Focus the first non-given cell                     |
+| **Home**                     | Focus index 0 (row 1, column 1), regardless of given status |
 
 **Rationale for P as the pen/pencil shortcut:** Single-letter, mnemonic (P for Pencil),
 unambiguous — no browser or OS conflict for an in-game context, and easy to reach
@@ -184,8 +185,7 @@ one-handed.
 mnemonic (C for Coach), no browser conflict in-game.
 
 If no cell is currently selected, digit keys (1–9), Backspace, and Delete have no effect.
-Arrow keys when no cell is selected select the first available player cell in reading
-order (top-left to bottom-right).
+Arrow keys when no cell is selected select index 0 (row 1, column 1), consistent with Home.
 
 ### 5.3 Input Routing
 
@@ -673,7 +673,8 @@ Reset, Check, and theme selector are all focusable and operable via keyboard.
 
 - The grid is a `grid` role with `gridcell` roles for individual cells.
 - Given cells are marked `aria-readonly="true"`.
-- The selected cell has `aria-selected="true"`.
+- The selected cell has `aria-selected="true"` — including given cells, which are
+  keyboard-selectable (§4.2) even though their contents cannot be edited.
 - Cells with conflict flags carry an appropriate `aria-label` or `aria-describedby`
   indicating the conflict (e.g., "Cell contains 5 — conflict with row").
 - Cells with incorrect flags (when correctness checking is active) carry an appropriate
