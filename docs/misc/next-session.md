@@ -8,7 +8,49 @@ addressed. Sign-off artifacts in `docs/misc/`:
 
 ---
 
-## TOP PRIORITY (next session): V2 sign-off
+## TOP PRIORITY (next session): Reviewer pass on the post-V2-sign-off diff
+
+A batch of changes landed *after* the V2 Reviewer pass (2026-05-22) and
+the V2 sign-off artifacts. They have **not** been through a Reviewer
+pass. Engage the Reviewer (`docs/agents/reviewer.md`) on this scope:
+
+- **Keyboard navigation through given cells** (commit `15e0954` and
+  follow-ups): arrow/Tab/Home stop on givens; click/tap blocked; digit/
+  Clear/Hint disabled and number keys no-op when a given is selected.
+- **Win-banner color fix** in Coffee Shop theme (`f654edf`).
+- **Coach-mutation fix** (commit `be7e23d`, this session): the
+  `PEN_ENTER` coach block is now gated on `_applyPenEnter`'s `mutated`
+  return, so a no-op fill (given cell, same-digit, or won board) no
+  longer ends a session or shows a recap. Latent in the UI but a
+  contract-level reducer invariant. Surfaced + fixed three coach
+  integration tests that had encoded the bug (analyzer fixtures carry no
+  `solution` field, so `loadFixturePuzzle` had aliased `solution =
+  givens`, making "correct fill" steps digit-0 no-ops). Added SS19 as a
+  regression guard. Specs updated: `aspec-coach-ui.md` §4.1, `tspec-coach.md`.
+
+**Spec-fidelity context for the Reviewer:**
+- `aspec-coach-ui.md` §4.1 and `tspec-coach.md` were updated to match the
+  coach fix (see the 2026-05-28 amendment/notes in each).
+- `fspec-002-coach.md` was **deliberately left unchanged**: it describes
+  the recap in terms of "filling a coached cell," and a no-op places no
+  digit, so the behavioral spec is already consistent with the fix. This
+  was a judgment call, not an oversight — flag if you disagree.
+- `CodeCoverageV2.md` is now slightly stale (SS19 + the new `mutated`
+  branch). Regenerate as part of V2 sign-off, not as a review blocker.
+
+The full suite is green (647 passing, 0 failing, 10 pending). Reverting
+the one-line fix makes SS19 the sole failure — confirming the guard and
+that no other test still leans on the bug. Note: integration tests are
+timing-sensitive and occasionally flake under full-suite load (e.g.
+`PERF-NEW-medium`); re-run once before treating a single failure as real.
+
+Reviewer report goes in `docs/misc/` following the `review-*-v2.md`
+pattern (suggest `review-coach-mutation.md` or a combined post-sign-off
+review).
+
+---
+
+## V2 sign-off — in progress (artifacts + UX checkpoint remain)
 
 Systemic full-suite flakiness — the last blocker — is **RESOLVED**
 (2026-05-22, commit `f9e69db`, pushed). The "all tests pass" V2 exit
