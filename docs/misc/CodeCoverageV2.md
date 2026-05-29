@@ -1,10 +1,10 @@
 # Code Coverage Report — v2
 
-**Date:** 2026-05-22
-**Test run:** 646 passing, 0 failing, 10 pending
+**Date:** 2026-05-29 (updated from 2026-05-22 draft; see §8 for change summary)
+**Test run:** 647 passing, 0 failing, 10 pending
 **Coverage tool:** c8 (V8 coverage via Playwright `page.coverage`)
 **Target (per CLAUDE.md / tspec §3.12):** 100% branch coverage
-**Status:** **Not met — 89.91% branch overall**
+**Status:** **Not met — 89.99% branch overall**
 
 ---
 
@@ -12,15 +12,15 @@
 
 | Metric | V2 Result | V1 Result | Delta |
 |---|---|---|---|
-| Statement | 94.37% | 96.58% | −2.21 |
-| Branch | **89.91%** | **90.84%** | −0.93 |
+| Statement | 94.39% | 96.58% | −2.19 |
+| Branch | **89.99%** | **90.84%** | −0.85 |
 | Function | 95.67% | 98.01% | −2.34 |
-| Line | 94.37% | 96.58% | −2.21 |
+| Line | 94.39% | 96.58% | −2.19 |
 
 The overall V2 numbers are slightly below V1 solely because three new coach
 files — `analyzer.js`, `coach.js`, `coachOverlay.js` — were not present in V1 and
 carry lower per-file coverage than the pre-existing baseline. Pre-existing files
-improved in aggregate: `state.js` gained 11 branch points, `coloring.js` gained 2.
+improved in aggregate: `state.js` gained 11+ branch points, `coloring.js` gained 2.
 
 ---
 
@@ -36,28 +36,28 @@ Sorted lowest-first within each group. Files at 100% branch are listed at the en
 | `js/coach/analyzer.js` | 86.05 | 837–838, 1024–1025, 1180–1224, and isolated branches across ~20 rank/technique code paths |
 | `js/ui/coach.js` | 85.88 | 268–269, 350–356, 363–367, 396–397 |
 
-### Pre-existing files — below 100% (V2 numbers, with V1 delta)
+### Pre-existing files — below 100% (V2 final numbers, with V1 delta)
 
 | File | Branch % | V1 Branch % | Delta | Uncovered lines |
 |---|---|---|---|---|
 | `js/ui/srLive.js` | 66.66 | 66.66 | — | 17, 27 |
-| `js/ui/numpad.js` | 70.00 | 79.48 | −9.48 | 127, 169, 171–172, 174–175, 261–263 |
+| `js/ui/numpad.js` | 72.72 | 79.48 | −6.76 | 127, 169, 171–172, 174–175, 273–275 |
 | `js/main.js` | 79.24 | 69.76 | +9.48 | 90–96, 115–116, 197–198 |
 | `js/ui/themes.js` | 83.33 | 81.81 | +1.52 | 42, 53 |
-| `js/game/state.js` | 84.98 | 73.84 | **+11.14** | 517–518, 528–529, 560–563, 574–577 |
+| `js/game/state.js` | 85.29 | 73.84 | **+11.45** | 506–507, 517–518, 549–552, 563–566 |
 | `js/ui/stats.js` | 85.71 | 85.71 | — | 71, 78 |
 | `js/ui/controls.js` | 85.71 | 85.00 | +0.71 | 51, 72–73 |
-| `js/solver/techniques/forcingChains.js` | 90.58 | 90.47 | +0.11 | 186–207, 236–257 |
-| `js/ui/grid.js` | 91.11 | 92.06 | −0.95 | 200, 242–244 |
-| `js/ui/keyboard.js` | 91.83 | 96.00 | −4.17 | 17, 33–34 |
+| `js/solver/techniques/forcingChains.js` | 90.90 | 90.47 | +0.43 | 186–207, 236–257 |
+| `js/ui/keyboard.js` | 90.19 | 96.00 | −5.81 | 17, 33–34, 64 |
+| `js/ui/grid.js` | 91.11 | 92.06 | −0.95 | 71, 202, 244–246 |
 | `js/ui/dialog.js` | 91.66 | 91.66 | — | 97 |
-| `js/providers/clientGenProvider.js` | 92.50 | 92.50 | — | 69–75, 81–85, 205–206 |
-| `js/solver/techniques/coloring.js` | 96.03 | 93.97 | **+2.06** | 175–176 |
-| `js/providers/cookieStatsStore.js` | 87.50 | 87.50 | — | 63–64 |
 | `js/persist/storage.js` | 90.00 | 90.00 | — | 45–46 |
 | `js/ui/winBanner.js` | 90.00 | 90.00 | — | 42 |
-| `js/providers/hintProvider.js` | 94.73 | 94.11 | +0.62 | 65–66 |
+| `js/providers/hintProvider.js` | 94.44 | 94.11 | +0.33 | 65–66 |
+| `js/providers/clientGenProvider.js` | 92.30 | 92.50 | −0.20 | 69–75, 81–85, 205–206 |
+| `js/providers/cookieStatsStore.js` | 87.50 | 87.50 | — | 63–64 |
 | `js/solver/uniqueness.js` | 97.05 | 97.05 | — | 45, 170 |
+| `js/solver/techniques/coloring.js` | 96.03 | 93.97 | **+2.06** | 175–176 |
 | `js/solver/techniques/xyWing.js` | 97.72 | 97.72 | — | 36 |
 | `js/util/events.js` | 96.42 | 96.29 | +0.13 | 51 |
 | `js/generator/rater.js` | 80.00 | 80.00 | — | 17 |
@@ -83,15 +83,15 @@ Sorted lowest-first within each group. Files at 100% branch are listed at the en
 | Area | Branch % | Notes |
 |---|---|---|
 | `js/util/` | 98.30 | `events.js:51` unchanged from v1 |
-| `js/solver/` (root) | 98.23 | `uniqueness.js:45,170` unchanged |
+| `js/solver/` (root) | 98.36 | `uniqueness.js:45,170` unchanged |
 | `js/worker/` | 100 | `protocol.js` only — unchanged |
-| `js/solver/techniques/` | 96.82 | Improved from v1 (96.32): coloring gains offset forcingChains |
+| `js/solver/techniques/` | 96.85 | Improved from v1 (96.32): coloring + forcingChains gains |
 | `js/persist/` | 94.11 | Unchanged — same gap files as v1 |
-| `js/providers/` | 92.50 | Unchanged — same gap files as v1 |
-| `js/game/` | 86.80 | **Improved from v1 (79.39)**: state.js +11 branch points |
+| `js/providers/` | 92.30 | Negligibly changed from v2 draft (92.50) — minor line shifts |
+| `js/game/` | 87.17 | **Improved from v1 (79.39)**: state.js +11 branch points |
 | `js/coach/` | 86.05 | **New in v2** — analyzer.js only |
 | `js/generator/` | 87.71 | Unchanged — worker-resident code caveat applies (see §4) |
-| `js/ui/` | 84.69 | Decreased from v1 (87.50): new coach/coachOverlay files |
+| `js/ui/` | 84.75 | Decreased from v1 (87.50): new coach/coachOverlay files |
 | `js/` (root: `main.js`) | 79.24 | Improved from v1 (69.76): boot-wiring caveat applies (see §4) |
 
 ---
@@ -113,10 +113,13 @@ are difficult to exercise from a normal test harness. Candidates for `/* c8 igno
 
 ### 4.3 `js/game/state.js` — improved but still the highest-priority real gap
 
-The most significant V2 coverage improvement: state.js gained 11 branch points (73.84%
-→ 84.98%) from the new undo, erase-all-pencil, and coach session reducer tests. Remaining
-gaps at lines 517–518, 528–529, 560–563, 574–577 are worth examining — the reducer's
-correctness argument depends on every arm being covered.
+The most significant V2 coverage improvement: state.js gained 11+ branch points (73.84%
+→ 85.29%) from the new undo, erase-all-pencil, and coach session reducer tests, plus the
+`mutated` branch in the `PEN_ENTER` coach block (added in the post-V2 coach-mutation fix,
+commit be7e23d). Remaining gaps at lines 506–507, 517–518, 549–552, 563–566 are worth
+examining — the reducer's correctness argument depends on every arm being covered.
+Note: these line numbers reflect the post-V2 coach-mutation fix; they differ from the
+2026-05-22 draft (517–518, 528–529, 560–563, 574–577) due to code changes in be7e23d.
 
 ### 4.4 The HTTP/file URL plumbing is still broken
 
@@ -141,6 +144,16 @@ fixtures for ranks 5OneElimCell, 6, 7, 9Col, 10Col, 15. Each fixture unlocks 1�
 analyzer test blocks covering ~5–10 branches each. No action required beyond
 continued fixture sourcing (tracked in `docs/misc/coach-fixture-tracker.md`).
 
+### 4.7 Post-V2 line number shifts
+
+Three post-V2-sign-off changes (keyboard-nav through givens `15e0954`, win-banner fix
+`f654edf`, coach-mutation fix `be7e23d`) modified `state.js`, `keyboard.js`, `grid.js`,
+and `coachOverlay.js`. Line numbers for uncovered branches in those files reflect the
+current code, not the 2026-05-22 snapshot.
+
+`keyboard.js` dropped from 91.83% to 90.19%: the keyboard-nav change added new code
+including line 64 (a guard branch not yet covered by the test suite).
+
 ---
 
 ## 5. Gap classification
@@ -152,9 +165,9 @@ Using the same framework as v1 (CodeCoverageV1.md §5):
 `storage.js:45–46`, `cookieStatsStore.js:63–64` (environment probes).
 
 **Category 2 — Reachable, write a test**
-`state.js:517–518,528–529,560–563,574–577` (reducer arms — highest priority);
-`numpad.js` regression (−9 points, new V2 numpad code); `keyboard.js:33–34`
-(new Home/shortcut guards); `coachOverlay.js` chain rendering path.
+`state.js:506–507,517–518,549–552,563–566` (reducer arms — highest priority);
+`numpad.js` regression (−7 points vs v1, new V2 numpad code); `keyboard.js:33–34,64`
+(Home/shortcut and keyboard-nav guards); `coachOverlay.js` chain rendering path.
 
 **Category 3 — Worker-only, route through direct-import test**
 `pipeline.js`, `fillGrid.js`, `rater.js` — unchanged from v1. Low ROI unless
@@ -190,15 +203,24 @@ npx c8 report --reporter=text --include='js/**' --exclude='js/tests/**'
 Coverage is not a blocker for V2 sign-off, per the established precedent from v1 and
 the pragmatism guidance from prior sessions: present data, let the user judge ROI.
 
-The headline number (89.91% branch) is marginally below v1 (90.84%). This is
+The headline number (89.99% branch) is marginally below v1 (90.84%). This is
 attributable entirely to the addition of the three new coach files. The pre-existing
 codebase improved (state.js +11 points, the largest single gain in either version).
 
 The most actionable gap is `state.js` — not because it grew, but because it is still
 the highest-stakes reducer code and the remaining arms are worth understanding.
-The `numpad.js` regression (−9 points) is a candidate for follow-up work in V3.
+The `numpad.js` regression (−7 points) is a candidate for follow-up work in V3.
 The analyzer and coachOverlay gaps resolve incrementally as fixture work continues.
 
 Recommend treating exit criterion 1 ("all tests pass — 100% branch coverage") as
 **satisfied at the same level as v1**: coverage is documented, gaps are classified, and
 no uncovered path represents a known correctness risk.
+
+---
+
+## 8. Update history
+
+| Date | Change |
+|---|---|
+| 2026-05-22 | Initial V2 draft (646 passing, 89.91% branch) |
+| 2026-05-29 | Regenerated after post-V2 changes (be7e23d, 15e0954, f654edf) and SS19 addition. 647 passing, 89.99% branch. `state.js` improved 84.98% → 85.29% (mutated branch now covered). Line numbers updated throughout. |
