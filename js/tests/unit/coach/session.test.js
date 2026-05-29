@@ -1216,6 +1216,7 @@ describe('SS19: PEN_ENTER no coach block when fill is a no-op (mutated === false
 
     // Cell 1 is a given (nakedSinglePuzzle row 0). _applyPenEnter returns false
     // and the coach block is gated on `mutated`, so the session must not react.
+    expect(gs.getState().puzzle.givens[1]).to.not.equal(0); // precondition: cell 1 is a given
     gs.dispatch({ type: 'SELECT_CELL', index: 1 });
     gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
 
