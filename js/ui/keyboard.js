@@ -2,7 +2,7 @@
  * @fileoverview Global keyboard shortcut handler.
  *
  * Handles: digits 1–9, Backspace/Delete, arrow keys, P (pen/pencil toggle),
- * Home (focus first non-given cell), Escape (close dialogs). All dispatched via GameState.
+ * Home (focus first cell), Escape (close dialogs). All dispatched via GameState.
  */
 
 import { close as closeDialog } from './dialog.js';

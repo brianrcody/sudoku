@@ -17,17 +17,20 @@ technique-ladder difficulty rater.
 | Death March | 0     | On completion only, no cell highlighting        |
 
 **Gameplay**
-- Pen and pencil mark modes
-- Arrow-key and tab navigation; system keyboard never invoked
+- Pen and pencil mark modes; `P` toggles between them
+- Arrow-key and tab navigation through all cells (including givens); `Home` jumps to the first cell; system keyboard never invoked
 - One-level undo (Undo button or Ctrl/Cmd+Z)
 - Erase all pencil marks in one tap
-- Coach mode — step-by-step technique guidance with visual overlay
+- Coach mode (`C`) — identifies the simplest applicable technique (Naked Single through
+  Forcing Chain / AIC), highlights relevant cells with an SVG arrow overlay, auto-reveals
+  candidate marks when needed, and shows a step-by-step explanation below the grid; a
+  recap confirms the technique after you apply the move
 - Puzzle state persisted across page loads (`localStorage`)
 - Per-difficulty statistics (games played, win rate, best/average time) persisted in cookies
 - New Puzzle confirmation when a game is in progress
 
-**Visual themes** — Minimalist, Ocean, Coffee, Terminal, Sunset. Theme persisted in a
-cookie; applied before first paint (no flash).
+**Visual themes** — Minimalist, Coffee Shop, School, Digital Terminal, Mountain. Theme
+persisted in a cookie; applied before first paint (no flash).
 
 **Accessibility** — keyboard navigable, ARIA roles, screen reader compatible.
 
