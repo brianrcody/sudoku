@@ -80,29 +80,28 @@ function xyChainDFS(board, candidates, bivalue, current, exitDigit, path, z) {
     const nextDigits = iterate(candidates[next]);
     const nextExit = nextDigits.find(d => d !== exitDigit);
 
-    // If the chain end also has z, we have a valid XY-Chain.
-    if (nextExit === z || candidates[next] & (1 << (z - 1))) {
-      // The chain end is `next`. Both `path[0]` and `next` carry z.
-      // Actually: path[0] has z (we chose z as the "pinned" digit at start),
-      // and next has z (either nextExit === z, or z is one of next's two digits).
-      if (candidates[next] & (1 << (z - 1))) {
-        const zBit = 1 << (z - 1);
-        const elims = [];
-        const start = path[0];
-        for (const peer of PEERS[start]) {
-          if (peer === next || path.includes(peer)) continue;
-          if (PEERS[next].includes(peer) && board[peer] === 0 && (candidates[peer] & zBit)) {
-            elims.push({ cellIndex: peer, digit: z });
-          }
+    // Valid termination requires the chain to FORCE z at the end: having
+    // entered `next` via exitDigit, its forced value (the other digit) must
+    // be z. Then either path[0] = z or next = z, so z can be eliminated from
+    // cells seeing both. Merely *containing* z is not sufficient — when the
+    // entry digit equals z the chain forces next to NOT be z.
+    if (nextExit === z) {
+      const zBit = 1 << (z - 1);
+      const elims = [];
+      const start = path[0];
+      for (const peer of PEERS[start]) {
+        if (peer === next || path.includes(peer)) continue;
+        if (PEERS[next].includes(peer) && board[peer] === 0 && (candidates[peer] & zBit)) {
+          elims.push({ cellIndex: peer, digit: z });
         }
-        if (elims.length > 0) {
-          return {
-            placements: [],
-            eliminations: elims,
-            technique: 'XY-Chain',
-            chain: { cells: [...path, next], digit: z },
-          };
-        }
+      }
+      if (elims.length > 0) {
+        return {
+          placements: [],
+          eliminations: elims,
+          technique: 'XY-Chain',
+          chain: { cells: [...path, next], digit: z },
+        };
       }
     }
 
@@ -156,8 +155,11 @@ export function forcingChain(state) {
  *   or a cell has exactly two candidates.
  * Weak link (odd steps): both cells can see each other and both have d.
  *
- * Termination condition (nice loop): the chain end can weakly link back to
- * the start in a way that produces an elimination.
+ * Termination (nice loops): a strong link closing back to the start forms a
+ * continuous loop — eliminate each weak link's digit from outside cells that
+ * see both of its endpoints. A weak link closing back to the start forms a
+ * discontinuous loop with two weak links at the start node — eliminate
+ * startDigit from the start cell.
  *
  * @param {Uint8Array} board
  * @param {Uint16Array} candidates
@@ -179,23 +181,32 @@ function aicSearch(board, candidates, startCell, startDigit, depth, path) {
       const cells = unit.filter(i => i !== last.cell && board[i] === 0 && (candidates[i] & (1 << (last.digit - 1))));
       if (cells.length !== 1) continue; // not a strong link (bilocation requires exactly 1 other)
       const next = cells[0];
-      if (path.some(p => p.cell === next && p.digit === last.digit)) continue;
 
-      // Check if this completes a nice loop with the start.
+      // Closing strong link back to the start forms a CONTINUOUS nice loop:
+      // the DFS alternates weak/strong arrivals starting weak, so the cycle's
+      // links alternate perfectly all the way around. In a continuous loop the
+      // two endpoints of every weak link carry opposite truth values, so the
+      // link digit can be eliminated from any outside cell seeing both ends.
+      // The closure must be tested before the revisit guard — the start node
+      // is always in the path.
       if (path.length >= 3 && next === startCell && last.digit === startDigit) {
-        // Closed AIC (type-1 nice loop): all other candidates in startCell can
-        // be eliminated because the loop proves startDigit must be true there.
         const elims = [];
-        const keepBit = 1 << (startDigit - 1);
-        const extra = candidates[startCell] & ~keepBit;
-        for (let dd = 1; dd <= 9; dd++) {
-          if (extra & (1 << (dd - 1))) {
-            elims.push({ cellIndex: startCell, digit: dd });
+        const inPath = new Set(path.map(p => p.cell));
+        for (let n = 1; n < path.length; n++) {
+          if (path[n].strong) continue; // weak-position links only
+          const a = path[n - 1].cell;
+          const b = path[n].cell;
+          const d = path[n].digit;
+          const dBit = 1 << (d - 1);
+          for (let i = 0; i < 81; i++) {
+            if (inPath.has(i) || board[i] !== 0 || !(candidates[i] & dBit)) continue;
+            if (PEERS[i].includes(a) && PEERS[i].includes(b) &&
+                !elims.some(e => e.cellIndex === i && e.digit === d)) {
+              elims.push({ cellIndex: i, digit: d });
+            }
           }
         }
         if (elims.length > 0) {
-          // Append the closing node before building chain data (bug fix: the closing
-          // node was previously omitted, leaving chain one step short).
           const closingNode = { cell: next, digit: last.digit, strong: true };
           return {
             placements: [],
@@ -205,6 +216,8 @@ function aicSearch(board, candidates, startCell, startDigit, depth, path) {
           };
         }
       }
+
+      if (path.some(p => p.cell === next && p.digit === last.digit)) continue;
 
       const result = aicSearch(board, candidates, startCell, startDigit, depth + 1, [
         ...path,
@@ -229,32 +242,25 @@ function aicSearch(board, candidates, startCell, startDigit, depth, path) {
     const bit = 1 << (last.digit - 1);
     for (const peer of PEERS[last.cell]) {
       if (board[peer] !== 0 || !(candidates[peer] & bit)) continue;
-      if (path.some(p => p.cell === peer && p.digit === last.digit)) continue;
 
-      // Check if this closes a loop: the peer sees the start cell with startDigit.
+      // Closing weak link back to the start makes a DISCONTINUOUS loop with
+      // two weak links at the start node. Assuming startDigit true at the
+      // start propagates around the loop (last is true-labeled here) and the
+      // closing weak link forces it false — a contradiction. Therefore
+      // startDigit is false at the start cell, and only there. The closure
+      // must be tested before the revisit guard — the start node is always
+      // in the path.
       if (peer === startCell && last.digit === startDigit && path.length >= 3) {
-        // Type-2 nice loop: cells seeing both discontinuity endpoints can have
-        // the digit eliminated.
-        const elims = [];
-        const elimBit = 1 << (last.digit - 1);
-        for (let i = 0; i < 81; i++) {
-          if (i === startCell || path.some(p => p.cell === i)) continue;
-          if (board[i] !== 0 || !(candidates[i] & elimBit)) continue;
-          if (PEERS[i].includes(startCell) && PEERS[i].includes(peer)) {
-            elims.push({ cellIndex: i, digit: last.digit });
-          }
-        }
-        if (elims.length > 0) {
-          // Append the closing (weak) node before building chain data.
-          const closingNode = { cell: peer, digit: last.digit, strong: false };
-          return {
-            placements: [],
-            eliminations: elims,
-            technique: 'Forcing Chain',
-            chain: { nodes: [...path, closingNode] },
-          };
-        }
+        const closingNode = { cell: peer, digit: last.digit, strong: false };
+        return {
+          placements: [],
+          eliminations: [{ cellIndex: startCell, digit: startDigit }],
+          technique: 'Forcing Chain',
+          chain: { nodes: [...path, closingNode] },
+        };
       }
+
+      if (path.some(p => p.cell === peer && p.digit === last.digit)) continue;
 
       const result = aicSearch(board, candidates, startCell, startDigit, depth + 1, [
         ...path,
