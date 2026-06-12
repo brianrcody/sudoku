@@ -1,0 +1,54 @@
+{
+  "n": 10000,
+  "seedBase": 424242,
+  "tiers": {
+    "hard": 441,
+    "easy": 4064,
+    "medium": 1879,
+    "death-march": 2062,
+    "kiddie": 108
+  },
+  "givenCounts": {
+    "n": 10000,
+    "mean": 24.38,
+    "p50": 24,
+    "p90": 26,
+    "p99": 27,
+    "max": 29
+  },
+  "unsolvedBase": 1446,
+  "solvedWithUrOnly": 49,
+  "solvedWithAlsOnly": 634,
+  "solvedWithBoth": 660,
+  "stillUnsolved": 786,
+  "combinedHardest16": 49,
+  "combinedHardest17": 611,
+  "urFiredInCombined": 86,
+  "timing": {
+    "stripMs": {
+      "n": 10000,
+      "mean": 13.266,
+      "p50": 12.694,
+      "p90": 15.311,
+      "p99": 18.733,
+      "max": 47.969
+    },
+    "baseRateMs": {
+      "n": 10000,
+      "mean": 2.931,
+      "p50": 0.153,
+      "p90": 9.895,
+      "p99": 31.415,
+      "max": 175.33
+    },
+    "extendedRateMs": {
+      "n": 1446,
+      "mean": 42.367,
+      "p50": 32.717,
+      "p90": 85.58,
+      "p99": 164.04,
+      "max": 364.795
+    }
+  },
+  "totalRuntimeS": 305.4
+}
