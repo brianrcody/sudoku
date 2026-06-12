@@ -6,6 +6,11 @@
 
 **Origin:** Conversation, 2026-05-11
 
+> **Superseded (2026-06-11).** This section is an early sketch. The investigation it called for has
+> been done; current decisions, level breakdown/naming, and the staged build plan live in
+> `docs/misc/v3-harder-tiers-brief.md` (with deeper analysis in
+> `docs/misc/v3-harder-tiers-exploration.md`). Read those, not this section, for the live plan.
+
 ### Background
 
 The V1/V2 technique ladder runs ranks 1–15, topping out at Forcing Chain (AIC). The five
