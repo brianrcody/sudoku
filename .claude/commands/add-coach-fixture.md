@@ -12,6 +12,9 @@ Pencil state is optional — if not provided, `pencil: null` is used.
 
 For XY-Chain, also ask: was this a **short** chain (≤ 6 cells) or a **long** chain (> 6)?
 The coach UI displays chain length in the supporting text; the user can check there.
+Note: sound XY-Chains are almost always long (the DFS is depth-biased) — `rank18Short`
+has never been captured, and landing one would close a documented coverage gap
+(`docs/misc/CodeCoverageV3.md` §2, analyzer short-arm).
 
 ---
 
@@ -32,13 +35,23 @@ Use this to derive rank, export name, and complexityAcknowledged:
 | Swordfish         | 9    | rank09        | false                  |
 | Jellyfish         | 10   | rank10        | false                  |
 | XY-Wing           | 11   | rank11        | false                  |
-| Simple Coloring   | 12   | rank12        | false                  |
-| Multi-Coloring    | 13   | rank13        | false                  |
-| XY-Chain (short)  | 14   | rank14Short   | false                  |
-| XY-Chain (long)   | 14   | rank14Long    | false                  |
-| Forcing Chain     | 15   | rank15        | true                   |
+| XYZ-Wing          | 12   | rank12        | false                  |
+| WXYZ-Wing         | 13   | rank13        | false                  |
+| Finned X-Wing     | 14   | rank14        | false                  |
+| Finned Swordfish  | 15   | rank15        | false                  |
+| Simple Coloring   | 16   | rank16        | false                  |
+| Multi-Coloring    | 17   | rank17        | false                  |
+| XY-Chain (short)  | 18   | rank18Short   | false                  |
+| XY-Chain (long)   | 18   | rank18Long    | false                  |
+| Forcing Chain     | 19   | rank19        | true                   |
+| Unique Rectangle  | 20   | rank20        | false                  |
+| ALS-XZ            | 21   | rank21        | true                   |
 
-Type is `'placement'` for ranks 1–2, `'elimination'` for ranks 3–15.
+If a fixture for the technique already exists and you are adding a variant rather than
+replacing it, append with a distinguishing suffix (existing examples: `rank16Rule4`,
+`rank18B`, `rank20Type2`, `rank20Type4`).
+
+Type is `'placement'` for ranks 1–2, `'elimination'` for ranks 3–21.
 
 ---
 
@@ -83,7 +96,7 @@ for this technique (e.g. `export const rank04 = { ... }`) and replace it entirel
 the new fixture. If no placeholder exists, append the new export at the end of the file
 before the final blank line.
 
-Fixture template **without** pencil (ranks 1–12 or any board that is rank-clean on raw candidates):
+Fixture template **without** pencil (ranks 1–15 or any board that is rank-clean on raw candidates):
 ```javascript
 // ===========================================================================
 // Rank N: Technique Name
@@ -103,7 +116,7 @@ export const EXPORT_NAME = {
 };
 ```
 
-Fixture template **with** pencil (rank 13+ or any board where pencil marks suppress lower techniques):
+Fixture template **with** pencil (rank 16+ or any board where pencil marks suppress lower techniques):
 ```javascript
 // ===========================================================================
 // Rank N: Technique Name

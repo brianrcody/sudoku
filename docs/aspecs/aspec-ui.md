@@ -1,11 +1,16 @@
 # Architectural Spec — UI Layer
-**Status:** Final
+**Status:** Final (amended 2026-06-12)
 **Date:** 2026-04-30
 **Author:** Architect
 **Loaded by:** Implementor (Phase 6), Reviewer, QE Test Writer, QE Test Runner.
 
 > **Also load:** `aspec-overview.md` — for the master directory tree, cross-cutting conventions, and the event flow diagram.
 > **Also load:** `aspec-game-state.md` — for the `GameState` shape, action list, and `createGameState` factory that all UI modules consume.
+
+> **Amendment 2026-06-12 (V3 harder tiers):** Seven tiers; the difficulty selector and
+> stats table render from `DIFFICULTY_ORDER`/`TIER_LABELS`. V3 adds `js/ui/busy.js`
+> (generation progress card + Cancel, SR-throttled announcements, focus handoff) and the
+> `coached-fin` grid role — specified in `aspec-harder-tiers.md` §5 and §8.
 > **Also load:** `aspec-themes.md` — `ui/themes.js` and the no-flash inline script are part of the UI layer; load that spec when implementing `ui/themes.js`.
 
 ---
@@ -107,7 +112,7 @@ Each `js/ui/*` module owns exactly one DOM subtree. Mount returns nothing; rende
 - Erase button dispatches `ERASE`.
 - Mode toggle dispatches `TOGGLE_MODE`; carries `aria-pressed` reflecting current mode.
 - Hint button state derived from `state.hintsRemaining`, `state.selected`, `state.puzzle.givens`, and `state.pen` per `aspec-hints.md` §2.
-- Check button has `display: none` via `.hidden-tier` class for Kiddie, Hard, and Death March (`CHECK_VISIBLE[difficulty] === false`).
+- Check button has `display: none` via `.hidden-tier` class for every tier with `CHECK_VISIBLE[difficulty] === false` (all but Easy and Medium).
 
 **Given-cell disable rule:** When `state.selected` is a given cell (`puzzle.givens[selected] !== 0`), digit buttons 1–9, the Clear button, and the Hint button are all disabled. The mode toggle, Undo, and Erase-all-pencil buttons are unaffected. This state is recomputed in `_update()` on every render triggered by a `'selected'` or `'puzzle'` change.
 
@@ -227,7 +232,7 @@ Every one of these events must produce a screen reader announcement via `srLive.
 | Incorrect flag applied (Kiddie real-time) | `"Incorrect"` |
 | Check results — cells incorrect | `"N cell(s) incorrect."` |
 | Check results — all correct | `"All filled cells are correct."` |
-| Hard/Death March on-fill result (incorrect) | Announcement matches the visible completion message |
+| Hard / silent-tier on-fill result (incorrect) | Announcement matches the visible completion message |
 | Hint used | `"Hint used: D placed in cell row N, column N. N hints remaining."` (or `"unlimited hints remaining."`) |
 | Hints exhausted (after last hint) | `"No hints remaining"` |
 | Mode toggled | `"Mode: Pen"` or `"Mode: Pencil"` |

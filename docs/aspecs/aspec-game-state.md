@@ -1,11 +1,17 @@
 # Architectural Spec — Game State, Bootstrap, and Config
-**Status:** Final
+**Status:** Final (amended 2026-06-12)
 **Date:** 2026-04-30
 **Author:** Architect
 **Loaded by:** Implementor (Phase 5–6), Reviewer, QE Test Writer, QE Test Runner.
 
 > **Also load:** `aspec-overview.md` — for the master directory tree, event flow diagram, and cross-cutting conventions.
 > **Also load:** `aspec-persistence.md` — for the persistence writer (§5), stats wiring code blocks (§3), and schemas referenced during bootstrap.
+
+> **Amendment 2026-06-12 (V3 harder tiers):** Config (§2) now covers seven tiers and adds
+> `TIER_LABELS`; correctness sections updated for the renamed/added tiers. V3 also adds
+> state fields `generatingDifficulty`/`genProgress`, the `GEN_PROGRESS` action, an
+> optional-difficulty `SET_GENERATING`, and a `migrateTierIds()` bootstrap step — these
+> are specified in `aspec-harder-tiers.md` §4–§5, not duplicated here.
 > **Also load:** `aspec-hints.md` — for the `SolverHintProvider` API consumed by the `HINT` action handler.
 
 ---
@@ -64,12 +70,13 @@ Strict order — no step may be reordered:
 
 Frozen constant tables. All are named exports; consumers import by name.
 
-- `DIFFICULTY_ORDER = ['kiddie', 'easy', 'medium', 'hard', 'death-march']`
-- `HINT_LIMITS = { kiddie: Infinity, easy: 3, medium: 1, hard: 0, 'death-march': 0 }`
-- `CHECK_VISIBLE = { kiddie: false, easy: true, medium: true, hard: false, 'death-march': false }`
-- `CORRECTNESS_MODE = { kiddie: 'realtime', easy: 'on-demand', medium: 'on-demand', hard: 'on-complete', 'death-march': 'on-complete-silent' }`
-- `GIVEN_COUNT_TARGET` — soft targets per tier: Kiddie 45–50, Easy 36–42, Medium 30–34, Hard 26–30, Death March 22–26. These are guidance for the removal loop; the rater decides the final tier.
-- `ATTEMPT_BUDGET = { kiddie: 20, easy: 30, medium: 60, hard: 150, 'death-march': 300 }` — max candidate puzzles attempted before returning the hardest-so-far (follow-up §2.2, flag 1).
+- `DIFFICULTY_ORDER = ['kiddie', 'easy', 'medium', 'hard', 'expert', 'diabolical', 'nightmare']`
+- `TIER_LABELS` — user-visible display name per tier ID (V3); the single source for UI tier labels.
+- `HINT_LIMITS = { kiddie: Infinity, easy: 3, medium: 1, hard: 0, expert: 0, diabolical: 0, nightmare: 0 }`
+- `CHECK_VISIBLE = { kiddie: false, easy: true, medium: true, hard: false, expert: false, diabolical: false, nightmare: false }`
+- `CORRECTNESS_MODE = { kiddie: 'realtime', easy: 'on-demand', medium: 'on-demand', hard: 'on-complete', expert: 'on-complete-silent', diabolical: 'on-complete-silent', nightmare: 'on-complete-silent' }`
+- `GIVEN_COUNT_TARGET` — soft targets per tier: Kiddie 45–50, Easy 36–42, Medium 30–34, Hard 26–30, Expert 22–26, Diabolical/Nightmare 20–27 (top-tier min is rarely reachable, so removal strips to minimality — matching the spike sampling that sized their budgets). Guidance for the removal loop; the rater decides the final tier.
+- `ATTEMPT_BUDGET = { kiddie: 20, easy: 30, medium: 60, hard: 150, expert: 300, diabolical: 2000, nightmare: 300 }` — max candidate puzzles attempted before the fallback path (follow-up §2.2, flag 1; V3 honest-fallback dialog for Diabolical/Nightmare, `aspec-harder-tiers.md` §5.4).
 - `WORKER_URL = './js/worker/generator.worker.js'`
 - `CHECK_HIGHLIGHT_MS = 3000`
 - `THEME_CLASSES = ['theme-minimalist', 'theme-coffee', 'theme-school', 'theme-terminal', 'theme-mountain']`
@@ -223,7 +230,7 @@ Behavioral obligations (from fspec §8.2 — see also `aspec-hints.md` for provi
 6. `hintsRemaining` decrements by 1.
 7. If `hintsRemaining` is now 0, the Hint button is permanently disabled for this puzzle (driven by UI reading `state.hintsRemaining`).
 8. Conflict detection re-evaluated (PEN_ENTER path step 5).
-9. Correctness evaluated if real-time (Kiddie) or if grid is now fully filled (Hard/Death March) (PEN_ENTER path step 6 / ON_COMPLETION_EVALUATE).
+9. Correctness evaluated if real-time (Kiddie) or if grid is now fully filled (Hard and the on-complete-silent tiers) (PEN_ENTER path step 6 / ON_COMPLETION_EVALUATE).
 10. Persistence written.
 11. Stats wiring (from `aspec-persistence.md` §3.2): immediately after hint digit written:
     ```js
@@ -256,7 +263,7 @@ Triggered automatically when all 81 cells are filled (after every pen entry). Be
 - If correct: win.
 - If incorrect: flag all wrong cells in `state.incorrect`; message "Not quite — some cells are incorrect. Keep going!"; `incorrectShownUntil = Date.now() + CHECK_HIGHLIGHT_MS`; fire timer for `CLEAR_INCORRECT`. No win.
 
-**Death March (on-complete-silent):** When all 81 cells filled:
+**Expert/Diabolical/Nightmare (on-complete-silent):** When all 81 cells filled:
 - Evaluate solution.
 - If correct: win.
 - If incorrect: **no cell highlighting**; message only: "Not quite. Keep going!". `state.incorrect` remains empty. No win.
@@ -333,4 +340,4 @@ checkOnComplete(state: GameState) → { correct: bool, wrong: Set<int> }
 
 - `checkRealtime` — for Kiddie. Evaluates cell at `cellIndex` against `state.puzzle.solution`. Updates `state.incorrect` immediately (adds or removes that cell).
 - `checkAll` — for Easy/Medium Check button. Evaluates all filled player cells against solution. Returns set of wrong cell indices.
-- `checkOnComplete` — for Hard/Death March. Evaluates the fully-filled board. Returns `{ correct, wrong }` where `wrong` is the set of incorrect cell indices (used by Hard; ignored by Death March which never highlights cells).
+- `checkOnComplete` — for Hard and the on-complete-silent tiers. Evaluates the fully-filled board. Returns `{ correct, wrong }` where `wrong` is the set of incorrect cell indices (used by Hard; ignored by the silent tiers, which never highlight cells).

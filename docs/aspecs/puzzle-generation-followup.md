@@ -1,5 +1,9 @@
 # Puzzle Generation Spike — Follow-up Assessment
 
+> **Historical record (pre-V1).** Decisions here are final but terminology is dated:
+> the "Death March" tier was renamed **Expert** in V3, which added **Diabolical** and
+> **Nightmare** above it — see `aspec-harder-tiers.md`.
+
 **Status:** Decision-support (not a full plan)
 **Date:** 2026-04-18
 **Author:** Architect

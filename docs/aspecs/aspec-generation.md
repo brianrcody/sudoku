@@ -1,11 +1,17 @@
 # Architectural Spec — Puzzle Generation
-**Status:** Final
+**Status:** Final (amended 2026-06-12)
 **Date:** 2026-04-30
 **Author:** Architect
 **Loaded by:** Implementor (Phase 3–4), QE Test Writer, QE Test Runner.
 
 > **Also load:** `aspec-overview.md` — for the master directory tree and cross-cutting conventions.
 > **Also load:** `aspec-solver.md` — `fillGrid`, `removeCells`, `rater`, and `pipeline` all import from `solver/uniqueness.js`, `solver/logical.js`, and `solver/candidates.js`.
+
+> **Amendment 2026-06-12 (V3 harder tiers):** Tier IDs are now
+> `kiddie/easy/medium/hard/expert/diabolical/nightmare`; the unsolved sentinel is
+> `'beyond-nightmare'` (§3, §9.3, §10.2, §10.4 updated in place). The provider resolve
+> shape changed to `{ puzzle, fallback }`, with `GEN_PROGRESS` forwarding and an
+> AbortController-based cancel path for the top tiers — see `aspec-harder-tiers.md` §5–§6.
 > **Also load:** `aspec-solver.md` (§6) — `tierForRank` is defined in `solver/logical.js` and imported by `rater.js` and `pipeline.js`.
 
 ---
@@ -62,7 +68,7 @@ rate(givens: Uint8Array(81)) →
   { tier: Tier, hardestRank: int, trace: Step[], solved: bool }
 ```
 
-Invokes `solveLogically(board)` with no technique limit. Maps `hardestRank` to `tier` via `tierForRank` (imported from `solver/logical.js`; see `aspec-solver.md` §6). If the solver did not fully solve the puzzle, `solved` is `false` and `tier` is `'beyond-death-march'`; the pipeline rejects and retries.
+Invokes `solveLogically(board)` with no technique limit. Maps `hardestRank` to `tier` via `tierForRank` (imported from `solver/logical.js`; see `aspec-solver.md` §6). If the solver did not fully solve the puzzle, `solved` is `false` and `tier` is `'beyond-nightmare'`; the pipeline rejects and retries.
 
 ---
 
@@ -153,7 +159,7 @@ Manages the single Worker instance and the pre-generation cache.
 
 ### 9.3 Difficulty Rating
 
-`rate(givens)`: run `solveLogically(board)` with no limit. Map `hardestRank` to tier via `tierForRank` (imported from `solver/logical.js`; see `aspec-solver.md` §6). If not solved, return `'beyond-death-march'` (pipeline rejects and retries).
+`rate(givens)`: run `solveLogically(board)` with no limit. Map `hardestRank` to tier via `tierForRank` (imported from `solver/logical.js`; see `aspec-solver.md` §6). If not solved, return `'beyond-nightmare'` (pipeline rejects and retries).
 
 ---
 
@@ -206,7 +212,7 @@ return toPuzzle(best.givens, best.solution, tierForRank(best.result.hardestRank)
 
 `toPuzzle` computes `id` using FNV-1a 32-bit hash of `givens || solution || seed`, encoded as hex.
 
-### 10.2 Death March Tuning
+### 10.2 Hardest-Tier Tuning
 
 After `buildMinimalPuzzle`, if `hardestRank` is clearly below the target tier's floor, skip running at technique limit — short-circuit to reject. Reduces wasted solver time on hopeless candidates.
 
@@ -216,7 +222,7 @@ After `buildMinimalPuzzle`, if `hardestRank` is clearly below the target tier's 
 
 ### 10.4 Fallback Reporting
 
-Worker posts `GEN_RESULT` with `fallback: true` and rank delta. Provider logs via `console.warn` only; no UI signal.
+Worker posts `GEN_RESULT` with `fallback: true` and rank delta. The provider resolves `{ puzzle, fallback }` (V3). For Diabolical/Nightmare, `main.js` opens the honest-fallback dialog instead of silently mislabeling (`aspec-harder-tiers.md` §5.4); for all other tiers the fallback remains silent (`console.warn` only).
 
 ---
 

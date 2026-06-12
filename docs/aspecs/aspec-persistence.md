@@ -1,11 +1,17 @@
 # Architectural Spec — Persistence, Statistics, and Storage
-**Status:** Final
+**Status:** Final (amended 2026-06-12)
 **Date:** 2026-04-30
 **Author:** Architect
 **Loaded by:** Implementor (Phase 5), Reviewer, QE Test Writer, QE Test Runner.
 
 > **Also load:** `aspec-overview.md` — for the master directory tree and cross-cutting conventions.
 > **Also load:** `aspec-game-state.md` — the persistence writer (§5 below) subscribes to `GameState` events; the stats wiring code blocks (§3 below) are referenced from action handlers in `aspec-game-state.md` §5.
+
+> **Amendment 2026-06-12 (V3 harder tiers):** The stats schema now has seven tier keys
+> (§10.1 updated in place). `js/persist/migrate.js` runs a one-time idempotent
+> `death-march` → `expert` migration at bootstrap (difficulty pref, saved game, stale
+> pre-gen cache eviction), and `cookieStatsStore.load()` folds legacy `death-march`
+> counters into `expert` — see `aspec-harder-tiers.md` §4 and §6.
 
 ---
 
@@ -211,7 +217,9 @@ A server-backed store (e.g., `serverStatsStore.js`) would implement the same `St
     "easy":         { "attempted": 0, "won": 0 },
     "medium":       { "attempted": 0, "won": 0 },
     "hard":         { "attempted": 0, "won": 0 },
-    "death-march":  { "attempted": 0, "won": 0 }
+    "expert":       { "attempted": 0, "won": 0 },
+    "diabolical":   { "attempted": 0, "won": 0 },
+    "nightmare":    { "attempted": 0, "won": 0 }
   }
 }
 ```

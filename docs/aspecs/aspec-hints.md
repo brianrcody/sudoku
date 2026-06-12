@@ -1,11 +1,14 @@
 # Architectural Spec — Hint Provider
-**Status:** Final
+**Status:** Final (amended 2026-06-12)
 **Date:** 2026-04-30
 **Author:** Architect
 **Loaded by:** Implementor (Phase 5), Reviewer, QE Test Writer, QE Test Runner.
 
 > **Also load:** `aspec-overview.md` — for the master directory tree and cross-cutting conventions.
 > **Also load:** `aspec-solver.md` (§6) — `hintProvider.js` drives `solveLogically` directly.
+
+> **Amendment 2026-06-12 (V3 harder tiers):** All tiers above Medium have zero hints;
+> §4 updated in place. No other change — the hint provider is tier-agnostic.
 > **Also load:** `aspec-game-state.md` (§5, HINT action) — for how the reducer invokes and applies the hint.
 
 ---
@@ -86,7 +89,7 @@ The remaining hint count is displayed on or immediately adjacent to the Hint but
 | Kiddie | "∞" always |
 | Easy | "3", "2", "1", or "0" (button disables immediately after last hint consumed) |
 | Medium | "1" or "0" (same note) |
-| Hard / Death March | "0" always (button always disabled) |
+| Hard / Expert / Diabolical / Nightmare | "0" always (button always disabled) |
 
 When the button is disabled due to exhaustion, the count display may be omitted or shown as "0" — Visual Designer's call.
 

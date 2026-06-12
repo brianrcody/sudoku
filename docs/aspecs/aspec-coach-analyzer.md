@@ -120,7 +120,7 @@ This is the canonical type definition. The UI spec will reference the section he
 CoachStep = {
   // --- Identity --------------------------------------------------------
   technique: string,                  // canonical technique name (see §3.1)
-  rank: int,                          // 1–15, matching aspec-techniques.md §2
+  rank: int,                          // 1–21, matching aspec-techniques.md §2 (V3 amendment)
   type: 'placement' | 'elimination',  // drives recap behavior (fspec §9)
 
   // --- Cell roles (drive .coached-* CSS classes per vspec §4) ---------
@@ -167,8 +167,10 @@ CoachStep = {
 
   // --- Complexity acknowledgment (XY-Chain, Forcing Chain) ------------
   complexity: {
-    acknowledged: bool,               // true for rank 14/15; rank 14 only when chain
-                                      // length ≥ COMPLEXITY_THRESHOLD (see §7.14).
+    acknowledged: bool,               // true for ranks 18/19 and 21; rank 18 only
+                                      // when chain length ≥ COMPLEXITY_THRESHOLD
+                                      // (see §7.14); rank 21 always (limited
+                                      // coaching — aspec-harder-tiers.md §8).
     note: string | null,              // additional sentence to render after
                                       // supportingText. null when acknowledged: false.
     endpoints: int[] | null,          // chain endpoint cell indices for
@@ -239,7 +241,7 @@ The renderer in the UI spec consumes `arrows` and emits `<line>`, `<path>`, or `
 
 `arrows` may be the empty array for techniques that communicate purely through cell-role classes (Hidden Pair, Hidden Triple, where the visual is "two/three cells highlighted with annotated candidates" and no directional pointer is meaningful).
 
-For the long-chain techniques (rank 14 and rank 15), `arrows` may contain only endpoint markers when the chain exceeds `COMPLEXITY_THRESHOLD`; see §7.14 and §7.15. The schema accommodates partial chains because every `Arrow` entry is independently valid — the renderer does not require chain closure.
+For the long-chain techniques (rank 18 and rank 19), `arrows` may contain only endpoint markers when the chain exceeds `COMPLEXITY_THRESHOLD`; see §7.14 and §7.15. The schema accommodates partial chains because every `Arrow` entry is independently valid — the renderer does not require chain closure.
 
 ### 3.3 Bitset Encoding for `autoReveal.cells[*].candidates`
 
@@ -346,11 +348,12 @@ return mapper(step, workingBoard, candidates);
 
 Every per-technique mapper receives:
 
-- `step` — the solver `Step` for the move. For ranks 1–11, only the four base fields are present. For ranks 12–15, `step` additionally carries chain data passed through by `logical.js` (see `aspec-solver.md` §6 for the full shape):
-  - Rank 12 (Simple Coloring): `step.colorChain` — `{ digit, groupA: int[], groupB: int[] }`
-  - Rank 13 (Multi-Coloring): `step.colorChains` — `Array<{ digit, groupA: int[], groupB: int[] }>`
-  - Rank 14 (XY-Chain): `step.chain` — `{ cells: int[], digit: int }`
-  - Rank 15 (Forcing Chain): `step.chain` — `{ nodes: Array<{ cell, digit, strong }> }`
+- `step` — the solver `Step` for the move. For ranks 1–11, only the four base fields are present. For ranks 12–21, `step` additionally carries pattern data passed through by `logical.js` (see `aspec-solver.md` §6 for the full shape):
+  - Rank 16 (Simple Coloring): `step.colorChain` — `{ digit, groupA: int[], groupB: int[] }`
+  - Rank 17 (Multi-Coloring): `step.colorChains` — `Array<{ digit, groupA: int[], groupB: int[] }>`
+  - Rank 18 (XY-Chain): `step.chain` — `{ cells: int[], digit: int }`
+  - Rank 19 (Forcing Chain): `step.chain` — `{ nodes: Array<{ cell, digit, strong }> }`
+  - Ranks 12–15, 20, 21 (V3): per-technique pattern extras (`pivot`/`wings`/`z`, `cells`, `baseCells`/`fins`/`digit`, `urType`/`urCells`/`urDigits`/`urExtra`, `alsA`/`alsB`/`x`) — see `aspec-harder-tiers.md` §3 and §8
 - `workingBoard` — the `Uint8Array(81)` constructed in §5.
 - `candidates` — `Uint16Array(81)` from `solveLogically`'s return value (the candidates as they were *just before* the technique fired, since the trace is recorded pre-application; see `aspec-solver.md` §7.2).
 
@@ -675,7 +678,7 @@ The analyzer detects which by inspecting `boxOf`, `rowOf`, `colOf` of the cause 
 
 ---
 
-### 7.12 Simple Coloring (rank 12, Elimination)
+### 7.12 Simple Coloring (rank 16, Elimination)
 
 **Mapper output:**
 
@@ -699,7 +702,7 @@ The analyzer detects which by inspecting `boxOf`, `rowOf`, `colOf` of the cause 
 
 ---
 
-### 7.13 Multi-Coloring (rank 13, Elimination)
+### 7.13 Multi-Coloring (rank 17, Elimination)
 
 **Mapper output:**
 
@@ -721,7 +724,7 @@ The analyzer detects which by inspecting `boxOf`, `rowOf`, `colOf` of the cause 
 
 ---
 
-### 7.14 XY-Chain (rank 14, Elimination)
+### 7.14 XY-Chain (rank 18, Elimination)
 
 Let `L` be the chain length (number of cells in the chain). Define:
 
@@ -761,7 +764,7 @@ The threshold is tunable; `6` is the analyzer's default. The UI spec must not fo
 
 ---
 
-### 7.15 Forcing Chain (AIC) (rank 15, Elimination)
+### 7.15 Forcing Chain (AIC) (rank 19, Elimination)
 
 **Mapper output:** Same shape as XY-Chain except:
 
@@ -1029,7 +1032,7 @@ The phase ordering is significant: the analyzer is implementable and testable in
 js/tests/unit/coach/analyzer.test.js
 ```
 
-Single Mocha test file covering all 15 techniques plus the no-technique cases. May be split into a directory of files per technique if it grows past ~600 lines; the directory split mirrors `js/tests/unit/techniques/`.
+Single Mocha test file covering all 21 techniques plus the no-technique cases. May be split into a directory of files per technique if it grows past ~600 lines; the directory split mirrors `js/tests/unit/techniques/`.
 
 ### 13.2 Fixture Boards
 
@@ -1059,7 +1062,7 @@ A fixture board must satisfy the property that **rank N is the lowest-ranked tec
 
 ### 13.3 Test Cases (Per Technique)
 
-For each rank 1–15:
+For each rank 1–21:
 
 1. **Happy path.** Load fixture, call `analyze`, assert every field of the returned `CoachStep` matches expectations.
 2. **Conflict blocks coaching.** Construct a fixture where the player has placed any digit in an empty cell and added that cell to `playerState.conflicts`. Assert the analyzer returns `{ type: 'no-technique', reason: 'error' }` immediately, without proceeding to the solver.
@@ -1071,13 +1074,13 @@ For each rank 1–15:
 ### 13.4 Test Cases (Cross-Cutting)
 
 1. **No-technique — complete.** Fixture: a fully-solved board. Assert `analyze` returns `{ type: 'no-technique', reason: 'complete' }`.
-2. **No-technique — inconsistent.** Fixture: a board with empty cells where no technique applies (use a board that requires beyond-rank-15 logic). Assert `{ type: 'no-technique', reason: 'inconsistent' }`.
+2. **No-technique — inconsistent.** Fixture: a board with empty cells where no technique applies (use a board that requires beyond-rank-21 logic). Assert `{ type: 'no-technique', reason: 'inconsistent' }`.
 2b. **No-technique — error (non-conflicting wrong digit).** Construct a minimal puzzle where `solution[i] = X` and `playerState.pen[i] = Y` (Y ≠ X, not in conflicts). Assert `{ type: 'no-technique', reason: 'error' }`.
 2c. **No-technique — error when conflicted.** Same setup as 2b but add cell `i` to `playerState.conflicts`. Assert the result is `{ type: 'no-technique', reason: 'error' }` — any non-empty conflicts set blocks coaching before the solver runs.
 3. **Purity.** Call `analyze` twice on the same input. Assert deep equality of the two return values, and assert neither input was mutated (compare `Uint8Array` byte-by-byte).
 4. **Schema completeness.** For every fixture, assert every field listed in §3 is present on the returned `CoachStep` (no `undefined`s).
-5. **Long-chain elision (rank 14).** Provide a fixture whose XY-Chain length exceeds `COMPLEXITY_THRESHOLD`. Assert `complexity.acknowledged === true`, `roles.cause.length === 2`, `arrows.length === 1`, and `arrows[0].style === 'dashed-arrow'`.
-6. **Forcing Chain always-acknowledged (rank 15).** Provide a short Forcing Chain fixture. Assert `complexity.acknowledged === true` regardless of length.
+5. **Long-chain elision (rank 18).** Provide a fixture whose XY-Chain length exceeds `COMPLEXITY_THRESHOLD`. Assert `complexity.acknowledged === true`, `roles.cause.length === 2`, `arrows.length === 1`, and `arrows[0].style === 'dashed-arrow'`.
+6. **Forcing Chain always-acknowledged (rank 19).** Provide a short Forcing Chain fixture. Assert `complexity.acknowledged === true` regardless of length.
 
 ### 13.5 Coverage Target
 

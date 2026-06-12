@@ -33,6 +33,13 @@ This aspec covers the full Sudoku v1 implementation. Authoritative inputs:
 
 All generation-architecture decisions from the follow-up §5 are fixed and not re-evaluated here: client-side Web Worker generation, up to 5 s Death March cold-start, attempt-budget fallback returns hardest candidate silently, background pre-generation persisted to `localStorage`, seedable PRNG, clean-room MIT implementation from SudokuWiki prose, `SolverHintProvider` in v1.
 
+> **V3 terminology note (2026-06-12):** "Death March" in the historical sections of this
+> file refers to the tier renamed **Expert** in V3, which also added **Diabolical** and
+> **Nightmare** above it (`aspec-harder-tiers.md`). The 5 s cold-start figure and the
+> silent attempt-budget fallback apply to Expert and below; the V3 tiers have their own
+> envelope (≤120 s approved; ~5–10 s expected), a progress/cancel card, and an honest
+> fallback dialog instead of silent mislabeling.
+
 ---
 
 ## 2. Technology Stack and Rationale
@@ -121,7 +128,7 @@ sudoku/
 │   ├── game/
 │   │   ├── state.js                  # In-memory game state reducer
 │   │   ├── conflicts.js              # Conflict detection on row/col/box
-│   │   ├── correctness.js            # Kiddie/Easy/Medium/Hard/Death March checking
+│   │   ├── correctness.js            # Per-tier checking (realtime/on-demand/on-complete[-silent])
 │   │   └── statistics.js             # Stats counters, persistence hook
 │   ├── persist/
 │   │   ├── cookies.js                # Read/write cookies (theme, stats)
@@ -397,7 +404,7 @@ All other fspec and vspec requirements map cleanly onto this plan.
 |---|---|---|
 | `aspec-overview.md` | This file — stack, directory tree, event flow, test infra, deployment, sequence | All agents |
 | `aspec-solver.md` | Grid utilities, events emitter, bitset, uniqueness solver, candidates, logical solver, key algorithms §7.1–7.2 | Implementor (Phase 1–2), QE |
-| `aspec-techniques.md` | Technique ladder, all 15 techniques, test policy, rank-to-tier | Implementor (Phase 2), QE |
+| `aspec-techniques.md` | Technique ladder, all 21 techniques (V3), test policy, rank-to-tier | Implementor (Phase 2), QE |
 | `aspec-generation.md` | Generator, rater, pipeline, Worker, puzzle providers, key algorithms §7.3–7.5, generation pipeline §9, worker protocol §10 | Implementor (Phase 3–4), QE |
 | `aspec-game-state.md` | main.js bootstrap, config, PRNG, game state shape, all actions, conflicts, correctness | Implementor (Phase 5–6), Reviewer, QE |
 | `aspec-hints.md` | Hint provider, hint flow, hint button state rules | Implementor (Phase 5), Reviewer, QE |

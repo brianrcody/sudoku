@@ -1,11 +1,18 @@
 # Architectural Spec — Technique Ladder
-**Status:** Final
+**Status:** Final (amended 2026-06-12)
 **Date:** 2026-04-30
 **Author:** Architect
 **Loaded by:** Implementor (Phase 2), QE Test Writer, QE Test Runner.
 
 > **Also load:** `aspec-overview.md` — for the master directory tree and cross-cutting conventions.
 > **Also load:** `aspec-solver.md` (§6) — `solveLogically` consumes `TECHNIQUES[]`; understand the driver before implementing individual techniques.
+
+> **Amendment 2026-06-12 (V3 harder tiers):** The ladder is now **21 ranks**. XYZ-Wing,
+> WXYZ-Wing, Finned X-Wing, and Finned Swordfish were inserted at ranks 12–15 (shifting
+> the coloring/chain techniques to 16–19); Unique Rectangle (rank 20) anchors the
+> **Diabolical** tier and ALS-XZ (rank 21) anchors **Nightmare**; `death-march` was
+> renamed `expert`. §2, §3, §4, and §6 below are updated in place. Normative definitions
+> and module contracts for the six new techniques live in `aspec-harder-tiers.md` §3.
 
 ---
 
@@ -56,10 +63,16 @@ TECHNIQUES = [
   swordfish,          // rank 9
   jellyfish,          // rank 10
   xyWing,             // rank 11
-  simpleColoring,     // rank 12
-  multiColoring,      // rank 13
-  xyChain,            // rank 14
-  forcingChain,       // rank 15
+  xyzWing,            // rank 12  (V3)
+  wxyzWing,           // rank 13  (V3)
+  finnedXWing,        // rank 14  (V3)
+  finnedSwordfish,    // rank 15  (V3)
+  simpleColoring,     // rank 16
+  multiColoring,      // rank 17
+  xyChain,            // rank 18
+  forcingChain,       // rank 19
+  uniqueRectangle,    // rank 20  (V3)
+  alsXz,              // rank 21  (V3)
 ];
 ```
 
@@ -75,7 +88,9 @@ Rank is 1-based (matching `hardestRank` in the solver trace). Array index is ran
 | Easy | 2 | + Hidden Single |
 | Medium | 3–7 | + Locked Candidates, Naked Pair, Hidden Pair, Naked Triple, Hidden Triple |
 | Hard | 8–11 | + X-Wing, Swordfish, Jellyfish, XY-Wing |
-| Death March | 12–15 | + Simple Coloring, Multi-Coloring, XY-Chain, Forcing Chain (AIC) |
+| Expert | 12–19 | + XYZ-Wing, WXYZ-Wing, Finned X-Wing, Finned Swordfish, Simple Coloring, Multi-Coloring, XY-Chain, Forcing Chain (AIC) |
+| Diabolical | 20 | + Unique Rectangle (Types 1/2/4) |
+| Nightmare | 21 | + ALS-XZ |
 
 Naked/hidden quads are not implemented in v1.
 
@@ -98,10 +113,16 @@ Each entry: rank, name, SudokuWiki reference, pattern.
 9. **Swordfish** — 3×3 fish. sudokuwiki.org/Sword_Fish_Strategy
 10. **Jellyfish** — 4×4 fish. sudokuwiki.org/Jelly_Fish_Strategy
 11. **XY-Wing** — Three bivalue cells (XY hinge, XZ and YZ wings); eliminate Z from cells seeing both wings. sudokuwiki.org/Y_Wing_Strategy
-12. **Simple Coloring** — Bilocation chain; two same-colored cells that see each other make the color false. sudokuwiki.org/Singles_Chains
-13. **Multi-Coloring** — Multiple colored chains interacting. sudokuwiki.org/Colors_Strategies
-14. **XY-Chain** — Chain of bivalue cells alternating on a shared digit. sudokuwiki.org/XY_Chains
-15. **Forcing Chain (AIC)** — Alternating Inference Chain combining strong/weak links. sudokuwiki.org/Alternating_Inference_Chains
+12. **XYZ-Wing** — Pivot with candidates {X,Y,Z} plus {X,Z} and {Y,Z} bivalue wings; eliminate Z from cells seeing all three. sudokuwiki.org/XYZ_Wing (V3 — full contract in `aspec-harder-tiers.md` §3.1)
+13. **WXYZ-Wing** — Bent almost-locked set: four cells, four digits across a box/line union; eliminate the non-restricted digit Z. sudokuwiki.org/WXYZ_Wing (V3 — §3.2)
+14. **Finned X-Wing** — X-Wing plus fin cells confined to one box; eliminations restricted to the cover-unit cells inside the fin box. sudokuwiki.org/Finned_X_Wing (V3 — §3.3)
+15. **Finned Swordfish** — 3×3 finned fish with the same fin-box restriction (sashimi allowed). sudokuwiki.org/Finned_Swordfish (V3 — §3.3)
+16. **Simple Coloring** — Bilocation chain; two same-colored cells that see each other make the color false. sudokuwiki.org/Singles_Chains
+17. **Multi-Coloring** — Multiple colored chains interacting. sudokuwiki.org/Colors_Strategies
+18. **XY-Chain** — Chain of bivalue cells alternating on a shared digit. sudokuwiki.org/XY_Chains
+19. **Forcing Chain (AIC)** — Alternating Inference Chain combining strong/weak links. sudokuwiki.org/Alternating_Inference_Chains
+20. **Unique Rectangle (Types 1/2/4)** — Deadly-pattern avoidance on a two-digit rectangle spanning exactly two boxes. sudokuwiki.org/Unique_Rectangles (V3 — §3.4)
+21. **ALS-XZ** — Two almost-locked sets sharing a restricted common digit X; eliminate Z from cells seeing all Z-cells of both sets. sudokuwiki.org/ALS_XZ (V3 — §3.5)
 
 Each technique module signature (repeated from §1 for module-level reference):
 ```js
@@ -129,12 +150,14 @@ export function tierForRank(rank) {
   if (rank <= 2)   return 'easy';
   if (rank <= 7)   return 'medium';
   if (rank <= 11)  return 'hard';
-  if (rank <= 15)  return 'death-march';
-  return 'beyond-death-march';
+  if (rank <= 19)  return 'expert';
+  if (rank <= 20)  return 'diabolical';
+  if (rank <= 21)  return 'nightmare';
+  return 'beyond-nightmare';
 }
 ```
 
-`rank === 0` means the solver made no progress (puzzle was already solved or is unsolvable by logical means). `'beyond-death-march'` is returned when the puzzle required techniques beyond rank 15; the generator pipeline rejects these and retries.
+`rank === 0` means the solver made no progress (puzzle was already solved or is unsolvable by logical means). `'beyond-nightmare'` is returned when the puzzle required techniques beyond rank 21; the generator pipeline rejects these and retries.
 
 ---
 

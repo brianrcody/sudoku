@@ -1,11 +1,16 @@
 # Architectural Spec — Solver Primitives and Logical Solver
-**Status:** Final
+**Status:** Final (amended 2026-06-12)
 **Date:** 2026-04-30
 **Author:** Architect
 **Loaded by:** Implementor (Phase 1–2), QE Test Writer, QE Test Runner. Also load when implementing the hint provider (Phase 5) since `hintProvider.js` drives `solveLogically` directly.
 
 > **Also load:** `aspec-overview.md` — for the master directory tree and cross-cutting conventions.
 > **Also load:** `aspec-techniques.md` — the TECHNIQUES[] array and technique contracts are consumed by `solveLogically`.
+
+> **Amendment 2026-06-12 (V3 harder tiers):** The ladder is 21 ranks and `tierForRank`
+> gained `expert`/`diabolical`/`nightmare` thresholds (§6 updated in place). `logical.js`
+> now whitelists the V3 techniques' pattern extras through to the `Step` via
+> `PASSTHROUGH_FIELDS` — see `aspec-harder-tiers.md` §3 and §7.
 
 ---
 
@@ -132,32 +137,33 @@ solveLogically(board: Uint8Array(81), { techniqueLimit?: int }) →
     digit: int | null,
     technique: string,
     eliminations: [{ cellIndex: int, digit: int }],
-    // optional chain fields — present only for ranks 12–15; logical.js passes them through verbatim:
-    colorChain?: {                          // ranks 12–13 (Simple/Multi-Coloring)
+    // optional pattern fields — present only for ranks 12–21; logical.js whitelists
+    // them through verbatim (PASSTHROUGH_FIELDS — see aspec-harder-tiers.md §7):
+    colorChain?: {                          // ranks 16–17 (Simple/Multi-Coloring)
       digit: int,
       groupA: int[],                        // cell indices, color-0 pole
       groupB: int[],                        // cell indices, color-1 pole
     },
-    colorChains?: Array<{                   // rank 13 (Multi-Coloring) — two chains
+    colorChains?: Array<{                   // rank 17 (Multi-Coloring) — two chains
       digit: int,
       groupA: int[],
       groupB: int[],
     }>,
-    chain?: {                               // rank 14 (XY-Chain)
+    chain?: {                               // rank 18 (XY-Chain)
       cells: int[],                         // ordered cell indices; endpoints are [0] and [last]
       digit: int,                           // shared elimination digit at both endpoints
-    } | {                                   // rank 15 (Forcing Chain / AIC)
+    } | {                                   // rank 19 (Forcing Chain / AIC)
       nodes: Array<{ cell: int, digit: int, strong: bool }>,
                                             // ordered; strong=true → strong link to next node
     },
   }
   ```
-  `eliminations` is always present (empty array for placement steps). Chain fields are absent for ranks 1–11; all consumers that use only the four base fields are unaffected.
+  `eliminations` is always present (empty array for placement steps). Pattern fields are absent for ranks 1–11; all consumers that use only the four base fields are unaffected. The V3 techniques (ranks 12–15, 20, 21) carry their own extras — `pivot`/`wings`/`z`, `cells`, `baseCells`/`fins`/`digit`, `urType`/`urCells`/`urDigits`/`urExtra`, `alsA`/`alsB`/`x` — shapes in `aspec-harder-tiers.md` §3.
 - `hardestRank` — the highest 1-based rank technique that was required to make progress (0 if no technique was needed).
 
 Exports:
 - `solveLogically` — see above.
-- `tierForRank(rank: int) → string | null` — maps a `hardestRank` value to a difficulty tier string. Returns `null` for rank 0 (trivial/no technique needed). Thresholds: ≤1 → `'kiddie'`, ≤2 → `'easy'`, ≤7 → `'medium'`, ≤11 → `'hard'`, ≤15 → `'death-march'`, >15 → `'beyond-death-march'`.
+- `tierForRank(rank: int) → string | null` — maps a `hardestRank` value to a difficulty tier string. Returns `null` for rank 0 (trivial/no technique needed). Thresholds: ≤1 → `'kiddie'`, ≤2 → `'easy'`, ≤7 → `'medium'`, ≤11 → `'hard'`, ≤19 → `'expert'`, ≤20 → `'diabolical'`, ≤21 → `'nightmare'`, >21 → `'beyond-nightmare'`.
 
 ---
 
