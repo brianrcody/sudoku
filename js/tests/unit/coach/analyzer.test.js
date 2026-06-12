@@ -3,7 +3,7 @@
  *
  * Test cases per §13.3 and §13.4 of aspec-coach-analyzer.md.
  *
- * Per-technique (for each rank 1–15):
+ * Per-technique (for each rank 1–21):
  *   1. Happy path — call analyze, assert key CoachStep fields.
  *   2. Working-board rule — conflict-flagged pen entry is ignored.
  *   3. Pencil-mark independence — autoReveal.cells come from initialCandidates.
@@ -21,8 +21,9 @@ import { analyze } from '/js/coach/analyzer.js';
 import { initialCandidates } from '/js/solver/candidates.js';
 import {
   rank01, rank02, rank03, rank04, rank04OneElimDigit, rank05, rank06, rank06OneElimDigit, rank07,
-  rank08, rank08Transpose, rank09, rank10, rank11, rank12, rank12Rule4, rank13,
-  rank14Short, rank14Long, rank15,
+  rank08, rank08Transpose, rank09, rank10, rank11, rank12, rank13, rank14, rank15,
+  rank16, rank16Rule4, rank17, rank18B, rank18Long, rank19, rank20, rank20Type2,
+  rank20Type4, rank21,
   noTechniqueComplete, noTechniqueInconsistent,
   // rank05OneElimCell,  // pending — see docs/misc/coach-fixture-tracker.md
 } from '/js/tests/fixtures/puzzles/coach/index.js';
@@ -83,6 +84,7 @@ function assertSchemaComplete(step) {
   expect(step.roles.unitMember).to.not.equal(undefined);
   expect(step.roles.scA).to.not.equal(undefined);
   expect(step.roles.scB).to.not.equal(undefined);
+  expect(step.roles.fin).to.not.equal(undefined, 'roles.fin must be int[] (sealed-schema amendment)');
 
   // autoReveal sub-object
   expect(step.autoReveal).to.not.equal(undefined);
@@ -389,8 +391,8 @@ describe('coach/analyzer — rank 11: XY-Wing', function () {
 });
 
 // AN14: Rule 2 — elim targets are within the chain (same-color cells see each other).
-describe('coach/analyzer — rank 12: Simple Coloring (Rule 2)', function () {
-  techniqueTests('Simple Coloring', 12, 'elimination', rank12, function (step) {
+describe('coach/analyzer — rank 16: Simple Coloring (Rule 2)', function () {
+  techniqueTests('Simple Coloring', 16, 'elimination', rank16, function (step) {
     expect(step.digits).to.have.length(1);
     expect(step.roles.cause).to.deep.equal([]);
     expect(step.roles.scA.length).to.be.above(0);
@@ -405,8 +407,8 @@ describe('coach/analyzer — rank 12: Simple Coloring (Rule 2)', function () {
   });
 });
 
-describe('coach/analyzer — rank 13: Multi-Coloring', function () {
-  techniqueTests('Multi-Coloring', 13, 'elimination', rank13, function (step) {
+describe('coach/analyzer — rank 17: Multi-Coloring', function () {
+  techniqueTests('Multi-Coloring', 17, 'elimination', rank17, function (step) {
     expect(step.digits).to.have.length(1);
     expect(step.roles.cause).to.deep.equal([]);
     expect(step.roles.scA.length).to.be.above(0);
@@ -417,8 +419,8 @@ describe('coach/analyzer — rank 13: Multi-Coloring', function () {
   });
 });
 
-describe('coach/analyzer — rank 14: XY-Chain (short)', function () {
-  techniqueTests('XY-Chain', 14, 'elimination', rank14Short, function (step) {
+describe('coach/analyzer — rank 18: XY-Chain (B)', function () {
+  techniqueTests('XY-Chain', 18, 'elimination', rank18B, function (step) {
     expect(step.digits).to.have.length(1);
     expect(step.roles.elimTarget.length).to.be.above(0);
     expect(step.unit).to.equal(null);
@@ -450,8 +452,8 @@ describe('coach/analyzer — rank 8: X-Wing (column-locked)', function () {
 });
 
 // AN15: Rule 4 — at least one elim target lies outside the chain (sees both colors).
-describe('coach/analyzer — rank 12: Simple Coloring (Rule 4)', function () {
-  techniqueTests('Simple Coloring', 12, 'elimination', rank12Rule4, function (step) {
+describe('coach/analyzer — rank 16: Simple Coloring (Rule 4)', function () {
+  techniqueTests('Simple Coloring', 16, 'elimination', rank16Rule4, function (step) {
     expect(step.digits).to.have.length(1);
     expect(step.roles.cause).to.deep.equal([]);
     expect(step.roles.scA.length).to.be.above(0);
@@ -467,8 +469,8 @@ describe('coach/analyzer — rank 12: Simple Coloring (Rule 4)', function () {
 });
 
 // AN18: long-chain branch — acknowledged and elision when L > COMPLEXITY_THRESHOLD.
-describe('coach/analyzer — rank 14: XY-Chain (long)', function () {
-  techniqueTests('XY-Chain', 14, 'elimination', rank14Long, function (step) {
+describe('coach/analyzer — rank 18: XY-Chain (long)', function () {
+  techniqueTests('XY-Chain', 18, 'elimination', rank18Long, function (step) {
     expect(step.digits).to.have.length(1);
     expect(step.roles.elimTarget.length).to.be.above(0);
     expect(step.unit).to.equal(null);
@@ -484,9 +486,8 @@ describe('coach/analyzer — rank 14: XY-Chain (long)', function () {
   });
 });
 
-/* rank15 fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
-describe('coach/analyzer — rank 15: Forcing Chain', function () {
-  techniqueTests('Forcing Chain', 15, 'elimination', rank15, function (step) {
+describe('coach/analyzer — rank 19: Forcing Chain', function () {
+  techniqueTests('Forcing Chain', 19, 'elimination', rank19, function (step) {
     expect(step.digits).to.have.length(1);
     expect(step.roles.elimTarget.length).to.be.above(0);
     expect(step.unit).to.equal(null);
@@ -496,7 +497,120 @@ describe('coach/analyzer — rank 15: Forcing Chain', function () {
     expect(step.complexity.endpoints).to.not.equal(null);
   });
 });
-*/
+
+describe('coach/analyzer — rank 12: XYZ-Wing', function () {
+  techniqueTests('XYZ-Wing', 12, 'elimination', rank12, function (step) {
+    expect(step.digits).to.have.length(1);
+    expect(step.roles.cause).to.have.length(3);
+    expect(step.roles.elimTarget.length).to.be.above(0);
+    expect(step.roles.fin).to.deep.equal([]);
+    expect(step.unit).to.equal(null);
+    const edges  = step.arrows.filter(a => a.style === 'chain-edge');
+    const dashed = step.arrows.filter(a => a.style === 'dashed-arrow');
+    expect(edges).to.have.length(2);
+    // Both chain edges originate at the pivot (cause[0]).
+    expect(edges.every(a => a.from === step.roles.cause[0])).to.equal(true);
+    expect(dashed.length).to.be.above(0);
+  });
+});
+
+describe('coach/analyzer — rank 13: WXYZ-Wing', function () {
+  techniqueTests('WXYZ-Wing', 13, 'elimination', rank13, function (step) {
+    expect(step.digits).to.have.length(1);
+    expect(step.roles.cause).to.have.length(4);
+    expect(step.roles.elimTarget.length).to.be.above(0);
+    expect(step.roles.fin).to.deep.equal([]);
+    expect(step.unit).to.equal(null);
+    const edges = step.arrows.filter(a => a.style === 'chain-edge');
+    expect(edges).to.have.length(3);
+  });
+});
+
+describe('coach/analyzer — rank 14: Finned X-Wing', function () {
+  techniqueTests('Finned X-Wing', 14, 'elimination', rank14, function (step) {
+    expect(step.digits).to.have.length(1);
+    expect(step.roles.cause.length).to.be.above(2);
+    expect(step.roles.fin.length).to.be.above(0);
+    expect(step.roles.elimTarget.length).to.be.above(0);
+    expect(step.unit).to.equal(null);
+    const connector = step.arrows.filter(a => a.style === 'connector-chain');
+    const dashed    = step.arrows.filter(a => a.style === 'dashed-arrow');
+    expect(connector).to.have.length(1);
+    expect(connector[0].points).to.have.length(4);
+    // Dashed pointers run from the fin to each elimination target.
+    expect(dashed).to.have.length(step.roles.elimTarget.length);
+    expect(dashed.every(a => a.from === step.roles.fin[0])).to.equal(true);
+    // Fin cells participate in autoReveal.
+    const revealed = new Set(step.autoReveal.cells.map(c => c.cellIndex));
+    expect(step.roles.fin.every(c => revealed.has(c))).to.equal(true);
+  });
+});
+
+describe('coach/analyzer — rank 15: Finned Swordfish', function () {
+  techniqueTests('Finned Swordfish', 15, 'elimination', rank15, function (step) {
+    expect(step.digits).to.have.length(1);
+    expect(step.roles.fin.length).to.be.above(0);
+    expect(step.roles.elimTarget.length).to.be.above(0);
+    expect(step.unit).to.equal(null);
+    const connector = step.arrows.filter(a => a.style === 'connector-chain');
+    expect(connector).to.have.length(1);
+    expect(connector[0].points).to.have.length(4);
+  });
+});
+
+describe('coach/analyzer — rank 20: Unique Rectangle', function () {
+  techniqueTests('Unique Rectangle', 20, 'elimination', rank20, function (step) {
+    expect(step.digits).to.have.length(2);
+    expect(step.roles.cause).to.have.length(4);
+    expect(step.roles.elimTarget.length).to.be.above(0);
+    expect(step.roles.fin).to.deep.equal([]);
+    expect(step.unit).to.equal(null);
+    const connector = step.arrows.filter(a => a.style === 'connector-chain');
+    expect(connector).to.have.length(1);
+    expect(connector[0].points).to.have.length(4);
+    // The rectangle outline connects exactly the four UR cells.
+    expect([...connector[0].points].sort((a, b) => a - b))
+      .to.deep.equal([...step.roles.cause].sort((a, b) => a - b));
+    expect(step.complexity.acknowledged).to.equal(false);
+  });
+});
+
+describe('coach/analyzer — rank 20: Unique Rectangle (Type 2)', function () {
+  techniqueTests('Unique Rectangle', 20, 'elimination', rank20Type2, function (step) {
+    expect(step.digits).to.have.length(2);
+    expect(step.roles.cause).to.have.length(4);
+    // Type 2 eliminations are outside the rectangle → dashed pointers exist.
+    const dashed = step.arrows.filter(a => a.style === 'dashed-arrow');
+    expect(dashed.length).to.be.above(0);
+    expect(step.supportingText).to.include('one of these two corners must be');
+  });
+});
+
+describe('coach/analyzer — rank 20: Unique Rectangle (Type 4)', function () {
+  techniqueTests('Unique Rectangle', 20, 'elimination', rank20Type4, function (step) {
+    expect(step.digits).to.have.length(2);
+    expect(step.roles.cause).to.have.length(4);
+    // Type 4 eliminations are inside the rectangle (the roof pair).
+    expect(step.roles.elimTarget.every(c => step.roles.cause.includes(c))).to.equal(true);
+    expect(step.supportingText).to.include('locked to them in this unit');
+  });
+});
+
+describe('coach/analyzer — rank 21: ALS-XZ (limited coaching)', function () {
+  techniqueTests('ALS-XZ', 21, 'elimination', rank21, function (step) {
+    expect(step.digits).to.have.length(1);
+    expect(step.roles.cause).to.deep.equal([]);
+    expect(step.roles.scA.length).to.be.above(0);
+    expect(step.roles.scB.length).to.be.above(0);
+    expect(step.roles.elimTarget.length).to.be.above(0);
+    expect(step.roles.fin).to.deep.equal([]);
+    expect(step.unit).to.equal(null);
+    // Limited coaching: no arrows, acknowledged with the trace-it-yourself note.
+    expect(step.arrows).to.deep.equal([]);
+    expect(step.complexity.acknowledged).to.equal(true);
+    expect(step.complexity.note).to.be.a('string').with.length.above(0);
+  });
+});
 
 // ===========================================================================
 // Cross-cutting tests (§13.4)
@@ -580,33 +694,28 @@ describe('coach/analyzer — cross-cutting', function () {
     assertSchemaComplete(step);
   });
 
-  // 13.4.5 Long-chain elision (rank 14): use rank14Long fixture
+  // 13.4.5 Long-chain elision (rank 18): rank18Long is mined to exceed the
+  // COMPLEXITY_THRESHOLD, so the elision branch must fire.
   it('long-chain elision: XY-Chain > COMPLEXITY_THRESHOLD → cause=endpoints, arrows=dashed', function () {
-    // rank14Long is the same board as rank14Short. If the DFS finds a short chain
-    // the elision branch doesn't fire; that's acceptable for the fixture.
-    // The test verifies that IF the chain is long, the elision contract is upheld.
-    // We also test the elision invariants synthetically here.
-    const step = analyze(puzzleOf(rank14Long), emptyPlayerState());
-    if (step.type === 'no-technique' || step.technique !== 'XY-Chain') return;
+    const step = analyze(puzzleOf(rank18Long), playerStateOf(rank18Long));
+    expect(step.technique).to.equal('XY-Chain');
 
-    // Whether the chain is short or long, complexity.endpoints must always be set.
     expect(step.complexity.endpoints).to.not.equal(null);
     expect(step.complexity.endpoints).to.have.length(2);
 
-    if (step.complexity.acknowledged) {
-      // Long-chain mode: cause contains only the 2 endpoints.
-      expect(step.roles.cause).to.have.length(2);
-      // arrows: single dashed-arrow endpoint-to-endpoint.
-      expect(step.arrows).to.have.length(1);
-      expect(step.arrows[0].style).to.equal('dashed-arrow');
-      expect(step.complexity.note).to.be.a('string');
-    }
+    expect(step.complexity.acknowledged).to.equal(true);
+    // Long-chain mode: cause contains only the 2 endpoints.
+    expect(step.roles.cause).to.have.length(2);
+    // arrows: single dashed-arrow endpoint-to-endpoint.
+    expect(step.arrows).to.have.length(1);
+    expect(step.arrows[0].style).to.equal('dashed-arrow');
+    expect(step.complexity.note).to.be.a('string');
   });
 
   // 13.4.6 Forcing Chain always-acknowledged
   it('Forcing Chain always-acknowledged regardless of chain length', function () {
-    const step = analyze(puzzleOf(rank15), emptyPlayerState());
-    if (step.type === 'no-technique' || step.technique !== 'Forcing Chain') return;
+    const step = analyze(puzzleOf(rank19), playerStateOf(rank19));
+    expect(step.technique).to.equal('Forcing Chain');
     expect(step.complexity.acknowledged).to.equal(true);
     expect(step.complexity.note).to.be.a('string');
     expect(step.complexity.note.length).to.be.above(0);

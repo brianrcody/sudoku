@@ -30,10 +30,16 @@ const RANK_BY_NAME = {
   'Swordfish':        9,
   'Jellyfish':        10,
   'XY-Wing':          11,
-  'Simple Coloring':  12,
-  'Multi-Coloring':   13,
-  'XY-Chain':         14,
-  'Forcing Chain':    15,
+  'XYZ-Wing':         12,
+  'WXYZ-Wing':        13,
+  'Finned X-Wing':    14,
+  'Finned Swordfish': 15,
+  'Simple Coloring':  16,
+  'Multi-Coloring':   17,
+  'XY-Chain':         18,
+  'Forcing Chain':    19,
+  'Unique Rectangle': 20,
+  'ALS-XZ':           21,
 };
 
 /**
@@ -104,6 +110,9 @@ export function analyze(puzzle, playerState) {
   const techniqueName = canonicalise(step.technique);
   const mapper = MAPPERS[techniqueName];
   const partial = mapper(step, workingBoard, candidates);
+  // The fin role exists on every CoachStep (sealed-schema amendment); only the
+  // finned-fish mappers populate it.
+  if (partial.roles.fin === undefined) partial.roles.fin = [];
   const rank = RANK_BY_NAME[techniqueName];
   return {
     ...partial,
@@ -173,6 +182,7 @@ function buildAutoReveal(roles, candidates, rank) {
   for (const c of roles.unitMember) all.add(c);
   for (const c of roles.scA)        all.add(c);
   for (const c of roles.scB)        all.add(c);
+  for (const c of roles.fin)        all.add(c);
   const sorted = [...all].sort((a, b) => a - b);
   return {
     required,
@@ -1223,4 +1233,195 @@ const MAPPERS = {
       },
     };
   },
+
+  // -------------------------------------------------------------------------
+  // Rank 12: XYZ-Wing
+  // -------------------------------------------------------------------------
+  'XYZ-Wing'(step) {
+    const elimTargets = [...new Set(step.eliminations.map(e => e.cellIndex))].sort((a, b) => a - b);
+    const [w1, w2] = [...step.wings].sort((a, b) => a - b);
+
+    const arrows = [
+      { from: step.pivot, to: w1, style: 'chain-edge', strong: true },
+      { from: step.pivot, to: w2, style: 'chain-edge', strong: true },
+    ];
+    for (const e of elimTargets) {
+      arrows.push({ from: w1, to: e, style: 'dashed-arrow' });
+      arrows.push({ from: w2, to: e, style: 'dashed-arrow' });
+    }
+
+    return {
+      roles: {
+        target: null,
+        cause: [step.pivot, w1, w2],
+        elimTarget: elimTargets,
+        unitMember: [],
+        scA: [],
+        scB: [],
+      },
+      digits: [step.z],
+      unit: null,
+      arrows,
+      supportingText: `One of these three cells must contain *${step.z}* — any cell that sees all three can't contain *${step.z}*.`,
+      complexity: { acknowledged: false, note: null, endpoints: null },
+    };
+  },
+
+  // -------------------------------------------------------------------------
+  // Rank 13: WXYZ-Wing
+  // -------------------------------------------------------------------------
+  'WXYZ-Wing'(step) {
+    const elimTargets = [...new Set(step.eliminations.map(e => e.cellIndex))].sort((a, b) => a - b);
+    const cells = [...step.cells].sort((a, b) => a - b);
+
+    const arrows = cells.slice(1).map(c => ({
+      from: cells[0], to: c, style: 'chain-edge', strong: true,
+    }));
+    for (const e of elimTargets) {
+      arrows.push({ from: cells[0], to: e, style: 'dashed-arrow' });
+    }
+
+    return {
+      roles: {
+        target: null,
+        cause: cells,
+        elimTarget: elimTargets,
+        unitMember: [],
+        scA: [],
+        scB: [],
+      },
+      digits: [step.z],
+      unit: null,
+      arrows,
+      supportingText: `One of these four cells must contain *${step.z}* — any cell that sees every *${step.z}* in the group can't contain *${step.z}*.`,
+      complexity: { acknowledged: false, note: null, endpoints: null },
+    };
+  },
+
+  // -------------------------------------------------------------------------
+  // Rank 14: Finned X-Wing
+  // -------------------------------------------------------------------------
+  'Finned X-Wing'(step) {
+    return finnedFishPartial(step, 'X-Wing');
+  },
+
+  // -------------------------------------------------------------------------
+  // Rank 15: Finned Swordfish
+  // -------------------------------------------------------------------------
+  'Finned Swordfish'(step) {
+    return finnedFishPartial(step, 'Swordfish');
+  },
+
+  // -------------------------------------------------------------------------
+  // Rank 20: Unique Rectangle (Types 1, 2, 4)
+  // -------------------------------------------------------------------------
+  'Unique Rectangle'(step) {
+    const elimTargets = [...new Set(step.eliminations.map(e => e.cellIndex))].sort((a, b) => a - b);
+    const [a, b] = step.urDigits;
+    // urCells order is [r1c1, r1c2, r2c1, r2c2]; connector wants clockwise.
+    const [tl, tr, bl, br] = step.urCells;
+
+    const arrows = [{ points: [tl, tr, br, bl], style: 'connector-chain' }];
+    for (const e of elimTargets) {
+      if (!step.urCells.includes(e)) {
+        arrows.push({ from: tl, to: e, style: 'dashed-arrow' });
+      }
+    }
+
+    let supportingText;
+    if (step.urType === 1) {
+      supportingText = `If these four cells held only *${a}* and *${b}*, the puzzle would have two solutions — and every puzzle here has exactly one. The corner with extra candidates can't be just *${a}*/*${b}*: remove *${a}* and *${b}* from it.`;
+    } else if (step.urType === 2) {
+      supportingText = `To avoid an impossible two-solution rectangle, one of these two corners must be *${step.urExtra}* — cells seeing both can't contain *${step.urExtra}*.`;
+    } else {
+      const locked = step.urExtra === a ? b : a;
+      supportingText = `To avoid an impossible two-solution rectangle, these two corners can't both keep *${step.urExtra}* — since *${locked}* is locked to them in this unit, remove *${step.urExtra}* from both.`;
+    }
+
+    return {
+      roles: {
+        target: null,
+        cause: [...step.urCells],
+        elimTarget: elimTargets,
+        unitMember: [],
+        scA: [],
+        scB: [],
+      },
+      digits: [...step.urDigits],
+      unit: null,
+      arrows,
+      supportingText,
+      complexity: { acknowledged: false, note: null, endpoints: null },
+    };
+  },
+
+  // -------------------------------------------------------------------------
+  // Rank 21: ALS-XZ (limited coaching by tier policy — fspec-003 §7.2)
+  // -------------------------------------------------------------------------
+  'ALS-XZ'(step) {
+    const elimTargets = [...new Set(step.eliminations.map(e => e.cellIndex))].sort((a, b) => a - b);
+
+    return {
+      roles: {
+        target: null,
+        cause: [],
+        elimTarget: elimTargets,
+        unitMember: [],
+        scA: [...step.alsA].sort((a, b) => a - b),
+        scB: [...step.alsB].sort((a, b) => a - b),
+      },
+      digits: [step.z],
+      unit: null,
+      arrows: [],
+      supportingText: `These two groups are each one digit short of locked. They share *${step.x}* restrictively — so one group must contain *${step.z}*. Cells seeing every *${step.z}* in both groups can't contain *${step.z}*.`,
+      complexity: {
+        acknowledged: true,
+        note: 'Tracing which digits lock each group is an advanced exercise — the highlights show the two groups and the result.',
+        endpoints: null,
+      },
+    };
+  },
 };
+
+/**
+ * Shared partial builder for the two finned-fish mappers: base-pattern
+ * bounding rectangle, fin cells in the dedicated fin role, dashed pointers
+ * from the fin to each elimination.
+ *
+ * @param {object} step
+ * @param {string} baseName - 'X-Wing' | 'Swordfish' (for the supporting text)
+ * @returns {object} partial CoachStep
+ */
+function finnedFishPartial(step, baseName) {
+  const elimTargets = [...new Set(step.eliminations.map(e => e.cellIndex))].sort((a, b) => a - b);
+  const baseCells = [...step.baseCells].sort((a, b) => a - b);
+  const fins = [...step.fins].sort((a, b) => a - b);
+
+  const rows = baseCells.map(rowOf);
+  const cols = baseCells.map(colOf);
+  const r1 = Math.min(...rows), r2 = Math.max(...rows);
+  const c1 = Math.min(...cols), c2 = Math.max(...cols);
+  const corners = [r1 * 9 + c1, r1 * 9 + c2, r2 * 9 + c2, r2 * 9 + c1];
+
+  const arrows = [{ points: corners, style: 'connector-chain' }];
+  for (const e of elimTargets) {
+    arrows.push({ from: fins[0], to: e, style: 'dashed-arrow' });
+  }
+
+  return {
+    roles: {
+      target: null,
+      cause: baseCells,
+      elimTarget: elimTargets,
+      unitMember: [],
+      scA: [],
+      scB: [],
+      fin: fins,
+    },
+    digits: [step.digit],
+    unit: null,
+    arrows,
+    supportingText: `*${step.digit}* almost forms ${baseName === 'X-Wing' ? 'an' : 'a'} ${baseName} — except for the *fin*. Either the ${baseName} holds, or the fin is *${step.digit}*. Both ways, *${step.digit}* can't appear in cells covered by both.`,
+    complexity: { acknowledged: false, note: null, endpoints: null },
+  };
+}

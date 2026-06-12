@@ -11,7 +11,7 @@ function zeroMap() {
     easy:         { attempted: 0, won: 0 },
     medium:       { attempted: 0, won: 0 },
     hard:         { attempted: 0, won: 0 },
-    'death-march': { attempted: 0, won: 0 },
+    'expert': { attempted: 0, won: 0 },
   };
 }
 
@@ -59,7 +59,7 @@ describe('game/statistics.js', () => {
     await stats.init();
 
     const map = stats.get();
-    for (const key of ['kiddie', 'easy', 'medium', 'hard', 'death-march']) {
+    for (const key of ['kiddie', 'easy', 'medium', 'hard', 'expert']) {
       expect(map[key].attempted).to.equal(0);
       expect(map[key].won).to.equal(0);
     }

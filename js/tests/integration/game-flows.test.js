@@ -167,18 +167,18 @@ describe('integration/game-flows', () => {
     expect(after.incorrect.size).to.be.above(0);
   });
 
-  // GF5: Death March: fill wrong, message only, no highlights
-  it('GF5: filling a Death March puzzle incorrectly shows message but no cell highlights', async function () {
+  // GF5: Expert: fill wrong, message only, no highlights
+  it('GF5: filling a Expert puzzle incorrectly shows message but no cell highlights', async function () {
     this.timeout(15000);
     const gameState = gs(iframe);
     if (!gameState) return this.skip();
 
     let waited = 0;
-    while (gameState.getState().puzzle?.difficulty !== 'death-march' && waited < 8000) {
+    while (gameState.getState().puzzle?.difficulty !== 'expert' && waited < 8000) {
       await new Promise(r => setTimeout(r, 250));
       waited += 250;
     }
-    if (gameState.getState().puzzle?.difficulty !== 'death-march') return this.skip();
+    if (gameState.getState().puzzle?.difficulty !== 'expert') return this.skip();
 
     const state = gameState.getState();
     for (let i = 0; i < 81; i++) {

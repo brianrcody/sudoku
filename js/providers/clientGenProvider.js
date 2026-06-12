@@ -4,7 +4,7 @@
  */
 
 import { MSG, makeGenRequest, makeGenAbort } from '../worker/protocol.js';
-import { WORKER_URL } from '../config.js';
+import { WORKER_URL, DIFFICULTY_ORDER } from '../config.js';
 import { randomSeed } from '../prng.js';
 
 const STORAGE_PREFIX = 'sudoku.pregen.v1.';
@@ -23,7 +23,7 @@ const STORAGE_PREFIX = 'sudoku.pregen.v1.';
  * Creates a ClientGenProvider that owns the Worker and pre-gen cache.
  *
  * @returns {{
- *   requestPuzzle: function({difficulty:string, signal?:AbortSignal}): Promise<Puzzle>,
+ *   requestPuzzle: function({difficulty:string, signal?:AbortSignal, onProgress?:function({attempts:number,budget:number}):void}): Promise<{puzzle: Puzzle, fallback: boolean}>,
  *   peekReady: function(string): Puzzle|null,
  *   primeNext: function(string): void,
  * }}
@@ -52,11 +52,10 @@ export function createClientGenProvider() {
         pending.delete(msg.id);
         if (msg.fallback) {
           console.warn('[clientGenProvider] Generation fallback', {
-            requested: msg.tier,
             got: puzzle.difficulty,
           });
         }
-        cb.resolve(puzzle);
+        cb.resolve({ puzzle, fallback: msg.fallback === true });
       } else {
         // Background result — store in cache.
         cache.set(puzzle.difficulty, puzzle);
@@ -73,8 +72,13 @@ export function createClientGenProvider() {
       }
       return;
     }
-    // GEN_PROGRESS messages are available for future progress indicators.
-    // Nothing to handle here in the provider layer.
+
+    if (msg.type === MSG.GEN_PROGRESS) {
+      const cb = pending.get(msg.id);
+      if (cb && cb.onProgress) {
+        cb.onProgress({ attempts: msg.attempts, budget: msg.budget });
+      }
+    }
   };
 
   worker.onerror = function (err) {
@@ -86,22 +90,22 @@ export function createClientGenProvider() {
   };
 
   /**
-   * @param {{ difficulty: string, signal?: AbortSignal }} opts
-   * @returns {Promise<Puzzle>}
+   * @param {{ difficulty: string, signal?: AbortSignal, onProgress?: function({attempts:number,budget:number}):void }} opts
+   * @returns {Promise<{puzzle: Puzzle, fallback: boolean}>}
    */
-  function requestPuzzle({ difficulty, signal }) {
+  function requestPuzzle({ difficulty, signal, onProgress }) {
     const cached = peekReady(difficulty);
     if (cached) {
       cache.delete(difficulty);
       _clearFromStorage(difficulty);
-      return Promise.resolve(cached);
+      return Promise.resolve({ puzzle: cached, fallback: false });
     }
 
     const id = String(++requestCounter);
     const seed = randomSeed();
 
     const promise = new Promise((resolve, reject) => {
-      const callbacks = { resolve, reject, signal };
+      const callbacks = { resolve, reject, signal, onProgress };
 
       if (signal) {
         signal.addEventListener('abort', () => {
@@ -154,8 +158,7 @@ export function createClientGenProvider() {
  * @param {Map<string, Puzzle>} cache
  */
 function _loadFromStorage(cache) {
-  const difficulties = ['kiddie', 'easy', 'medium', 'hard', 'death-march'];
-  for (const diff of difficulties) {
+  for (const diff of DIFFICULTY_ORDER) {
     try {
       const raw = localStorage.getItem(STORAGE_PREFIX + diff);
       if (!raw) continue;

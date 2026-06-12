@@ -6,15 +6,23 @@ technique-ladder difficulty rater.
 
 ## Features
 
-**Five difficulty levels**
+**Seven difficulty levels**
 
-| Level       | Hints | Feedback                                        |
-|-------------|-------|-------------------------------------------------|
-| Kiddie      | ∞     | Real-time — incorrect cells flagged as entered  |
-| Easy        | 3     | On-demand Check button                          |
-| Medium      | 1     | On-demand Check button                          |
-| Hard        | 0     | On completion only                              |
-| Death March | 0     | On completion only, no cell highlighting        |
+| Level      | Hints | Feedback                                        |
+|------------|-------|-------------------------------------------------|
+| Kiddie     | ∞     | Real-time — incorrect cells flagged as entered  |
+| Easy       | 3     | On-demand Check button                          |
+| Medium     | 1     | On-demand Check button                          |
+| Hard       | 0     | On completion only                              |
+| Expert     | 0     | On completion only, no cell highlighting        |
+| Diabolical | 0     | On completion only, no cell highlighting        |
+| Nightmare  | 0     | On completion only, no cell highlighting        |
+
+Expert is the former "Death March" tier (existing statistics carry over). Diabolical
+puzzles require Unique Rectangle reasoning; Nightmare puzzles require ALS-XZ. Searching
+for a top-tier puzzle can take a little while on a cold start — a progress line and a
+Cancel button appear after a few seconds, and if no qualifying puzzle is found the app
+says so honestly and offers the hardest one it generated instead.
 
 **Gameplay**
 - Pen and pencil mark modes; `P` toggles between them
@@ -22,9 +30,11 @@ technique-ladder difficulty rater.
 - One-level undo (Undo button or Ctrl/Cmd+Z)
 - Erase all pencil marks in one tap
 - Coach mode (`C`) — identifies the simplest applicable technique (Naked Single through
-  Forcing Chain / AIC), highlights relevant cells with an SVG arrow overlay, auto-reveals
-  candidate marks when needed, and shows a step-by-step explanation below the grid; a
-  recap confirms the technique after you apply the move
+  Forcing Chain / AIC, plus Unique Rectangles and ALS-XZ at the top tiers), highlights
+  relevant cells with an SVG arrow overlay, auto-reveals candidate marks when needed, and
+  shows a step-by-step explanation below the grid; a recap confirms the technique after
+  you apply the move. ALS-XZ uses deliberately limited coaching: the coach names the
+  technique, highlights the two cell groups and the result, and leaves the tracing to you
 - Puzzle state persisted across page loads (`localStorage`)
 - Per-difficulty statistics (games played, win rate, best/average time) persisted in cookies
 - New Puzzle confirmation when a game is in progress

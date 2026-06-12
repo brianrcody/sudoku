@@ -30,10 +30,16 @@ const RANK_BY_NAME = {
   'Swordfish':         9,
   'Jellyfish':         10,
   'XY-Wing':           11,
-  'Simple Coloring':   12,
-  'Multi-Coloring':    13,
-  'XY-Chain':          14,
-  'Forcing Chain':     15,
+  'XYZ-Wing':          12,
+  'WXYZ-Wing':         13,
+  'Finned X-Wing':     14,
+  'Finned Swordfish':  15,
+  'Simple Coloring':   16,
+  'Multi-Coloring':    17,
+  'XY-Chain':          18,
+  'Forcing Chain':     19,
+  'Unique Rectangle':  20,
+  'ALS-XZ':            21,
 };
 
 const NAME_BY_RANK = Object.fromEntries(

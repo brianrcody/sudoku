@@ -13,14 +13,16 @@ function setCookieRaw(value) {
   document.cookie = `${encodeURIComponent(COOKIE_NAME)}=${value}; path=/`;
 }
 
-/** Returns the 5-tier zero map. */
+/** Returns the 7-tier zero map. */
 function zeroMap() {
   return {
-    kiddie:        { attempted: 0, won: 0 },
-    easy:          { attempted: 0, won: 0 },
-    medium:        { attempted: 0, won: 0 },
-    hard:          { attempted: 0, won: 0 },
-    'death-march': { attempted: 0, won: 0 },
+    kiddie:     { attempted: 0, won: 0 },
+    easy:       { attempted: 0, won: 0 },
+    medium:     { attempted: 0, won: 0 },
+    hard:       { attempted: 0, won: 0 },
+    expert:     { attempted: 0, won: 0 },
+    diabolical: { attempted: 0, won: 0 },
+    nightmare:  { attempted: 0, won: 0 },
   };
 }
 
@@ -30,7 +32,7 @@ describe('providers/cookieStatsStore.js', () => {
   it('CS1: load() returns zero map when the stats cookie is absent', async () => {
     // setup.js clears cookies in beforeEach.
     const map = await cookieStatsStore.load();
-    for (const key of ['kiddie', 'easy', 'medium', 'hard', 'death-march']) {
+    for (const key of ['kiddie', 'easy', 'medium', 'hard', 'expert', 'diabolical', 'nightmare']) {
       expect(map[key].attempted).to.equal(0);
       expect(map[key].won).to.equal(0);
     }
@@ -97,5 +99,37 @@ describe('providers/cookieStatsStore.js', () => {
     const map = await cookieStatsStore.load();
     expect(map).to.be.an('object');
     expect(Object.keys(map)).to.include('easy');
+  });
+
+  // CS8: legacy death-march counters migrate into expert (V3 tier rename)
+  it('CS8: load() folds legacy death-march stats into expert and drops the old key', async () => {
+    const legacy = {
+      kiddie: { attempted: 1, won: 1 },
+      easy: { attempted: 2, won: 1 },
+      medium: { attempted: 3, won: 2 },
+      hard: { attempted: 4, won: 2 },
+      'death-march': { attempted: 9, won: 5 },
+    };
+    const payload = encodeURIComponent(JSON.stringify({ version: 1, stats: legacy }));
+    setCookieRaw(payload);
+
+    const map = await cookieStatsStore.load();
+    expect(map.expert).to.deep.equal({ attempted: 9, won: 5 });
+    expect(map).to.not.have.property('death-march');
+    expect(map.diabolical).to.deep.equal({ attempted: 0, won: 0 });
+    expect(map.nightmare).to.deep.equal({ attempted: 0, won: 0 });
+  });
+
+  // CS9: legacy migration adds to existing expert counters (idempotent merge)
+  it('CS9: load() adds legacy death-march counters onto existing expert counters', async () => {
+    const stats = zeroMap();
+    stats.expert = { attempted: 2, won: 1 };
+    stats['death-march'] = { attempted: 3, won: 2 };
+    const payload = encodeURIComponent(JSON.stringify({ version: 1, stats }));
+    setCookieRaw(payload);
+
+    const map = await cookieStatsStore.load();
+    expect(map.expert).to.deep.equal({ attempted: 5, won: 3 });
+    expect(map).to.not.have.property('death-march');
   });
 });

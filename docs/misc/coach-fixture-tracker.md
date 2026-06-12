@@ -1,8 +1,9 @@
 # Coach Analyzer Fixture Tracker
 
-Fixtures for ranks 1–3 are complete. Ranks 4–15 are collected organically: when the
-coach fires a given technique during manual play, capture the board state and invoke
-`/add-coach-fixture` to build the fixture.
+Fixtures for ranks 1–3 are complete. Higher ranks are collected organically (manual-play
+capture + `/add-coach-fixture`) or mined rank-clean from seeded generation
+(`scripts/mine-coach-fixtures.js`, V3). Rank numbers follow the 21-rank V3 ladder
+(aspec-harder-tiers.md §2).
 
 ---
 
@@ -47,12 +48,18 @@ then run `/add-coach-fixture`.
 | 9    | Swordfish (col)  | `rank09Col`      | Pending   | All AS Swordfish candidates fired row-locked under our solver; needs organic capture or new source |
 | 10   | Jellyfish        | `rank10`         | Complete  | Source: `000000000070030920019025630004000210000000000057090460095140370000000000042367590` |
 | 11   | XY-Wing          | `rank11`         | Complete  | Source: `034500000802060400600008000003900004050000090900005800000300008001040605000007120` |
-| 12   | Simple Coloring (Rule 2) | `rank12` | Complete | Source: `000000030002090500080706004900054006030000070600380009300601020007020600060000000` |
-| 12   | Simple Coloring (Rule 4) | `rank12Rule4` | Complete | Source: `007000200000054009061000008300740905000000000508016002700000590800370000005000300` |
-| 13   | Multi-Coloring   | `rank13`         | Complete  | Source: `030700080710000035005000100350204090000090000090308072003000500170000046080006020` |
-| 14   | XY-Chain (short) | `rank14Short`    | Complete  | Source: `004009200070010604500000000010500080060127050050006070000000007306070040007200900`; chain ≤ 6; acknowledged: false |
-| 14   | XY-Chain (long)  | `rank14Long`     | Complete  | Source: `080103070000000000001408020570001039000609000920800051030905200000000000010702060`; chain > 6; acknowledged: true |
-| 15   | Forcing Chain    | `rank15`         | Pending   | Export in index.js is an invalid placeholder (fires rank 1); AS source URL not found |
+| 12   | XYZ-Wing         | `rank12`         | Complete  | Mined rank-clean (seed 640019); pencil state included (V3 ladder)            |
+| 13   | WXYZ-Wing        | `rank13`         | Complete  | Mined rank-clean (seed 640003); pencil state included                        |
+| 14   | Finned X-Wing    | `rank14`         | Complete  | Mined rank-clean (seed 640000); pencil state included                        |
+| 15   | Finned Swordfish | `rank15`         | Complete  | Mined rank-clean (seed 640000); pencil state included                        |
+| 16   | Simple Coloring (Rule 2) | `rank16` | Complete  | Mined rank-clean Rule-2 shape (seed 922831); replaces pre-V3 `rank12` board (no longer rank-clean under the 21-rank ladder) |
+| 16   | Simple Coloring (Rule 4) | `rank16Rule4` | Complete | Former `rank12Rule4` board (still rank-clean); rank field updated            |
+| 17   | Multi-Coloring   | `rank17`         | Complete  | Mined rank-clean (seed 640098); replaces pre-V3 `rank13` board               |
+| 18   | XY-Chain (B)     | `rank18B`        | Complete  | Former `rank14Short` board; under the sound DFS the chain found is long. A genuinely short-chain fixture was not reachable by mining (depth-first search bias) — the mapper's short arm is a documented coverage exception |
+| 18   | XY-Chain (long)  | `rank18Long`     | Complete  | Mined rank-clean (seed 640004); chain > 6; acknowledged: true; replaces pre-V3 `rank14Long` |
+| 19   | Forcing Chain    | `rank19`         | Complete  | Mined rank-clean (seed 640041) — first valid FC fixture (pre-V3 closures were unreachable; see bugs-forcing-chains-soundness.md) |
+| 20   | Unique Rectangle | `rank20`         | Complete  | Mined rank-clean (seed 640112); pencil state included                        |
+| 21   | ALS-XZ           | `rank21`         | Complete  | Mined rank-clean (seed 640000); limited-coaching technique                   |
 
 ---
 

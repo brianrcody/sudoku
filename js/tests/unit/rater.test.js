@@ -4,14 +4,16 @@
  * rate() wraps solveLogically and maps hardestRank → tier via tierForRank.
  * tierForRank is imported directly for the boundary tests (R7/R8).
  *
- * Tier ladder (from logical.js §8.5):
+ * Tier ladder (from logical.js / aspec-harder-tiers.md §2):
  *   rank 0       → null (trivial / already solved)
  *   rank 1       → 'kiddie'
  *   rank 2       → 'easy'
  *   rank 3–7     → 'medium'
  *   rank 8–11    → 'hard'
- *   rank 12–15   → 'death-march'
- *   rank ≥ 16    → 'beyond-death-march'
+ *   rank 12–19   → 'expert'
+ *   rank 20      → 'diabolical'
+ *   rank 21      → 'nightmare'
+ *   rank ≥ 22    → 'beyond-nightmare'
  */
 
 import { rate } from '/js/generator/rater.js';
@@ -63,30 +65,24 @@ describe('rater.js', function () {
     expect(result.solved).to.be.true;
   });
 
-  // R3: Medium fixture rates as 'medium' (or the solver may land in easy if the
-  // puzzle is simpler than expected — the important thing is it returns a valid tier)
+  // R3: Medium fixture rates as 'medium'
   it('R3: rates a medium-level puzzle in the \'medium\' tier range', function () {
-    // Medium puzzle sourced from a known logical-solver requiring locked candidates
+    // Generator-mined medium puzzle (seed 31393): Locked Candidates +
+    // Hidden Triple, hardestRank 7.
     const mediumGivens = new Uint8Array([
-      0,0,0, 0,0,0, 9,0,7,
-      0,0,0, 4,2,0, 1,8,0,
-      0,0,0, 7,0,5, 0,2,6,
-      1,0,0, 9,0,4, 0,0,0,
-      0,5,0, 0,0,0, 0,4,0,
-      0,0,0, 5,0,7, 0,0,3,
-      6,2,0, 3,0,1, 0,0,0,
-      0,8,4, 0,5,9, 0,0,0,
-      5,0,7, 0,0,0, 0,0,0,
+      0,0,6, 0,9,1, 0,0,3,
+      0,9,0, 3,8,0, 0,2,0,
+      0,8,3, 0,2,6, 0,0,1,
+      1,0,0, 0,0,0, 0,8,6,
+      0,0,5, 0,1,0, 2,0,0,
+      0,0,8, 4,0,0, 1,0,0,
+      0,0,0, 6,3,5, 9,0,8,
+      0,3,0, 0,7,0, 0,6,0,
+      0,0,0, 0,0,0, 0,0,0,
     ]);
     const result = rate(mediumGivens);
-    // Rate must return a valid tier and the puzzle must have a solve result
-    expect(result).to.have.property('tier');
-    expect(result).to.have.property('hardestRank');
-    expect(result).to.have.property('solved');
-    // If solved, the tier should be in the expected range (easy–medium at minimum)
-    if (result.solved) {
-      expect(['easy', 'medium', 'hard']).to.include(result.tier);
-    }
+    expect(result.solved).to.be.true;
+    expect(result.tier).to.equal('medium');
   });
 
   // R4: Hard fixture rates as 'hard'
@@ -109,8 +105,8 @@ describe('rater.js', function () {
     expect(result.tier).to.be.a('string');
   });
 
-  // R5: Death March fixture rates as 'death-march' or harder
-  it('R5: rates a death-march puzzle — solver returns valid tier', function () {
+  // R5: top-band fixture rates as 'expert' or harder
+  it('R5: rates an expert-or-harder puzzle — solver returns valid tier', function () {
     // AI Escargot — one of the hardest known Sudoku puzzles
     const dmGivens = new Uint8Array([
       1,0,0, 0,0,7, 0,9,0,
@@ -126,31 +122,23 @@ describe('rater.js', function () {
     const result = rate(dmGivens);
     expect(result.tier).to.be.a('string');
     expect(result.hardestRank).to.be.a('number');
-    // Rate always returns a string tier for any board
-    expect(['kiddie','easy','medium','hard','death-march','beyond-death-march'])
+    // AI Escargot sits at or beyond the top of the generated ladder.
+    expect(['expert', 'diabolical', 'nightmare', 'beyond-nightmare'])
       .to.include(result.tier);
   });
 
-  // R6: Returns 'beyond-death-march' on a board the ladder cannot solve
-  it('R6: returns tier=\'beyond-death-march\' on unsolvable-by-ladder board', function () {
-    // Board with too few givens — the logical ladder will fail to solve it,
+  // R6: Returns 'beyond-nightmare' on a board the ladder cannot solve
+  it('R6: returns tier=\'beyond-nightmare\' on unsolvable-by-ladder board', function () {
+    // Board with too few givens — the logical ladder cannot make progress,
     // which manifests as solved=false in solveLogically.
-    // We use a board with almost no givens (just 4) to guarantee the solver gets stuck.
     const beyondGivens = new Uint8Array(81).fill(0);
-    // Place only 4 givens — far below the minimum for logical solvability
     beyondGivens[0] = 1;
     beyondGivens[10] = 2;
     beyondGivens[20] = 3;
     beyondGivens[30] = 4;
     const result = rate(beyondGivens);
-    // hardestRank >= 16 results in 'beyond-death-march'
-    // OR the solver can't solve it — check the contract
-    if (!result.solved) {
-      expect(result.tier).to.equal('beyond-death-march');
-    } else {
-      // If somehow solved (extremely unlikely with 4 givens), tier is still a string
-      expect(result.tier).to.be.a('string');
-    }
+    expect(result.solved).to.be.false;
+    expect(result.tier).to.equal('beyond-nightmare');
   });
 
   // ---------------------------------------------------------------------------
@@ -166,22 +154,26 @@ describe('rater.js', function () {
   // ---------------------------------------------------------------------------
 
   it('R8: tierForRank maps every boundary rank to the correct tier', function () {
-    // Tier boundaries per logical.js:
+    // Tier boundaries per logical.js / aspec-harder-tiers.md §2:
     //   1       → 'kiddie'
     //   2       → 'easy'
     //   3–7     → 'medium'
     //   8–11    → 'hard'
-    //   12–15   → 'death-march'
-    //   16+     → 'beyond-death-march'
+    //   12–19   → 'expert'
+    //   20      → 'diabolical'
+    //   21      → 'nightmare'
+    //   22+     → 'beyond-nightmare'
     expect(tierForRank(1)).to.equal('kiddie');
     expect(tierForRank(2)).to.equal('easy');
     expect(tierForRank(3)).to.equal('medium');
     expect(tierForRank(7)).to.equal('medium');
     expect(tierForRank(8)).to.equal('hard');
     expect(tierForRank(11)).to.equal('hard');
-    expect(tierForRank(12)).to.equal('death-march');
-    expect(tierForRank(15)).to.equal('death-march');
-    expect(tierForRank(16)).to.equal('beyond-death-march');
+    expect(tierForRank(12)).to.equal('expert');
+    expect(tierForRank(19)).to.equal('expert');
+    expect(tierForRank(20)).to.equal('diabolical');
+    expect(tierForRank(21)).to.equal('nightmare');
+    expect(tierForRank(22)).to.equal('beyond-nightmare');
   });
 
   // ---------------------------------------------------------------------------

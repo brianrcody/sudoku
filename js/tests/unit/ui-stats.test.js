@@ -19,11 +19,13 @@ function makePuzzle({ difficulty = 'easy' } = {}) {
 
 function makeStatsMap(overrides = {}) {
   const base = {
-    kiddie:        { attempted: 0, won: 0 },
-    easy:          { attempted: 0, won: 0 },
-    medium:        { attempted: 0, won: 0 },
-    hard:          { attempted: 0, won: 0 },
-    'death-march': { attempted: 0, won: 0 },
+    kiddie:     { attempted: 0, won: 0 },
+    easy:       { attempted: 0, won: 0 },
+    medium:     { attempted: 0, won: 0 },
+    hard:       { attempted: 0, won: 0 },
+    expert:     { attempted: 0, won: 0 },
+    diabolical: { attempted: 0, won: 0 },
+    nightmare:  { attempted: 0, won: 0 },
   };
   return { ...base, ...overrides };
 }
@@ -63,18 +65,20 @@ describe('ui/stats.js', () => {
     return { fakeGs, fakeStats };
   }
 
-  // US1: Renders 5 rows in DIFFICULTY_ORDER
-  it('US1: renders exactly 5 rows in DIFFICULTY_ORDER sequence', () => {
+  // US1: Renders 7 rows in DIFFICULTY_ORDER
+  it('US1: renders exactly 7 rows in DIFFICULTY_ORDER sequence', () => {
     mountStats();
     const rows = root.querySelectorAll('#stats-tbody tr');
-    expect(rows.length).to.equal(5);
+    expect(rows.length).to.equal(7);
     // Verify order by checking aria-labels contain the difficulty names in order.
     const labels = DIFFICULTY_ORDER.map((_, i) => rows[i].getAttribute('aria-label').toLowerCase());
     expect(labels[0]).to.include('kiddie');
     expect(labels[1]).to.include('easy');
     expect(labels[2]).to.include('medium');
     expect(labels[3]).to.include('hard');
-    expect(labels[4]).to.include('death');
+    expect(labels[4]).to.include('expert');
+    expect(labels[5]).to.include('diabolical');
+    expect(labels[6]).to.include('nightmare');
   });
 
   // US2: Active-diff marker on current difficulty

@@ -133,10 +133,10 @@ describe('pipeline.js', function () {
 
   // PL8: Death March short-circuit reject — low-rank candidates are skipped
   // This is exercised implicitly when budget > 1 since most kiddie/easy
-  // candidates are rejected when targeting death-march. We verify the pipeline
+  // candidates are rejected when targeting expert. We verify the pipeline
   // runs through its budget rather than crashing on a short-circuit.
-  it('PL8: death-march short-circuit branch does not crash with budget=3', function () {
-    const puzzle = generateForTier('death-march', makeOpts(8, { budget: 3 }));
+  it('PL8: expert short-circuit branch does not crash with budget=3', function () {
+    const puzzle = generateForTier('expert', makeOpts(8, { budget: 3 }));
     expect(puzzle).to.have.property('id');
     expect(puzzle.givens).to.be.instanceof(Uint8Array);
   });
@@ -182,14 +182,38 @@ describe('pipeline.js', function () {
   });
 
   // PL11: Perf — DM generation within 30 s hard cap; warn above 5 s
-  it('PL11: [perf] death-march generation completes within 30 s', function () {
+  it('PL11: [perf] expert generation completes within 30 s', function () {
     this.timeout(35000);
     const t0 = performance.now();
-    generateForTier('death-march', makeOpts(11));
+    generateForTier('expert', makeOpts(11));
     const elapsed = performance.now() - t0;
     if (elapsed > 5000) {
-      console.warn(`[perf] death-march generation: ${(elapsed / 1000).toFixed(2)}s`);
+      console.warn(`[perf] expert generation: ${(elapsed / 1000).toFixed(2)}s`);
     }
     expect(elapsed).to.be.below(30000);
+  });
+
+  // PL12: Perf — seeded diabolical generation lands inside the 120 s envelope
+  // with wide margin. Seed 222 hits diabolical on attempt ~78 (deterministic),
+  // representative of the tier's ~0.8%/attempt accept rate.
+  it('PL12: [perf] seeded diabolical generation completes within 20 s', function () {
+    this.timeout(25000);
+    const t0 = performance.now();
+    const puzzle = generateForTier('diabolical', makeOpts(222));
+    const elapsed = performance.now() - t0;
+    console.log(`[PERF] Diabolical generation (seeded): ${(elapsed / 1000).toFixed(2)}s (budget 20 s)`);
+    expect(puzzle.difficulty).to.equal('diabolical');
+    expect(elapsed).to.be.below(20000);
+  });
+
+  // PL13: Perf — seeded nightmare generation (≈6%/attempt accept rate).
+  it('PL13: [perf] seeded nightmare generation completes within 15 s', function () {
+    this.timeout(20000);
+    const t0 = performance.now();
+    const puzzle = generateForTier('nightmare', makeOpts(13));
+    const elapsed = performance.now() - t0;
+    console.log(`[PERF] Nightmare generation (seeded): ${(elapsed / 1000).toFixed(2)}s (budget 15 s)`);
+    expect(puzzle.difficulty).to.equal('nightmare');
+    expect(elapsed).to.be.below(15000);
   });
 });

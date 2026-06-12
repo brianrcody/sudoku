@@ -6,6 +6,7 @@
  */
 
 import { open as openDialog } from './dialog.js';
+import { DIFFICULTY_ORDER, TIER_LABELS } from '../config.js';
 
 const RELEVANT_KEYS = new Set(['puzzle']);
 
@@ -20,15 +21,14 @@ export function mount(root, gameState) {
   _root = root;
   _gameState = gameState;
 
+  const options = DIFFICULTY_ORDER
+    .map(id => `<option value="${id}"${id === 'medium' ? ' selected' : ''}>${TIER_LABELS[id]}</option>`)
+    .join('\n        ');
   _root.innerHTML = `
     <div class="difficulty-row">
       <label for="difficulty-select">Difficulty</label>
       <select id="difficulty-select" aria-label="Select difficulty level">
-        <option value="kiddie">Kiddie</option>
-        <option value="easy">Easy</option>
-        <option value="medium" selected>Medium</option>
-        <option value="hard">Hard</option>
-        <option value="death-march">Death March</option>
+        ${options}
       </select>
     </div>
   `;

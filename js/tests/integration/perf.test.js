@@ -4,7 +4,8 @@
  * Measures wall-clock duration for every user-facing action listed in
  * docs/misc/next-session.md against the CLAUDE.md / tspec §17 budgets:
  * - Non-generation actions: <1 s
- * - Death March cold-start generation: <5 s (per aspec §17 / SYS3)
+ * - Expert cold-start generation: <5 s (per aspec §17 / SYS3)
+ * - Nightmare cold-start generation: <15 s (fspec-003 §5.1 band)
  *
  * Each test logs the measured time so the perf report can be captured
  * even when assertions pass with margin.
@@ -13,8 +14,12 @@
 const NON_GEN_BUDGET_MS = 1000;
 const MEDIUM_GEN_BUDGET_MS = 1500;
 const HARD_GEN_BUDGET_MS = 2000;
-const DM_GEN_BUDGET_MS = 5000;
-const TIERS = ['kiddie', 'easy', 'medium', 'hard', 'death-march'];
+const EXPERT_GEN_BUDGET_MS = 5000;
+const NIGHTMARE_GEN_BUDGET_MS = 15000;
+// Diabolical's cold-start is seeded-validated at the pipeline level
+// (PL12) and manually validated in-browser (PerformanceV3.md) — its accept
+// rate (~0.8%/attempt) makes an unseeded UI-path assertion flaky.
+const TIERS = ['kiddie', 'easy', 'medium', 'hard', 'expert', 'nightmare'];
 
 async function waitForPuzzle(iframe, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
@@ -86,14 +91,15 @@ describe('integration/perf', () => {
    */
   TIERS.forEach(tier => {
     it(`PERF-NEW-${tier}: New Puzzle (${tier}) within budget`, async function () {
-      this.timeout(20000);
+      this.timeout(30000);
       iframe = await loadIframe();
       const win = iframe.contentWindow;
       const doc = iframe.contentDocument;
       const gs = await waitForGameState(iframe);
 
       const initialId = gs.getState().puzzle.id;
-      const budget = tier === 'death-march' ? DM_GEN_BUDGET_MS
+      const budget = tier === 'nightmare' ? NIGHTMARE_GEN_BUDGET_MS
+        : tier === 'expert' ? EXPERT_GEN_BUDGET_MS
         : tier === 'hard' ? HARD_GEN_BUDGET_MS
         : tier === 'medium' ? MEDIUM_GEN_BUDGET_MS
         : NON_GEN_BUDGET_MS;

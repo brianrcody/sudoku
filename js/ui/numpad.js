@@ -265,7 +265,7 @@ function _update(state) {
       !hasPencil;
   }
 
-  // Hard/Death March on-completion incorrect message.
+  // Hard-and-above on-completion incorrect message.
   const msgEl = _root.querySelector('#completion-msg');
   if (msgEl) {
     const msg = state.completionMessage ?? '';

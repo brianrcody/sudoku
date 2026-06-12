@@ -12,8 +12,8 @@ const _provider = createClientGenProvider();
 /**
  * Request a puzzle. Fulfils from cache if available; otherwise generates via Worker.
  *
- * @param {{ difficulty: string, signal?: AbortSignal }} opts
- * @returns {Promise<import('./clientGenProvider.js').Puzzle>}
+ * @param {{ difficulty: string, signal?: AbortSignal, onProgress?: function({attempts:number,budget:number}):void }} opts
+ * @returns {Promise<{puzzle: import('./clientGenProvider.js').Puzzle, fallback: boolean}>}
  */
 export const requestPuzzle = _provider.requestPuzzle.bind(_provider);
 

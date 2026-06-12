@@ -16,20 +16,27 @@ import { mount as mountWinBanner } from './ui/winBanner.js';
 import { mount as mountKeyboard } from './ui/keyboard.js';
 import { mount as mountCoach } from './ui/coach.js';
 import { mount as mountCoachOverlay } from './ui/coachOverlay.js';
+import { mount as mountBusy } from './ui/busy.js';
 
 import { cookieStatsStore } from './providers/cookieStatsStore.js';
+import { migrateTierIds } from './persist/migrate.js';
 import { createStatsProvider } from './providers/statsProvider.js';
 import { createStatistics } from './game/statistics.js';
 import { requestPuzzle, peekReady, primeNext } from './providers/puzzleProvider.js';
 import { nextHint } from './providers/hintProvider.js';
 import { createGameState } from './game/state.js';
 import { getItem, setItem, removeItem } from './persist/storage.js';
-import { DIFFICULTY_ORDER, HINT_LIMITS } from './config.js';
+import { DIFFICULTY_ORDER, HINT_LIMITS, TIER_LABELS } from './config.js';
 
 // ── Step 2: reconcile cookie with classList ────────────────────────────────
 // The inline head <script> already applied the theme class to <body>. initTheme()
 // reads the cookie and re-applies, handling any drift between the two.
 initTheme();
+
+// ── Step 2.5: one-time V3 tier-ID migration (death-march → expert) ─────────
+// Must run before any module reads persisted difficulty/state. The stats
+// cookie migrates inside cookieStatsStore.load().
+migrateTierIds();
 
 // ── Step 3: stats stack ───────────────────────────────────────────────────
 const statsProvider = createStatsProvider(cookieStatsStore);
@@ -49,6 +56,12 @@ if (typeof window !== 'undefined') window.gameState = gameState;
 // ── Step 7: restore or request puzzle ─────────────────────────────────────
 const STATE_KEY = 'sudoku.state.v1';
 const DIFF_KEY = 'sudoku.currentDifficulty.v1';
+
+/** Tiers whose budget-exhaustion fallback prompts the user (fspec-003 §5.4). */
+const HONEST_FALLBACK_TIERS = new Set(['diabolical', 'nightmare']);
+
+/** @type {AbortController|null} Controller for the in-flight foreground request. */
+let _genAbort = null;
 
 const savedDiffPref = getItem(DIFF_KEY);
 let currentDifficulty = (savedDiffPref && DIFFICULTY_ORDER.includes(savedDiffPref))
@@ -108,12 +121,8 @@ if (savedBlob && savedBlob.version === 1 && savedBlob.puzzle) {
 
 } else {
   // No saved state — request a new puzzle.
-  gameState.dispatch({ type: 'SET_GENERATING', flag: true, message: 'Generating puzzle…' });
-  puzzleProvider.requestPuzzle({ difficulty: currentDifficulty }).then(puzzle => {
+  _requestForeground(currentDifficulty, puzzle => {
     gameState.dispatch({ type: 'PUZZLE_LOADED', puzzle });
-  }).catch(err => {
-    console.error('[main] Failed to generate puzzle:', err);
-    gameState.dispatch({ type: 'SET_GENERATING', flag: false });
   });
 }
 
@@ -141,6 +150,12 @@ mountNumpad(
 
 mountCoach(document.body, gameState);
 mountCoachOverlay(document.body, gameState);
+
+mountBusy(
+  document.getElementById('busy-root'),
+  gameState,
+  { onCancel: _cancelForeground }
+);
 
 mountStats(
   document.getElementById('stats-root'),
@@ -187,16 +202,80 @@ document.getElementById('btn-reset')?.addEventListener('click', () => {
 });
 
 function _startNewPuzzle(difficulty) {
-  gameState.dispatch({ type: 'SET_GENERATING', flag: true, message: 'Generating puzzle…' });
-  puzzleProvider.requestPuzzle({ difficulty }).then(puzzle => {
-    gameState.dispatch({ type: 'NEW_PUZZLE', difficulty, puzzle });
+  _requestForeground(difficulty, puzzle => {
+    gameState.dispatch({ type: 'NEW_PUZZLE', difficulty: puzzle.difficulty, puzzle });
     removeItem(STATE_KEY);
     announce('New puzzle started.');
     document.getElementById('btn-new')?.focus();
-  }).catch(err => {
-    console.error('[main] Failed to generate new puzzle:', err);
-    gameState.dispatch({ type: 'SET_GENERATING', flag: false });
   });
+}
+
+// ── Foreground generation with progress, cancel, and honest fallback ───────
+
+/**
+ * Request a puzzle in the foreground with the busy-card lifecycle: progress
+ * dispatches, cancel support, and the honest-fallback dialog for the top
+ * tiers. `onLoaded(puzzle)` runs only when a puzzle should actually load.
+ *
+ * @param {string} difficulty
+ * @param {function(object): void} onLoaded
+ */
+function _requestForeground(difficulty, onLoaded) {
+  _genAbort?.abort();
+  const controller = new AbortController();
+  _genAbort = controller;
+
+  gameState.dispatch({
+    type: 'SET_GENERATING', flag: true, message: 'Generating puzzle…', difficulty,
+  });
+
+  puzzleProvider.requestPuzzle({
+    difficulty,
+    signal: controller.signal,
+    onProgress({ attempts, budget }) {
+      if (_genAbort === controller) {
+        gameState.dispatch({ type: 'GEN_PROGRESS', attempts, budget });
+      }
+    },
+  }).then(({ puzzle, fallback }) => {
+    if (_genAbort !== controller) return; // superseded by a newer request
+    _genAbort = null;
+
+    if (fallback && HONEST_FALLBACK_TIERS.has(difficulty)) {
+      gameState.dispatch({ type: 'SET_GENERATING', flag: false });
+      const requested = TIER_LABELS[difficulty];
+      const actual = TIER_LABELS[puzzle.difficulty] ?? puzzle.difficulty;
+      openDialog({
+        title: `No ${requested} puzzle found`,
+        body: `The generator couldn't find a ${requested} puzzle this time. ` +
+              `The best it found is rated ${actual}. Play it?`,
+        confirmLabel: `Play ${actual}`,
+        onConfirm: () => {
+          setItem(DIFF_KEY, puzzle.difficulty);
+          onLoaded(puzzle);
+        },
+      });
+      return;
+    }
+
+    onLoaded(puzzle);
+  }).catch(err => {
+    if (err && err.name === 'AbortError') return; // cancelled — state already reset
+    console.error('[main] Failed to generate puzzle:', err);
+    if (_genAbort === controller) {
+      _genAbort = null;
+      gameState.dispatch({ type: 'SET_GENERATING', flag: false });
+    }
+  });
+}
+
+/** Cancel the in-flight foreground generation and restore the prior state. */
+function _cancelForeground() {
+  if (_genAbort === null) return;
+  _genAbort.abort();
+  _genAbort = null;
+  gameState.dispatch({ type: 'SET_GENERATING', flag: false });
+  announce('Puzzle search cancelled.');
 }
 
 function _isInProgress(state) {
@@ -233,6 +312,9 @@ gameState.on('changed', ({ action, changed }) => {
   // stale request must not overwrite the user's most recent CHANGE_DIFFICULTY.
   if (action.type === 'CHANGE_DIFFICULTY') {
     setItem(DIFF_KEY, action.difficulty);
+    // A difficulty change while a foreground generation is pending acts as
+    // Cancel (fspec-003 §10.1); the user starts the next puzzle explicitly.
+    if (_genAbort !== null) _cancelForeground();
   }
 
   // Debounced state write for in-progress saves.

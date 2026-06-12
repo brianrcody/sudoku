@@ -184,7 +184,7 @@ describe('integration/a11y', () => {
     if (!gs) return this.skip();
 
     const state = gs.getState();
-    if (state.puzzle?.difficulty === 'hard' || state.puzzle?.difficulty === 'death-march') {
+    if (state.puzzle?.difficulty === 'hard' || state.puzzle?.difficulty === 'expert') {
       return this.skip();
     }
 

@@ -3,7 +3,23 @@
  */
 
 /** @type {string[]} Difficulty levels in ascending order. */
-export const DIFFICULTY_ORDER = ['kiddie', 'easy', 'medium', 'hard', 'death-march'];
+export const DIFFICULTY_ORDER = [
+  'kiddie', 'easy', 'medium', 'hard', 'expert', 'diabolical', 'nightmare',
+];
+
+/**
+ * User-visible display name per tier ID.
+ * @type {Object<string, string>}
+ */
+export const TIER_LABELS = {
+  kiddie: 'Kiddie',
+  easy: 'Easy',
+  medium: 'Medium',
+  hard: 'Hard',
+  expert: 'Expert',
+  diabolical: 'Diabolical',
+  nightmare: 'Nightmare',
+};
 
 /**
  * Maximum hints available per difficulty.
@@ -14,7 +30,9 @@ export const HINT_LIMITS = {
   easy: 3,
   medium: 1,
   hard: 0,
-  'death-march': 0,
+  expert: 0,
+  diabolical: 0,
+  nightmare: 0,
 };
 
 /**
@@ -26,7 +44,9 @@ export const CHECK_VISIBLE = {
   easy: true,
   medium: true,
   hard: false,
-  'death-march': false,
+  expert: false,
+  diabolical: false,
+  nightmare: false,
 };
 
 /**
@@ -38,12 +58,16 @@ export const CORRECTNESS_MODE = {
   easy: 'on-demand',
   medium: 'on-demand',
   hard: 'on-complete',
-  'death-march': 'on-complete-silent',
+  expert: 'on-complete-silent',
+  diabolical: 'on-complete-silent',
+  nightmare: 'on-complete-silent',
 };
 
 /**
  * Soft target given-count ranges per tier. The rater decides the final tier;
- * these guide the removal loop.
+ * these guide the removal loop. The top tiers' min is rarely reachable, which
+ * makes removal strip to minimality — matching the spike sampling that sized
+ * their budgets (docs/misc/v3-harder-tiers-spike.md).
  * @type {Object<string, {min: number, max: number}>}
  */
 export const GIVEN_COUNT_TARGET = {
@@ -51,11 +75,15 @@ export const GIVEN_COUNT_TARGET = {
   easy: { min: 36, max: 42 },
   medium: { min: 30, max: 34 },
   hard: { min: 26, max: 30 },
-  'death-march': { min: 22, max: 26 },
+  expert: { min: 22, max: 26 },
+  diabolical: { min: 20, max: 27 },
+  nightmare: { min: 20, max: 27 },
 };
 
 /**
- * Max puzzle attempts before returning the hardest-so-far candidate.
+ * Max puzzle attempts before the honest-fallback path (see fspec-003 §5.4).
+ * Diabolical's accept rate is ~0.49%/attempt; 2000 attempts puts the miss
+ * probability below 0.01%.
  * @type {Object<string, number>}
  */
 export const ATTEMPT_BUDGET = {
@@ -63,7 +91,9 @@ export const ATTEMPT_BUDGET = {
   easy: 30,
   medium: 60,
   hard: 150,
-  'death-march': 300,
+  expert: 300,
+  diabolical: 2000,
+  nightmare: 300,
 };
 
 /**

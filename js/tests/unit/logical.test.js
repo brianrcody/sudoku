@@ -42,30 +42,25 @@ describe('logical.js', function () {
 
   // L3: Solves Medium fixture (rank ≤ 7)
   it('L3: solves medium-level fixture — solved=true, hardestRank∈[3..7]', function () {
-    // Medium puzzle requiring Locked Candidates or Naked/Hidden subsets.
+    // Generator-mined medium puzzle (seed 31393): solves with Locked
+    // Candidates + Hidden Triple (hardestRank 7). The previous fixture was
+    // mis-labeled — it actually requires rank-20 logic (Unique Rectangle)
+    // and only "passed" via a conditional assertion that never ran.
     const givens = new Uint8Array([
-      0,0,0, 0,0,0, 9,0,7,
-      0,0,0, 4,2,0, 1,8,0,
-      0,0,0, 7,0,5, 0,2,6,
-      1,0,0, 9,0,4, 0,0,0,
-      0,5,0, 0,0,0, 0,4,0,
-      0,0,0, 5,0,7, 0,0,3,
-      6,2,0, 3,0,1, 0,0,0,
-      0,8,4, 0,5,9, 0,0,0,
-      5,0,7, 0,0,0, 0,0,0,
+      0,0,6, 0,9,1, 0,0,3,
+      0,9,0, 3,8,0, 0,2,0,
+      0,8,3, 0,2,6, 0,0,1,
+      1,0,0, 0,0,0, 0,8,6,
+      0,0,5, 0,1,0, 2,0,0,
+      0,0,8, 4,0,0, 1,0,0,
+      0,0,0, 6,3,5, 9,0,8,
+      0,3,0, 0,7,0, 0,6,0,
+      0,0,0, 0,0,0, 0,0,0,
     ]);
     const board = givens.slice();
     const result = solveLogically(board);
-    // This may or may not solve depending on difficulty — assert it runs without error
-    // and if solved, rank is within medium range.
-    if (result.solved) {
-      expect(result.hardestRank).to.be.within(1, 7);
-    }
-    // If not solved at medium, the puzzle may be harder — that's acceptable for the test;
-    // the important thing is the function runs correctly.
-    expect(result).to.have.property('solved');
-    expect(result).to.have.property('hardestRank');
-    expect(result).to.have.property('trace');
+    expect(result.solved).to.equal(true);
+    expect(result.hardestRank).to.be.within(3, 7);
   });
 
   // L4: Solves Hard fixture (rank ≤ 11)
@@ -92,8 +87,8 @@ describe('logical.js', function () {
     }
   });
 
-  // L5: Death March fixture — returns valid result with hardestRank ∈ [12..15]
-  it('L5: death-march-level fixture — result shape is valid', function () {
+  // L5: Expert fixture — returns valid result with hardestRank ∈ [12..19]
+  it('L5: expert-level fixture — result shape is valid', function () {
     // Use an extremely hard puzzle. We test that the solver terminates and returns proper shape.
     const givens = new Uint8Array([
       8,0,0, 0,0,0, 0,0,0,

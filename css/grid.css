@@ -324,6 +324,33 @@ body.theme-mountain .pencil-mark {
   color: var(--pencil-on-coach-light);
 }
 
+/* Finned-fish fin cell (vspec-003 §6): mid fill, dotted ring, "fin" tag. */
+.cell.coached-fin {
+  position: relative;
+  background: var(--coach-mid) !important;
+  outline: 2px dotted var(--coach);
+  outline-offset: -3px;
+  z-index: 2;
+}
+
+.cell.coached-fin::after {
+  content: "fin";
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--coach);
+  pointer-events: none;
+}
+
+.cell.coached-fin.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 /* Focus ring overrides — coached cells use the coach accent color */
 .cell.coached-target:not(.selected):focus-visible,
 .cell.coached-cause:not(.selected):focus-visible {

@@ -62,9 +62,10 @@ describe('puzzleProvider / clientGenProvider', function () {
 
     // requestPuzzle should resolve immediately from cache
     const t0 = performance.now();
-    const puzzle = await provider2.requestPuzzle({ difficulty: 'kiddie' });
+    const { puzzle, fallback } = await provider2.requestPuzzle({ difficulty: 'kiddie' });
     const elapsed = performance.now() - t0;
     expect(puzzle.id).to.equal('fake-id');
+    expect(fallback).to.equal(false);
     expect(elapsed).to.be.below(50); // well under 50 ms — this was synchronous
 
     // Cache should be cleared after consumption
@@ -76,11 +77,12 @@ describe('puzzleProvider / clientGenProvider', function () {
     this.timeout(15000);
     const provider = createClientGenProvider();
     expect(provider.peekReady('kiddie')).to.be.null;
-    const puzzle = await provider.requestPuzzle({ difficulty: 'kiddie' });
+    const { puzzle, fallback } = await provider.requestPuzzle({ difficulty: 'kiddie' });
     expect(puzzle).to.have.property('id');
     expect(puzzle.difficulty).to.be.a('string');
     expect(puzzle.givens).to.be.instanceof(Uint8Array);
     expect(puzzle.givens.length).to.equal(81);
+    expect(fallback).to.be.a('boolean');
   });
 
   // PP3: primeNext posts background=true — BG flag check
@@ -119,7 +121,7 @@ describe('puzzleProvider / clientGenProvider', function () {
     const provider = createClientGenProvider();
     expect(provider.peekReady('kiddie')).to.be.null;
     expect(provider.peekReady('easy')).to.be.null;
-    expect(provider.peekReady('death-march')).to.be.null;
+    expect(provider.peekReady('expert')).to.be.null;
   });
 
   // PP6: localStorage mirror on cache write — background result triggers storage write
@@ -199,20 +201,24 @@ describe('puzzleProvider / clientGenProvider', function () {
   it('PP9: two concurrent requestPuzzle calls both resolve', async function () {
     this.timeout(15000);
     const provider = createClientGenProvider();
-    const [p1, p2] = await Promise.all([
+    const [r1, r2] = await Promise.all([
       provider.requestPuzzle({ difficulty: 'kiddie' }),
       provider.requestPuzzle({ difficulty: 'kiddie' }),
     ]);
-    expect(p1.givens).to.be.instanceof(Uint8Array);
-    expect(p2.givens).to.be.instanceof(Uint8Array);
+    expect(r1.puzzle.givens).to.be.instanceof(Uint8Array);
+    expect(r2.puzzle.givens).to.be.instanceof(Uint8Array);
   });
 
-  // PP10: Provider does not expose fallback flag — Puzzle has no .fallback
-  it('PP10: puzzle returned by requestPuzzle has no .fallback property', async function () {
+  // PP10: Resolve shape is { puzzle, fallback } — fallback lives on the
+  // envelope, never on the Puzzle object itself.
+  it('PP10: requestPuzzle resolves { puzzle, fallback } with no .fallback on the puzzle', async function () {
     this.timeout(15000);
     const provider = createClientGenProvider();
-    const puzzle = await provider.requestPuzzle({ difficulty: 'kiddie' });
-    expect(puzzle).to.not.have.property('fallback');
+    const result = await provider.requestPuzzle({ difficulty: 'kiddie' });
+    expect(result).to.have.property('puzzle');
+    expect(result).to.have.property('fallback');
+    expect(result.fallback).to.be.a('boolean');
+    expect(result.puzzle).to.not.have.property('fallback');
   });
 
   // PP11: Corrupt localStorage entry treated as empty — no throw, peekReady null

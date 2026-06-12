@@ -2,7 +2,7 @@
  * @fileoverview Ordered technique ladder. Each entry is a function conforming
  * to the technique signature: `(state) → result | null`.
  *
- * Import order matches rank (1–15). The logical solver iterates this array in
+ * Import order matches rank (1–21). The logical solver iterates this array in
  * order, restarting from rank 0 on every progress step.
  */
 
@@ -17,10 +17,15 @@ import xWing from './xWing.js';
 import swordfish from './swordfish.js';
 import jellyfish from './jellyfish.js';
 import xyWing from './xyWing.js';
+import xyzWing from './xyzWing.js';
+import wxyzWing from './wxyzWing.js';
+import { finnedXWing, finnedSwordfish } from './finnedFish.js';
 import { simpleColoring } from './coloring.js';
 import { multiColoring } from './coloring.js';
 import { xyChain } from './forcingChains.js';
 import { forcingChain } from './forcingChains.js';
+import uniqueRectangle from './uniqueRectangle.js';
+import alsXz from './alsXz.js';
 
 /**
  * Ordered array of technique functions, rank 1 first.
@@ -39,8 +44,14 @@ export const TECHNIQUES = [
   swordfish,         // rank 9
   jellyfish,         // rank 10
   xyWing,            // rank 11
-  simpleColoring,    // rank 12
-  multiColoring,     // rank 13
-  xyChain,           // rank 14
-  forcingChain,      // rank 15
+  xyzWing,           // rank 12
+  wxyzWing,          // rank 13
+  finnedXWing,       // rank 14
+  finnedSwordfish,   // rank 15
+  simpleColoring,    // rank 16
+  multiColoring,     // rank 17
+  xyChain,           // rank 18
+  forcingChain,      // rank 19
+  uniqueRectangle,   // rank 20
+  alsXz,             // rank 21
 ];

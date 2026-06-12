@@ -11,6 +11,20 @@ import { initialCandidates, applyPlacement, applyElimination } from './candidate
  */
 
 /**
+ * Technique-result fields copied onto elimination steps for the coach
+ * analyzer: chain shapes (coloring/chains) and the pattern fields of the
+ * rank 12–21 techniques.
+ * @type {string[]}
+ */
+const PASSTHROUGH_FIELDS = [
+  'colorChain', 'colorChains', 'chain',
+  'pivot', 'wings', 'z', 'cells',
+  'baseCells', 'fins', 'digit',
+  'urType', 'urCells', 'urDigits', 'urExtra',
+  'alsA', 'alsB', 'x',
+];
+
+/**
  * Attempt to solve `board` using the technique ladder up to `techniqueLimit`.
  *
  * @param {Uint8Array} board - 81 cells; 0 = empty. Mutated in place.
@@ -57,10 +71,10 @@ export function solveLogically(board, { techniqueLimit = Infinity, candidates: p
           technique: result.technique,
           eliminations: result.eliminations,
         };
-        // Pass chain fields through for coach analyzer consumption.
-        if (result.colorChain  !== undefined) step.colorChain  = result.colorChain;
-        if (result.colorChains !== undefined) step.colorChains = result.colorChains;
-        if (result.chain       !== undefined) step.chain       = result.chain;
+        // Pass technique pattern fields through for coach analyzer consumption.
+        for (const key of PASSTHROUGH_FIELDS) {
+          if (result[key] !== undefined) step[key] = result[key];
+        }
         trace.push(step);
       }
 
@@ -88,8 +102,10 @@ export function tierForRank(rank) {
   if (rank <= 2)   return 'easy';
   if (rank <= 7)   return 'medium';
   if (rank <= 11)  return 'hard';
-  if (rank <= 15)  return 'death-march';
-  return 'beyond-death-march';
+  if (rank <= 19)  return 'expert';
+  if (rank <= 20)  return 'diabolical';
+  if (rank <= 21)  return 'nightmare';
+  return 'beyond-nightmare';
 }
 
 /**

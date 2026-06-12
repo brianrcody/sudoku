@@ -177,7 +177,7 @@ describe('generator.worker.js (integration)', function () {
     worker.addEventListener('message', resultListener);
 
     // Post request and immediately abort
-    worker.postMessage(makeGenRequest({ id, tier: 'death-march', seed: 4004 }));
+    worker.postMessage(makeGenRequest({ id, tier: 'expert', seed: 4004 }));
     worker.postMessage(makeGenAbort(id));
 
     await noResultPromise;
@@ -251,17 +251,15 @@ describe('generator.worker.js (integration)', function () {
   });
 
   // W8: Fallback puzzle returned with fallback:true when budget is exhausted
-  it('W8: GEN_RESULT has fallback=true when budget=1 targeting death-march', async function () {
+  it('W8: GEN_RESULT has fallback=true when budget=1 targeting diabolical', async function () {
     this.timeout(15000);
     const id = 'w8';
-    // budget=1 for death-march: nearly certain to miss, returns fallback
-    worker.postMessage(makeGenRequest({ id, tier: 'death-march', seed: 8008, budget: 1 }));
+    // budget=1 targeting diabolical with this fixed seed misses (verified:
+    // the single attempt rates 'expert'), so fallback must be true.
+    worker.postMessage(makeGenRequest({ id, tier: 'diabolical', seed: 8008, budget: 1 }));
     const msg = await expectMessage(worker, m => m.type === MSG.GEN_RESULT && m.id === id, 14000);
-    // With budget=1 and death-march, the returned puzzle almost certainly has a
-    // different difficulty — which triggers fallback=true.
-    // If by chance it succeeded, fallback would be false — we accept either.
-    expect(msg).to.have.property('fallback');
-    expect(msg.fallback).to.be.a('boolean');
+    expect(msg.fallback).to.equal(true);
+    expect(msg.puzzle.difficulty).to.not.equal('diabolical');
     // The puzzle must still be valid
     expect(msg.puzzle.givens).to.be.instanceof(Uint8Array);
   });

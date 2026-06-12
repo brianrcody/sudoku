@@ -18,7 +18,7 @@ the rater has final say.
 
 ---
 
-## Technique Ladder (ranks 1–15)
+## Technique Ladder (ranks 1–21, V3)
 
 | Rank | Technique         | Tier           |
 |------|-------------------|----------------|
@@ -33,14 +33,22 @@ the rater has final say.
 | 9    | Swordfish         | **Hard**       |
 | 10   | Jellyfish         | **Hard**       |
 | 11   | XY-Wing           | **Hard**       |
-| 12   | Simple Coloring   | **Death March**|
-| 13   | Multi-Coloring    | **Death March**|
-| 14   | XY-Chain          | **Death March**|
-| 15   | Forcing Chain (AIC) | **Death March**|
+| 12   | XYZ-Wing          | **Expert**     |
+| 13   | WXYZ-Wing         | **Expert**     |
+| 14   | Finned X-Wing     | **Expert**     |
+| 15   | Finned Swordfish  | **Expert**     |
+| 16   | Simple Coloring   | **Expert**     |
+| 17   | Multi-Coloring    | **Expert**     |
+| 18   | XY-Chain          | **Expert**     |
+| 19   | Forcing Chain (AIC) | **Expert**   |
+| 20   | Unique Rectangle (Types 1/2/4) | **Diabolical** |
+| 21   | ALS-XZ            | **Nightmare**  |
 
 A puzzle lands in the tier corresponding to the highest-ranked technique the solver had
-to use. If the logical solver gets stuck even with all 15 techniques enabled, the puzzle
-requires guessing and is classified `beyond-death-march` — the pipeline rejects it and
+to use. "Expert" is the renamed pre-V3 "Death March" tier; ranks 12–15 were inserted
+inside it (Kiddie–Hard ratings and Expert set-membership are unaffected — see
+aspec-harder-tiers.md §2). If the logical solver gets stuck even with all 21 techniques
+enabled, the puzzle is classified `beyond-nightmare` — the pipeline rejects it and
 retries.
 
 ---
@@ -56,7 +64,9 @@ actual tier is always determined by the solver.
 | Easy        | 36–42         |
 | Medium      | 30–34         |
 | Hard        | 26–30         |
-| Death March | 22–26         |
+| Expert      | 22–26         |
+| Diabolical  | 20–27 (strips to minimality) |
+| Nightmare   | 20–27 (strips to minimality) |
 
 ---
 

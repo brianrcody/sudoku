@@ -7,15 +7,7 @@
  * when the current difficulty changes.
  */
 
-import { DIFFICULTY_ORDER } from '../config.js';
-
-const DIFFICULTY_LABELS = {
-  kiddie: 'Kiddie',
-  easy: 'Easy',
-  medium: 'Medium',
-  hard: 'Hard',
-  'death-march': 'Death March',
-};
+import { DIFFICULTY_ORDER, TIER_LABELS } from '../config.js';
 
 const RELEVANT_KEYS = new Set(['puzzle']);
 
@@ -76,7 +68,7 @@ function _render(state) {
   tbody.innerHTML = '';
   for (const diff of DIFFICULTY_ORDER) {
     const s = statsMap ? statsMap[diff] : { attempted: 0, won: 0 };
-    const label = DIFFICULTY_LABELS[diff];
+    const label = TIER_LABELS[diff];
     const tr = document.createElement('tr');
     if (diff === activeDiff) tr.classList.add('active-diff');
     tr.setAttribute('aria-label', `${label}: ${s.attempted} attempted, ${s.won} won`);

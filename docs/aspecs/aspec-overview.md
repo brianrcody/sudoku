@@ -97,8 +97,13 @@ sudoku/
 │   │       ├── swordfish.js
 │   │       ├── jellyfish.js
 │   │       ├── xyWing.js
+│   │       ├── xyzWing.js            # V3 (aspec-harder-tiers.md)
+│   │       ├── wxyzWing.js           # V3
+│   │       ├── finnedFish.js         # V3: finned X-Wing + finned Swordfish
 │   │       ├── coloring.js           # Simple coloring + multi-coloring
-│   │       └── forcingChains.js      # XY-chains + AIC-style forcing chains
+│   │       ├── forcingChains.js      # XY-chains + AIC-style forcing chains
+│   │       ├── uniqueRectangle.js    # V3: UR Types 1/2/4
+│   │       └── alsXz.js              # V3: ALS-XZ
 │   ├── generator/
 │   │   ├── fillGrid.js               # Random filled solution via backtracking
 │   │   ├── removeCells.js            # Symmetric-or-random removal with uniqueness guard
@@ -120,7 +125,8 @@ sudoku/
 │   │   └── statistics.js             # Stats counters, persistence hook
 │   ├── persist/
 │   │   ├── cookies.js                # Read/write cookies (theme, stats)
-│   │   └── storage.js                # localStorage (puzzle state, pre-gen cache, seen)
+│   │   ├── storage.js                # localStorage (puzzle state, pre-gen cache, seen)
+│   │   └── migrate.js                # V3: death-march → expert tier-ID migration
 │   ├── ui/
 │   │   ├── grid.js                   # Renders grid cells; dispatches cell events
 │   │   ├── numpad.js                 # Renders pad + buttons; routes input
@@ -132,7 +138,8 @@ sudoku/
 │   │   ├── themes.js                 # Theme class swap + cookie persistence
 │   │   ├── keyboard.js               # Desktop keyboard shortcuts
 │   │   ├── coach.js                  # Coach button, panel, recap, toast, lifecycle (aspec-coach-ui.md)
-│   │   └── coachOverlay.js           # SVG arrow overlay renderer (aspec-coach-ui.md)
+│   │   ├── coachOverlay.js           # SVG arrow overlay renderer (aspec-coach-ui.md)
+│   │   └── busy.js                   # V3: generation progress card + Cancel (aspec-harder-tiers.md §5.3)
 │   ├── coach/
 │   │   └── analyzer.js               # Pure-function coach analyzer (aspec-coach-analyzer.md)
 │   └── tests/
@@ -310,6 +317,12 @@ c8 with `--include=js/**` and `--exclude=js/tests/**`. Target: **100% branch cov
 39. `game/state.js` — `ERASE_ALL_PENCIL` action, `_hasNoPencil()` helper
 40. `ui/numpad.js` — "Erase all pencil" button; `css/controls.css` — 2-column undo row
 
+**Phase 11 — Harder Difficulty Tiers (V3)** (see `aspec-harder-tiers.md`)
+41. Technique modules ranks 12–15, 20, 21 + 21-rank ladder + `tierForRank`
+42. Tier IDs (`expert`/`diabolical`/`nightmare`), config, `persist/migrate.js`
+43. Provider `{puzzle, fallback}` + progress; `ui/busy.js`; main.js cancel/fallback flows
+44. Coach mappers + sealed-schema `fin` amendment; soundness sweep in permanent suite
+
 **Milestone exits:**
 - Phase 2: solver correctly rates 100% of a curated 50-puzzle regression set at known difficulty.
 - Phase 3: `generateForTier` produces a correctly-rated puzzle for all five tiers within budget.
@@ -394,4 +407,5 @@ All other fspec and vspec requirements map cleanly onto this plan.
 | `aspec-coach-analyzer.md` | Coach Mode analyzer — pure function returning CoachStep; sealed schema consumed by aspec-coach-ui.md | Implementor (Phase 8a), Reviewer, QE |
 | `aspec-coach-ui.md` | Coach Mode UI — CoachSession state, all COACH_* actions, pencil revert, coach.js, coachOverlay.js, CSS, a11y, tests | Implementor (Phase 8b), Reviewer, QE |
 | `aspec-undo.md` | One-level undo — `undoSnapshot` field, `UNDO` action, numpad button, Ctrl/Cmd+Z | Implementor (Phase 9), Reviewer, QE |
+| `aspec-harder-tiers.md` | V3 harder tiers — 21-rank ladder, tier IDs/migration, generation progress/cancel/fallback, coach mappers + `fin` role | Implementor (Phase 11), Reviewer, QE |
 | `aspec-erase-pencil.md` | Erase-all-pencil — `ERASE_ALL_PENCIL` action, numpad button, 2-column undo row | Implementor (Phase 10), Reviewer, QE |

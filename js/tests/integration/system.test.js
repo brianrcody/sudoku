@@ -6,7 +6,7 @@
  * non-deterministic. The GF1 test in game-flows.test.js covers a programmatic
  * full-solve using the exposed game state, which is the practical equivalent.
  *
- * SYS3: Death March generation perf gate — verified by loading the app with
+ * SYS3: Expert generation perf gate — verified by loading the app with
  * a DM difficulty pre-set and measuring time to puzzle load.
  */
 
@@ -98,18 +98,18 @@ describe('system tests', () => {
     expect(gs2.getState().pen[idx2]).to.equal(2);
   });
 
-  // SYS3: Death March cold-start completes within 5 s
-  it('SYS3: Death March puzzle generates within 5 s budget', async function () {
+  // SYS3: Expert cold-start completes within 5 s
+  it('SYS3: Expert puzzle generates within 5 s budget', async function () {
     this.timeout(20000);
 
-    // Pre-write difficulty preference to death-march.
+    // Pre-write difficulty preference to expert.
     // We need to set the difficulty key before the app loads.
     // Use a temporary iframe to set localStorage, then load the main app.
     const prep = createIframe();
     await waitForPuzzle(prep, 12000);
     prep.contentWindow.localStorage.setItem(
       'sudoku.currentDifficulty.v1',
-      JSON.stringify('death-march')
+      JSON.stringify('expert')
     );
     // Clear any saved state so a fresh generation happens.
     prep.contentWindow.localStorage.removeItem('sudoku.state.v1');
@@ -129,8 +129,8 @@ describe('system tests', () => {
 
       const elapsed = performance.now() - t0;
       const state = gs.getState();
-      if (state.puzzle?.difficulty === 'death-march') {
-        console.log(`[SYS3] Death March load time: ${elapsed.toFixed(0)} ms`);
+      if (state.puzzle?.difficulty === 'expert') {
+        console.log(`[SYS3] Expert load time: ${elapsed.toFixed(0)} ms`);
         expect(elapsed).to.be.below(5000);
       }
       expect(state.puzzle).to.not.be.null;

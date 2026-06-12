@@ -18,6 +18,14 @@
 
 > **CoachStep schema sealed — `aspec-coach-ui.md` must not modify this schema without Orchestrator approval.** The `CoachStep` type defined in §3 is a hard contract between this spec and the forthcoming UI spec. Any change after sealing requires re-opening this spec.
 
+> **Amendment (2026-06-12, approved per the sealing process for the V3 harder-tiers
+> feature):** `roles` gains a seventh array `fin: int[]` (non-empty only for Finned
+> X-Wing / Finned Swordfish); `rank` extends to 1–21 with XY-Chain = 18 and Forcing
+> Chain = 19; six canonical technique names are added (XYZ-Wing, WXYZ-Wing, Finned
+> X-Wing, Finned Swordfish, Unique Rectangle, ALS-XZ). Normative mapper definitions for
+> the new techniques live in `aspec-harder-tiers.md` §8. All other schema guarantees
+> (every field present, null sentinels, no `undefined`) extend to the new role.
+
 ---
 
 ## Table of Contents

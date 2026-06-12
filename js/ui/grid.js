@@ -132,6 +132,7 @@ function _updateCell(el, i, state) {
     if (roles.unitMember.includes(i))    el.classList.add('coached-unit-member');
     if (roles.scA.includes(i))           el.classList.add('coached-sc-a');
     if (roles.scB.includes(i))           el.classList.add('coached-sc-b');
+    if (roles.fin.includes(i))           el.classList.add('coached-fin');
   }
 
   const isCoached = coachSession?.coachedCells.has(i) === true;

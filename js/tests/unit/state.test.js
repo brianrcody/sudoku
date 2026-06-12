@@ -84,7 +84,7 @@ function makeDMPuzzle() {
   const solution = new Uint8Array(81);
   givens[0] = 1;
   for (let i = 0; i < 81; i++) solution[i] = (i % 9) + 1;
-  return { id: 'test-dm', difficulty: 'death-march', givens, solution, solveTrace: [] };
+  return { id: 'test-dm', difficulty: 'expert', givens, solution, solveTrace: [] };
 }
 
 /** Creates a fully-solved board matching the solution pattern ((i%9)+1). */
@@ -497,9 +497,9 @@ describe('game/state.js', () => {
   });
 
   // S33: HINT disabled for Hard/DM (HINT_LIMITS = 0)
-  it('S33: HINT_LIMITS for hard and death-march are 0', () => {
+  it('S33: HINT_LIMITS for hard and expert are 0', () => {
     expect(HINT_LIMITS['hard']).to.equal(0);
-    expect(HINT_LIMITS['death-march']).to.equal(0);
+    expect(HINT_LIMITS['expert']).to.equal(0);
   });
 
   // S33a: HINT records attempt on first hint
@@ -727,6 +727,39 @@ describe('game/state.js', () => {
     const s = gs.getState();
     expect(s.generating).to.be.false;
     expect(s.generatingMessage).to.equal('');
+  });
+
+  // S49a: SET_GENERATING carries the requested difficulty and resets progress
+  it('S49a: SET_GENERATING stores difficulty when flag=true and clears it when false', () => {
+    gs.dispatch({ type: 'SET_GENERATING', flag: true, message: 'Generating…', difficulty: 'diabolical' });
+    expect(gs.getState().generatingDifficulty).to.equal('diabolical');
+    expect(gs.getState().genProgress).to.equal(null);
+    gs.dispatch({ type: 'SET_GENERATING', flag: false });
+    expect(gs.getState().generatingDifficulty).to.equal(null);
+  });
+
+  // S49b: GEN_PROGRESS updates genProgress only while generating
+  it('S49b: GEN_PROGRESS sets genProgress while generating and is ignored otherwise', () => {
+    gs.dispatch({ type: 'GEN_PROGRESS', attempts: 5, budget: 100 });
+    expect(gs.getState().genProgress).to.equal(null); // not generating — ignored
+
+    gs.dispatch({ type: 'SET_GENERATING', flag: true, message: 'Generating…', difficulty: 'nightmare' });
+    gs.dispatch({ type: 'GEN_PROGRESS', attempts: 5, budget: 100 });
+    expect(gs.getState().genProgress).to.deep.equal({ attempts: 5, budget: 100 });
+
+    gs.dispatch({ type: 'SET_GENERATING', flag: false });
+    expect(gs.getState().genProgress).to.equal(null);
+  });
+
+  // S49c: PUZZLE_LOADED clears generation progress state
+  it('S49c: PUZZLE_LOADED resets generatingDifficulty and genProgress', () => {
+    gs.dispatch({ type: 'SET_GENERATING', flag: true, message: 'Generating…', difficulty: 'diabolical' });
+    gs.dispatch({ type: 'GEN_PROGRESS', attempts: 9, budget: 2000 });
+    loadPuzzle(gs, makeEasyPuzzle());
+    const s = gs.getState();
+    expect(s.generating).to.be.false;
+    expect(s.generatingDifficulty).to.equal(null);
+    expect(s.genProgress).to.equal(null);
   });
 
   // S50: 'changed' event emits Set of changed keys

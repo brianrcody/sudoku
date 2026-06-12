@@ -46,6 +46,8 @@ import { rowOf, colOf } from '../util/grid.js';
  * @property {boolean} winHandled
  * @property {boolean} generating
  * @property {string} generatingMessage
+ * @property {string|null} generatingDifficulty - Tier of the in-flight foreground request.
+ * @property {{attempts:number,budget:number}|null} genProgress
  * @property {CoachSession|null} coachSession
  * @property {UndoSnapshot|null} undoSnapshot
  */
@@ -93,6 +95,8 @@ export function createGameState({ stats, hintProvider }) {
     winHandled: false,
     generating: false,
     generatingMessage: '',
+    generatingDifficulty: null,
+    genProgress: null,
     completionMessage: '',
     coachSession: null,
     undoSnapshot: null,
@@ -235,14 +239,16 @@ export function createGameState({ stats, hintProvider }) {
         state.winHandled = false;
         state.generating = false;
         state.generatingMessage = '';
+        state.generatingDifficulty = null;
+        state.genProgress = null;
         state.completionMessage = '';
         state.coachSession = null;
         state.undoSnapshot = null;
         if (clearIncorrectTimer !== null) { clearTimeout(clearIncorrectTimer); clearIncorrectTimer = null; }
         _emit(action, 'puzzle', 'pen', 'pencil', 'selected', 'activeMode', 'conflicts',
               'incorrect', 'incorrectShownUntil', 'hintsRemaining', 'attemptRecorded',
-              'won', 'winHandled', 'generating', 'generatingMessage', 'completionMessage',
-              'coachSession', 'undoSnapshot');
+              'won', 'winHandled', 'generating', 'generatingMessage', 'generatingDifficulty',
+              'genProgress', 'completionMessage', 'coachSession', 'undoSnapshot');
         break;
       }
 
@@ -565,7 +571,7 @@ export function createGameState({ stats, hintProvider }) {
             stats.recordWin(state.puzzle.difficulty);
             _emit(action, 'won', 'winHandled');
           } else if (!correct) {
-            // Death March: no cell highlighting, but show a message briefly.
+            // Expert and above: no cell highlighting, but show a message briefly.
             state.completionMessage = "Not quite. Keep going!";
             state.incorrectShownUntil = Date.now() + CHECK_HIGHLIGHT_MS;
             _scheduleClearIncorrect();
@@ -607,14 +613,16 @@ export function createGameState({ stats, hintProvider }) {
         state.winHandled = false;
         state.generating = false;
         state.generatingMessage = '';
+        state.generatingDifficulty = null;
+        state.genProgress = null;
         state.completionMessage = '';
         state.coachSession = null;
         state.undoSnapshot = null;
         if (clearIncorrectTimer !== null) { clearTimeout(clearIncorrectTimer); clearIncorrectTimer = null; }
         _emit(action, 'puzzle', 'pen', 'pencil', 'selected', 'activeMode', 'conflicts',
               'incorrect', 'incorrectShownUntil', 'hintsRemaining', 'attemptRecorded',
-              'won', 'winHandled', 'generating', 'generatingMessage', 'completionMessage',
-              'coachSession', 'undoSnapshot');
+              'won', 'winHandled', 'generating', 'generatingMessage', 'generatingDifficulty',
+              'genProgress', 'completionMessage', 'coachSession', 'undoSnapshot');
         break;
       }
 
@@ -674,7 +682,16 @@ export function createGameState({ stats, hintProvider }) {
       case 'SET_GENERATING': {
         state.generating = action.flag;
         state.generatingMessage = action.message ?? '';
-        _emit(action, 'generating', 'generatingMessage');
+        state.generatingDifficulty = action.flag ? (action.difficulty ?? null) : null;
+        state.genProgress = null;
+        _emit(action, 'generating', 'generatingMessage', 'generatingDifficulty', 'genProgress');
+        break;
+      }
+
+      case 'GEN_PROGRESS': {
+        if (state.generating !== true) break; // stale progress after resolve/cancel
+        state.genProgress = { attempts: action.attempts, budget: action.budget };
+        _emit(action, 'genProgress');
         break;
       }
 
