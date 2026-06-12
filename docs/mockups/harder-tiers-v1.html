@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup — Harder Difficulty Tiers (v1)</title>
+<style>
+  /* ── Minimalist theme tokens (from vspec-001 / vspec-002) ───────────── */
+  :root {
+    --bg: #f7f6f2; --surface: #ffffff; --border: #c8c4bb; --border-strong: #2e2b25;
+    --text: #1c1a16; --text-muted: #7a7570; --given-bg: #eceae4;
+    --accent: #2c5282; --accent-light: #dbeafe; --pencil: #5a6778;
+    --btn-bg: #f0ede6; --btn-hover: #e4e0d7; --btn-border: #c8c4bb;
+    --primary-hover: #1e3a6e; --stats-row-sep: #f0ede6; --modal-bg: var(--surface);
+    --coach: #7c3aed; --coach-light: #ede9fe; --coach-mid: #c4b5fd;
+    --pencil-on-coach: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 32px 18px 80px; max-width: 980px; margin: 0 auto;
+  }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: var(--text-muted); font-size: 13px; margin-bottom: 36px; }
+  section { margin-bottom: 56px; }
+  h2 {
+    font-size: 16px; border-bottom: 2px solid var(--border); padding-bottom: 6px;
+    margin-bottom: 6px;
+  }
+  .note { font-size: 12.5px; color: var(--text-muted); margin-bottom: 18px; max-width: 70ch; }
+  .demo { display: flex; gap: 36px; flex-wrap: wrap; align-items: flex-start; }
+
+  /* ── Controls / buttons (controls.css) ──────────────────────────────── */
+  .btn {
+    font-size: 13px; padding: 8px 14px; border: 1px solid var(--btn-border);
+    border-radius: 6px; background: var(--btn-bg); color: var(--text); cursor: pointer;
+  }
+  .btn:hover { background: var(--btn-hover); }
+  .btn-primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+  .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+  select {
+    font-size: 13px; padding: 6px 28px 6px 10px; border: 1px solid var(--btn-border);
+    border-radius: 4px; background-color: var(--btn-bg); color: var(--text); cursor: pointer;
+  }
+  label.ctl { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px; }
+
+  /* ── Stats table (stats.css approximation) ──────────────────────────── */
+  table.stats { border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+  table.stats th, table.stats td { font-size: 13px; padding: 7px 14px; text-align: right; border-bottom: 1px solid var(--stats-row-sep); }
+  table.stats th { color: var(--text-muted); font-weight: 600; }
+  table.stats td:first-child, table.stats th:first-child { text-align: left; }
+  table.stats tr.new td { background: #fbfaf6; }
+  .pill { font-size: 10px; background: var(--coach-light); color: var(--coach); border-radius: 8px; padding: 1px 7px; margin-left: 6px; font-weight: 600; vertical-align: 1px;}
+
+  /* ── Busy / progress card ───────────────────────────────────────────── */
+  .busy-card {
+    width: 414px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 22px 24px; text-align: center;
+  }
+  .busy-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .busy-progress { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; min-height: 18px; }
+  .spinner {
+    width: 22px; height: 22px; margin: 0 auto 12px; border-radius: 50%;
+    border: 3px solid var(--accent-light); border-top-color: var(--accent);
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Modal (controls.css) ───────────────────────────────────────────── */
+  .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: center; justify-content: center; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: var(--modal-bg); border-radius: 10px; padding: 28px 28px 22px; max-width: 360px; width: 90%; box-shadow: 0 8px 40px rgba(0,0,0,0.18); border: 1px solid var(--border); }
+  .modal h2 { font-size: 16px; font-weight: 600; margin: 0 0 8px; border: none; padding: 0; }
+  .modal p { font-size: 14px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.5; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ── Mini sudoku grid ───────────────────────────────────────────────── */
+  .gridwrap { position: relative; width: max-content; }
+  .sgrid {
+    display: grid; grid-template-columns: repeat(9, 38px); grid-auto-rows: 38px;
+    border: 2px solid var(--border-strong); background: var(--surface); width: max-content;
+  }
+  .cell {
+    border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    position: relative; display: flex; align-items: center; justify-content: center;
+    font-family: Georgia, "Times New Roman", serif; font-size: 19px;
+  }
+  .cell.b-r { border-right: 2px solid var(--border-strong); }
+  .cell.b-b { border-bottom: 2px solid var(--border-strong); }
+  .cell.given { background: var(--given-bg); }
+  .pmarks { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3,1fr); grid-auto-rows: 1fr; }
+  .pmarks span { font-family: "Courier New", Courier, monospace; font-size: 8.5px; color: var(--pencil); display: flex; align-items: center; justify-content: center; }
+  .pmarks span.cp { color: var(--coach); font-weight: 700; }
+
+  /* coached-cell treatments (vspec-002 §4) */
+  .coached-cause { background: var(--coach-light); box-shadow: inset 0 0 0 1.5px var(--coach); }
+  .coached-elim-target { outline: 2px dashed var(--coach); outline-offset: -3px; }
+  .coached-sc-a { background: var(--coach); }
+  .coached-sc-a .pmarks span { color: rgba(255,255,255,0.55); }
+  .coached-sc-a .pmarks span.cp { color: #ffffff; }
+  .coached-sc-b { outline: 2.5px dashed var(--coach); outline-offset: -3px; background: var(--coach-light); }
+
+  /* NEW: fin treatment proposal (fspec-003 §6.3 / §9.5) */
+  .coached-fin { background: var(--coach-mid); outline: 2px dotted var(--coach); outline-offset: -3px; }
+  .coached-fin::after {
+    content: "fin"; position: absolute; top: 1px; right: 2px;
+    font-family: system-ui, sans-serif; font-size: 7.5px; font-weight: 700;
+    color: var(--coach); letter-spacing: 0.02em;
+  }
+
+  svg.overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  /* coach panel (controls.css, verbatim sizes) */
+  .coach-panel { margin-top: 12px; border: 1.5px solid var(--coach); border-radius: 6px; background: var(--surface); padding: 14px 16px; width: 414px; max-width: 100%; }
+  .coach-panel-technique { font-size: 15px; font-weight: 700; color: var(--coach); margin-bottom: 6px; letter-spacing: 0.01em; }
+  .coach-panel-text { font-size: 13px; line-height: 1.5; }
+  .coach-panel-text em { color: var(--coach); font-style: normal; font-weight: 600; }
+  .coach-panel-note { margin-top: 8px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+  figcaption { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<h1>Harder Difficulty Tiers — Visual Mockup v1</h1>
+<p class="sub">Minimalist theme. Five surfaces: tier selector &amp; stats, generation progress,
+honest-fallback dialog, and the three new coach treatments (fin, Unique Rectangle, ALS groups).</p>
+
+<!-- ════════ 1. Difficulty selector + stats ════════ -->
+<section>
+  <h2>1 · Difficulty selector &amp; statistics</h2>
+  <p class="note">Seven tiers. "Expert" replaces "Death March" and inherits its historical
+  statistics; Diabolical and Nightmare start fresh. No other selector behavior changes.</p>
+  <div class="demo">
+    <div>
+      <label class="ctl" for="diff">Difficulty</label>
+      <select id="diff">
+        <option>Kiddie</option><option>Easy</option><option>Medium</option><option>Hard</option>
+        <option selected>Expert</option><option>Diabolical</option><option>Nightmare</option>
+      </select>
+    </div>
+    <table class="stats">
+      <tr><th>Difficulty</th><th>Started</th><th>Completed</th><th>Best time</th></tr>
+      <tr><td>Kiddie</td><td>12</td><td>12</td><td>03:51</td></tr>
+      <tr><td>Easy</td><td>34</td><td>31</td><td>06:12</td></tr>
+      <tr><td>Medium</td><td>58</td><td>49</td><td>11:48</td></tr>
+      <tr><td>Hard</td><td>41</td><td>30</td><td>19:25</td></tr>
+      <tr><td>Expert</td><td>17</td><td>9</td><td>34:02</td></tr>
+      <tr class="new"><td>Diabolical<span class="pill">new</span></td><td>0</td><td>0</td><td>—</td></tr>
+      <tr class="new"><td>Nightmare<span class="pill">new</span></td><td>0</td><td>0</td><td>—</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ════════ 2. Generation progress ════════ -->
+<section>
+  <h2>2 · Generation progress (Diabolical / Nightmare, after 3 s)</h2>
+  <p class="note">The existing "Generating puzzle…" busy state gains a live progress line and a
+  Cancel button — only for the two new tiers, and only once the wait passes 3 seconds. Cancel
+  restores the exact prior state. (Counter below is animated for demonstration.)</p>
+  <div class="busy-card">
+    <div class="spinner" aria-hidden="true"></div>
+    <div class="busy-title">Generating puzzle…</div>
+    <div class="busy-progress">Searching for a worthy puzzle… (attempt <span id="att">412</span> of 2000)</div>
+    <button class="btn" type="button">Cancel</button>
+  </div>
+</section>
+
+<!-- ════════ 3. Honest fallback dialog ════════ -->
+<section>
+  <h2>3 · Honest exhaustion fallback (replaces silent mislabeling)</h2>
+  <p class="note">If the search budget is exhausted, the player is told the truth and chooses.
+  "Play" loads the found puzzle <em>labeled with its true tier</em>; Cancel restores the prior
+  state. Uses the existing dialog component.</p>
+  <button class="btn" type="button" onclick="document.getElementById('fb').classList.add('open')">Show dialog</button>
+  <div class="modal-backdrop" id="fb" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="fbt">
+      <h2 id="fbt">No Nightmare puzzle found</h2>
+      <p>The generator couldn't find a Nightmare puzzle this time. The best it found is rated
+      Expert. Play it?</p>
+      <div class="modal-actions">
+        <button class="btn" onclick="document.getElementById('fb').classList.remove('open')">Cancel</button>
+        <button class="btn btn-primary" onclick="document.getElementById('fb').classList.remove('open')">Play Expert</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ 4. Finned X-Wing coaching ════════ -->
+<section>
+  <h2>4 · Coach — Finned X-Wing (Expert, full coaching)</h2>
+  <p class="note">Existing treatments throughout, plus the one new cell role: the <strong>fin</strong>
+  (mid-purple fill + dotted ring + "fin" tag — distinguishable without color). The X-Wing
+  rectangle uses the existing connector outline; dashed pointers mark eliminations.</p>
+  <div class="demo">
+    <figure>
+      <div class="gridwrap" id="g-fish"></div>
+      <figcaption>Corners r3c4·r3c9·r8c4·r8c9 (cause) · fin r8c8 · eliminations r7c9, r9c9</figcaption>
+    </figure>
+    <div class="coach-panel">
+      <div class="coach-panel-technique">Finned X-Wing</div>
+      <p class="coach-panel-text"><em>4</em> almost forms an X-Wing — except for the <em>fin</em>.
+      Either the X-Wing holds, or the fin is <em>4</em>. Both ways, <em>4</em> can't appear in
+      cells covered by both.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ 5. Unique Rectangle coaching ════════ -->
+<section>
+  <h2>5 · Coach — Unique Rectangle Type 1 (Diabolical, full coaching)</h2>
+  <p class="note">The four rectangle cells get the cause treatment joined by a closed connector
+  outline; the roof corner is also an elimination target (dashed ring). Fully walkable — this is
+  the flagship coaching experience of the new Diabolical tier.</p>
+  <div class="demo">
+    <figure>
+      <div class="gridwrap" id="g-ur"></div>
+      <figcaption>Floor r4c2·r5c2·r5c6 hold exactly {3,7}; roof r4c6 loses 3 and 7</figcaption>
+    </figure>
+    <div class="coach-panel">
+      <div class="coach-panel-technique">Unique Rectangle</div>
+      <p class="coach-panel-text">If these four cells held only <em>3</em> and <em>7</em>, the
+      puzzle would have two solutions — and every puzzle here has exactly one. The corner with
+      extra candidates can't be just <em>3</em>/<em>7</em>: remove <em>3</em> and <em>7</em>
+      from it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ 6. ALS-XZ limited coaching ════════ -->
+<section>
+  <h2>6 · Coach — ALS-XZ (Nightmare, limited coaching)</h2>
+  <p class="note">Limited fidelity: the two almost-locked sets reuse the coloring group
+  treatments (Group A solid, Group B dashed), eliminations are marked, the rule is stated, and
+  the note says the rest is yours. No arrows, no walk-through — by design.</p>
+  <div class="demo">
+    <figure>
+      <div class="gridwrap" id="g-als"></div>
+      <figcaption>Set A r2c5 (solid) · Set B r2c7+r2c8 (dashed) · elimination r2c3</figcaption>
+    </figure>
+    <div class="coach-panel">
+      <div class="coach-panel-technique">ALS-XZ</div>
+      <p class="coach-panel-text">These two groups are each one digit short of locked. They share
+      <em>2</em> restrictively — so one group must contain <em>9</em>. Cells seeing every
+      <em>9</em> in both groups can't contain <em>9</em>.</p>
+      <p class="coach-panel-note">Tracing which digits lock each group is an advanced exercise —
+      the highlights show the two groups and the result.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  // animated attempt counter
+  let n = 412;
+  setInterval(() => { n = n >= 1990 ? 412 : n + Math.floor(Math.random()*14)+3;
+    document.getElementById('att').textContent = n; }, 350);
+
+  const CS = 38;
+  function buildGrid(elId, cells, arrows) {
+    const wrap = document.getElementById(elId);
+    const grid = document.createElement('div');
+    grid.className = 'sgrid';
+    const byIdx = {};
+    for (const c of cells) byIdx[c.r * 9 + c.c] = c;
+    for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
+      const d = document.createElement('div');
+      d.className = 'cell';
+      if (c % 3 === 2 && c !== 8) d.classList.add('b-r');
+      if (r % 3 === 2 && r !== 8) d.classList.add('b-b');
+      const spec = byIdx[r * 9 + c];
+      if (spec) {
+        if (spec.cls) d.classList.add(...spec.cls.split(' '));
+        if (spec.d) { d.textContent = spec.d; d.classList.add('given'); }
+        if (spec.p) {
+          const pm = document.createElement('div'); pm.className = 'pmarks';
+          for (let k = 1; k <= 9; k++) {
+            const s = document.createElement('span');
+            if (spec.p.includes(k)) { s.textContent = k; if ((spec.cp||[]).includes(k)) s.classList.add('cp'); }
+            pm.appendChild(s);
+          }
+          d.appendChild(pm);
+        }
+      }
+      grid.appendChild(d);
+    }
+    wrap.appendChild(grid);
+    if (arrows) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'overlay');
+      svg.innerHTML = arrows;
+      wrap.appendChild(svg);
+    }
+  }
+  const ctr = (r, c) => [c * CS + CS/2 + 2, r * CS + CS/2 + 2];
+
+  // 4: Finned X-Wing — corners (2,3)(2,8)(7,3)(7,8) 0-indexed, fin (7,7), elims (6,8)(8,8)
+  buildGrid('g-fish', [
+    {r:2,c:3,cls:'coached-cause',p:[4,1],cp:[4]}, {r:2,c:8,cls:'coached-cause',p:[4,6],cp:[4]},
+    {r:7,c:3,cls:'coached-cause',p:[4,9],cp:[4]}, {r:7,c:8,cls:'coached-cause',p:[4,2],cp:[4]},
+    {r:7,c:7,cls:'coached-fin',p:[4,5],cp:[4]},
+    {r:6,c:8,cls:'coached-elim-target',p:[4,3,8],cp:[4]}, {r:8,c:8,cls:'coached-elim-target',p:[4,7],cp:[4]},
+    {r:1,c:1,d:5},{r:4,c:4,d:9},{r:5,c:2,d:1},{r:3,c:6,d:7},{r:6,c:1,d:8},{r:0,c:5,d:2},
+  ], (() => {
+    const [x1,y1]=ctr(2,3),[x2,y2]=ctr(2,8),[x3,y3]=ctr(7,8),[x4,y4]=ctr(7,3);
+    const [fx,fy]=ctr(7,7); const [e1x,e1y]=ctr(6,8); const [e2x,e2y]=ctr(8,8);
+    return `
+    <polygon points="${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4}"
+      fill="none" stroke="#7c3aed" stroke-width="2" opacity="0.85"/>
+    <line x1="${fx}" y1="${fy}" x2="${e1x}" y2="${e1y}" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="4 3" opacity="0.8"/>
+    <line x1="${fx}" y1="${fy}" x2="${e2x}" y2="${e2y}" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="4 3" opacity="0.8"/>`;
+  })());
+
+  // 5: UR Type 1 — floor (3,1)(4,1)(4,5), roof (3,5) 0-indexed
+  buildGrid('g-ur', [
+    {r:3,c:1,cls:'coached-cause',p:[3,7],cp:[3,7]},
+    {r:4,c:1,cls:'coached-cause',p:[3,7],cp:[3,7]},
+    {r:4,c:5,cls:'coached-cause',p:[3,7],cp:[3,7]},
+    {r:3,c:5,cls:'coached-cause coached-elim-target',p:[3,7,9],cp:[3,7]},
+    {r:0,c:0,d:6},{r:2,c:3,d:1},{r:5,c:7,d:4},{r:7,c:2,d:9},{r:6,c:6,d:2},{r:8,c:4,d:5},
+  ], (() => {
+    const [x1,y1]=ctr(3,1),[x2,y2]=ctr(3,5),[x3,y3]=ctr(4,5),[x4,y4]=ctr(4,1);
+    return `<polygon points="${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4}"
+      fill="none" stroke="#7c3aed" stroke-width="2" opacity="0.85"/>`;
+  })());
+
+  // 6: ALS-XZ — A (1,4) solid; B (1,6)(1,7) dashed; elim (1,2)
+  buildGrid('g-als', [
+    {r:1,c:4,cls:'coached-sc-a',p:[2,9],cp:[2,9]},
+    {r:1,c:6,cls:'coached-sc-b',p:[2,5],cp:[2]},
+    {r:1,c:7,cls:'coached-sc-b',p:[5,9],cp:[9]},
+    {r:1,c:2,cls:'coached-elim-target',p:[1,9],cp:[9]},
+    {r:0,c:0,d:3},{r:3,c:3,d:6},{r:5,c:5,d:1},{r:7,c:1,d:8},{r:2,c:8,d:4},{r:6,c:7,d:7},
+  ], null);
+</script>
+</body>
+</html>
