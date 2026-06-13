@@ -1,6 +1,6 @@
 # Architectural Spec — Coach Mode UI and State Integration
 **ID:** aspec-coach-ui
-**Status:** Final (amended 2026-05-28)
+**Status:** Final (amended 2026-06-12)
 **Date:** 2026-05-04
 **Author:** Architect
 
@@ -9,6 +9,8 @@
 > **Amendment 2026-05-28:** Gated the `PEN_ENTER` coach block (§4.1) on `_applyPenEnter`'s `mutated` return. A no-op `PEN_ENTER` (given cell, same-digit re-entry, or won board) places no digit and must not fire `COACH_END`/`COACH_FILL_RECAP`. The previous guard (`coachSession !== null && !fromHint`) omitted this, so such a dispatch on an active session would still end the session or show a recap. Latent in the UI (digit input is blocked on givens), but a contract-level reducer invariant. Updated §4.1 pseudocode and added the "No-op fill case" note.
 
 > **Amendment 2026-05-14:** Fixed Hidden Pair / Hidden Triple elimination completion. These techniques set `roles.elimTarget = []` because their eliminations happen within the cause cells, not in external cells. The original `eliminationTargets` construction iterated `roles.elimTarget` and produced an empty Map, causing `Array.every()` on an empty iterable to return `true` immediately — the elim recap fired on the first pencil toggle. Fix: when `roles.elimTarget` is empty, build per-cell bitmasks from `result.eliminations` instead. Updated §2.1 (`eliminationTargets` field description), §3.1 (COACH_START step 3 code), and §6.10 (`_composeElimRecapDetail` cell-count fix).
+
+> **Amendment 2026-06-12:** Fixed elimination completion and the elim recap detail line for techniques whose headline `digits` differ from the digit actually eliminated. A Unique Rectangle (Type 2/4) reports its pair `{a,b}` in `step.digits` but removes only the *extra* digit, leaving the other (locked) digit in place. The `roles.elimTarget` construction path computed `digitBits` from `result.digits` and required *every* headline digit cleared from each target cell, so the completion check was never satisfied (e.g. UR Type 4 leaves digit `a` penciled): the elim recap never fired and the coached highlight never cleared, though the elimination itself applied (the next Coach press advanced normally). `_composeElimRecapDetail` had the parallel defect, naming `step.digits[0]` — a digit that was never removed. Fix: build `eliminationTargets` **and** the recap digit solely from `result.eliminations`, never from `digits`/`roles`. This subsumes the 2026-05-14 Hidden Pair/Triple branch — there is now a single unconditional construction. Updated §2.1, §3.1 (COACH_START step 3 code), and §6.10 (`_composeElimRecapDetail`).
 
 **Loaded by:** Implementor (Phase 8b — Coach Mode), Reviewer, QE Test Writer, QE Test Runner. This is the second of two Coach Mode specs; load `aspec-coach-analyzer.md` first for the sealed `CoachStep` schema this spec consumes.
 
@@ -100,11 +102,12 @@ GameState.coachSession =
                                                // For elimination techniques: maps each
                                                // affected cell index to the bitmask of
                                                // digits that must be cleared from pencil.
-                                               // Built from roles.elimTarget for most
-                                               // techniques; built from result.eliminations
-                                               // for Hidden Pair / Hidden Triple (which set
-                                               // roles.elimTarget = [] because eliminations
-                                               // happen within the cause cells).
+                                               // Built solely from result.eliminations
+                                               // ({cellIndex, digit} entries) — never from
+                                               // step.digits, whose headline digits can name
+                                               // digits that are NOT eliminated (e.g. a Unique
+                                               // Rectangle reports its pair but strips only the
+                                               // extra digit, keeping the locked one).
                                                // null for placement techniques (ranks 1–2).
                                                // Never mutated after COACH_START.
 
@@ -205,22 +208,18 @@ If a previous session is active (`state.coachSession !== null`), the reducer fir
    }
    ```
    Auto-reveal is the **only** time the coach writes to `state.pencil`. Even ranks 1–2 (`autoReveal.required === false`) do not touch `pencil`. The `coachRevealedBits` array is all-zeros for rank 1–2 sessions.
-3. Compute `eliminationTargets` for elimination techniques:
+3. Compute `eliminationTargets` for elimination techniques. Derive the per-cell
+   bitmasks from the individual `result.eliminations` entries — **never** from
+   `result.digits`. The headline digits can differ from what is actually eliminated
+   (a Unique Rectangle reports its pair `{a,b}` but removes only the extra digit,
+   leaving the locked one in place), so a `digits`-based mask would require clearing
+   a digit that legitimately stays and the completion check would never fire:
    ```js
    const eliminationTargets = (result.type === 'elimination')
      ? (() => {
          const m = new Map();
-         if (result.roles.elimTarget.length > 0) {
-           // Most techniques: all elim-target cells lose the same digit set.
-           const digitBits = result.digits.reduce((b, d) => b | (1 << (d - 1)), 0);
-           for (const c of result.roles.elimTarget) m.set(c, digitBits);
-         } else {
-           // Hidden Pair / Hidden Triple: roles.elimTarget is empty because
-           // eliminations happen within the cause cells. Build per-cell bitmasks
-           // from the individual elimination entries instead.
-           for (const { cellIndex, digit } of result.eliminations) {
-             m.set(cellIndex, (m.get(cellIndex) ?? 0) | (1 << (digit - 1)));
-           }
+         for (const { cellIndex, digit } of result.eliminations) {
+           m.set(cellIndex, (m.get(cellIndex) ?? 0) | (1 << (digit - 1)));
          }
          return m;
        })()
@@ -914,13 +913,11 @@ function _showRecap(step, variant) {
 }
 
 function _composeElimRecapDetail(step) {
-  const D = step.digits[0];  // primary digit being eliminated
-  // Use roles.elimTarget when non-empty (most techniques). Fall back to
-  // counting distinct cells in step.eliminations for Hidden Pair / Hidden
-  // Triple, which set roles.elimTarget = [].
-  const n = step.roles.elimTarget.length > 0
-    ? step.roles.elimTarget.length
-    : new Set(step.eliminations.map(e => e.cellIndex)).size;
+  // Source the removed digit and affected-cell count from the actual eliminations,
+  // not from step.digits — the headline digits can name a digit that was never
+  // removed (e.g. a Unique Rectangle reports its pair but strips only the extra).
+  const D = step.eliminations[0].digit;
+  const n = new Set(step.eliminations.map(e => e.cellIndex)).size;
   const unitLabel = step.unit ? _formatUnitLabel(step.unit) : 'the grid';
   return `${step.technique} in ${unitLabel}: digit ${D} removed from ${n} cell${n === 1 ? '' : 's'}.`;
 }

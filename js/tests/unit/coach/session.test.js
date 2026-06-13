@@ -961,6 +961,86 @@ describe('PENCIL_TOGGLE — elimination completion (Hidden Pair, roles.elimTarge
   });
 });
 
+// ---------------------------------------------------------------------------
+// Unique Rectangle: headline digits differ from the eliminated digit. The
+// completion check must key off the actual eliminations, not roles.digits,
+// or the recap never fires (regression: UR Type 4 left the locked digit in
+// place, so an elimTarget×digits bitmask was never satisfied).
+// ---------------------------------------------------------------------------
+
+describe('PENCIL_TOGGLE — elimination completion (Unique Rectangle Type 4)', () => {
+
+  /**
+   * UR reports its pair {4,5} in `digits`, but removes only digit 5 from the
+   * two roof corners (cells 20, 21); digit 4 is locked and stays.
+   */
+  function urType4Step() {
+    return {
+      type: 'elimination',
+      technique: 'Unique Rectangle',
+      rank: 20,
+      digits: [4, 5],
+      roles: {
+        target: null,
+        cause: [2, 11, 20, 21],
+        elimTarget: [20, 21],
+        unitMember: [],
+        scA: [],
+        scB: [],
+      },
+      unit: null,
+      arrows: [],
+      eliminations: [
+        { cellIndex: 20, digit: 5 },
+        { cellIndex: 21, digit: 5 },
+      ],
+      autoReveal: { required: true, cells: [] },
+      supportingText: 'Remove *5* from both corners.',
+      complexity: { acknowledged: false, note: null, endpoints: null },
+    };
+  }
+
+  it('eliminationTargets keys off the eliminated digit, not the headline pair', () => {
+    const gs = stateWithPuzzle();
+    gs.dispatch({ type: 'COACH_START', result: urType4Step() });
+    const targets = gs.getState().coachSession.eliminationTargets;
+    // Only digit 5 (bit 4) — NOT 4|5.
+    expect(targets.get(20)).to.equal(1 << 4);
+    expect(targets.get(21)).to.equal(1 << 4);
+  });
+
+  it('recap fires after clearing only digit 5, with the locked digit 4 still penciled', () => {
+    const gs = stateWithPuzzle();
+    gs.dispatch({ type: 'COACH_START', result: urType4Step() });
+
+    gs.dispatch({ type: 'SET_MODE', mode: 'pencil' });
+    // Arm both targets with digit 5 first (mirrors auto-reveal in the real game),
+    // so the completion check is non-trivial; then add the locked digit 4.
+    for (const c of [20, 21]) {
+      gs.dispatch({ type: 'SELECT_CELL', index: c });
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 5 });
+    }
+    for (const c of [20, 21]) {
+      gs.dispatch({ type: 'SELECT_CELL', index: c });
+      gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 4 });
+    }
+
+    // Clear digit 5 from the first corner — second still has it, no recap yet.
+    gs.dispatch({ type: 'SELECT_CELL', index: 20 });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 5 });
+    expect(gs.getState().coachSession.recap).to.equal(null);
+
+    // Clear digit 5 from the second corner — all eliminations applied → recap.
+    gs.dispatch({ type: 'SELECT_CELL', index: 21 });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 5 });
+    expect(gs.getState().coachSession.recap).to.equal('elim');
+
+    // The locked digit 4 must remain in both corners.
+    expect(gs.getState().pencil[20] & (1 << 3)).to.not.equal(0);
+    expect(gs.getState().pencil[21] & (1 << 3)).to.not.equal(0);
+  });
+});
+
 describe('cross-action: ON_COMPLETION_EVALUATE with win during recap', () => {
 
   it('winning during a recap clears coachSession', () => {

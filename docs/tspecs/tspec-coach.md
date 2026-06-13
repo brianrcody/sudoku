@@ -110,7 +110,8 @@ Coach Mode splits cleanly into three test surfaces:
 | `NEW_PUZZLE` / `RESET_PUZZLE` / `PUZZLE_LOADED` clear slice | Yes | |
 | `CHANGE_DIFFICULTY` ends + pencil reverts / no-op without session | Yes | |
 | Elimination completion: full clear → elim recap; partial → no recap | Yes (Locked Candidates) | |
-| Elimination completion: Hidden Pair `elimTarget=[]` fallback | Yes | |
+| Elimination completion: Hidden Pair `elimTarget=[]` (built from `eliminations`) | Yes | |
+| Elimination completion: headline digit ≠ eliminated digit (UR Type 4) | Yes | SS20 |
 | Win-during-recap (via direct `COACH_END {reason:'won'}`) | Yes (proxy) | SS16 also exercises the real `ON_COMPLETION_EVALUATE` chain via `_applyPenEnter` |
 | `COACH_START` guarded when `puzzle === null` | Yes | SS1 |
 | `COACH_START` guarded when `won === true` | Yes | SS2 |
@@ -223,7 +224,8 @@ These tests append to the existing file using the same `stubStats`, `stubHintPro
 | SS3 | `COACH_START` no-technique emits `coachSession` change-key (informational) | unit | `result.type === 'no-technique'` branch's emit | Load puzzle; dispatch `COACH_START` with `{type:'no-technique', reason:'complete'}` | `coachSession === null`; a `'changed'` event fires with `changed.has('coachSession') === true` | P2 |
 | SS4 | `COACH_START` over an active session reverts pencil first (defensive path) | unit | `if (state.coachSession !== null)` defensive branch in `COACH_START` | Start a rank-4 session with auto-reveal that adds bits to cell 5. Without dispatching `COACH_END`, dispatch a second `COACH_START` with a rank-1 step. | First session's pencil-revert happens before second session's snapshot is taken; cell 5's bits return to pre-first-session value; second session slice is populated with fresh snapshot | P1 |
 | SS5 | `COACH_START` placement technique → `eliminationTargets === null` | unit | `result.type === 'elimination'` false branch | Dispatch `COACH_START` with `nakedSingleStep()` | `coachSession.eliminationTargets === null` | P1 |
-| SS6 | `COACH_START` elimination with `roles.elimTarget = []` builds from `eliminations` | unit | Hidden Pair / Hidden Triple branch in eliminationTargets construction | Dispatch `COACH_START` with a Hidden Pair step (`elimTarget: []`, `eliminations: [{10,3},{11,3},{11,7}]`) | `eliminationTargets.get(10) === (1 << 2)`; `eliminationTargets.get(11) === (1 << 2) | (1 << 6)` | P2 |
+| SS6 | `COACH_START` elimination with `roles.elimTarget = []` builds from `eliminations` | unit | `eliminationTargets` construction (single unconditional `result.eliminations` loop) | Dispatch `COACH_START` with a Hidden Pair step (`elimTarget: []`, `eliminations: [{10,3},{11,3},{11,7}]`) | `eliminationTargets.get(10) === (1 << 2)`; `eliminationTargets.get(11) === (1 << 2) | (1 << 6)` | P2 |
+| SS20 | `COACH_START` keys `eliminationTargets` off the eliminated digit, not the headline pair (Unique Rectangle Type 4) | unit | `eliminationTargets` construction must ignore `step.digits` — headline digits diverge from eliminated digits | Dispatch `COACH_START` with a UR Type 4 step (`digits: [4,5]`, `elimTarget: [20,21]`, `eliminations: [{20,5},{21,5}]`). Then arm both targets with digit 5 (and the locked digit 4), clear digit 5 from each via `PENCIL_TOGGLE` | `eliminationTargets.get(20) === (1 << 4)` and `.get(21) === (1 << 4)` (digit 5 only, NOT 4\|5); elim recap fires after clearing digit 5 from both while the locked digit 4 remains penciled | P1 |
 | SS7 | `COACH_FILL_RECAP` no-op when `coachSession === null` | unit | `if (state.coachSession === null) break` | No session active; dispatch `COACH_FILL_RECAP {variant:'normal'}` | No state change; capture emits and assert no `'coachSession'` emit fires | P1 |
 | SS8 | `COACH_FILL_RECAP` no-op when already in recap (normal/error) | unit | `if (state.coachSession.recap !== null) break` | Start session; dispatch `COACH_FILL_RECAP {variant:'normal'}` (enters recap); then dispatch `COACH_FILL_RECAP {variant:'error'}` | `recap` remains `'normal'`; second dispatch produces no additional `'coachSession'` emit | P1 |
 | SS9 | `COACH_FILL_RECAP` no-op when already in recap (elim) | unit | Same guard for elim variant | Start elimination session; dispatch `COACH_FILL_RECAP {variant:'normal'}`; then `COACH_FILL_RECAP {variant:'elim'}` | `recap` remains `'normal'`; second dispatch no-op | P2 |
@@ -322,8 +324,7 @@ These tests follow the existing `iframe` / `loadIframe` / `wait` pattern in the 
 | `COACH_START` `autoReveal.required` false | Existing rank-1 test |
 | `COACH_START` `result.type === 'elimination'` true | Existing elim tests + SS6 |
 | `COACH_START` `result.type === 'elimination'` false | SS5 |
-| `COACH_START` `roles.elimTarget.length > 0` true | Existing Locked Candidates test |
-| `COACH_START` `roles.elimTarget.length > 0` false | Existing Hidden Pair test; SS6 |
+| `COACH_START` `eliminationTargets` from `result.eliminations` (single unconditional loop, no `roles.elimTarget`/`digits` branch) | Existing Locked Candidates + Hidden Pair tests; SS6; SS20 (headline≠eliminated digit) |
 | `COACH_START` `selected !== null && coachedCells.has(selected)` true/false | Existing focus-init tests |
 | `COACH_END` `coachSession === null` break | Existing |
 | `COACH_END` `coachSession !== null` | Existing |
@@ -376,8 +377,7 @@ These tests follow the existing `iframe` / `loadIframe` / `wait` pattern in the 
 | `_showRecap` `variant === 'elim'` / `'normal'` / `'error'` | Existing CT-R1, CT-R2, CT-EC1 |
 | `_composeRecapDetail` Naked Single branch | Existing CT-R1 |
 | `_composeRecapDetail` Hidden Single branch | CT-R6 |
-| `_composeElimRecapDetail` `roles.elimTarget.length > 0` | Existing CT-EC1 + CT-R7 |
-| `_composeElimRecapDetail` `roles.elimTarget.length === 0` (Hidden Pair fallback) | CT-R7 extension (extend when rank05 fixture lands) |
+| `_composeElimRecapDetail` digit/count from `step.eliminations` (no `roles.elimTarget` branch; digit is `eliminations[0].digit`, not `digits[0]`) | Existing CT-EC1 + CT-R7 |
 | `_composeElimRecapDetail` `step.unit !== null` / `null` | CT-R7 / CT-R8 |
 | `_trackFocus` coached / non-coached / null | Existing CT-P1, CT-P3, CT-P4 |
 

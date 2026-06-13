@@ -729,20 +729,16 @@ export function createGameState({ stats, hintProvider }) {
           }
         }
 
-        // 3. Compute eliminationTargets for elimination techniques.
+        // 3. Compute eliminationTargets for elimination techniques. Derive the
+        // per-cell bitmasks from the individual elimination entries — never from
+        // result.digits, whose "headline" digits can differ from what is actually
+        // eliminated (e.g. a Unique Rectangle reports its pair {a,b} but removes
+        // only the extra digit, leaving the locked one in place).
         const eliminationTargets = (result.type === 'elimination')
           ? (() => {
               const m = new Map();
-              if (result.roles.elimTarget.length > 0) {
-                const digitBits = result.digits.reduce((b, d) => b | (1 << (d - 1)), 0);
-                for (const c of result.roles.elimTarget) m.set(c, digitBits);
-              } else {
-                // Hidden Pair / Hidden Triple: eliminations happen within cause cells,
-                // so roles.elimTarget is empty. Build per-cell bitmasks from the
-                // individual elimination entries instead.
-                for (const { cellIndex, digit } of result.eliminations) {
-                  m.set(cellIndex, (m.get(cellIndex) ?? 0) | (1 << (digit - 1)));
-                }
+              for (const { cellIndex, digit } of result.eliminations) {
+                m.set(cellIndex, (m.get(cellIndex) ?? 0) | (1 << (digit - 1)));
               }
               return m;
             })()

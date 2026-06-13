@@ -860,11 +860,14 @@ conflict indicator handles correctness feedback as normal (§11.4). The session 
 a non-coached cell had been filled (§2.2). Auto-revealed candidates revert (standard path
 per §2.3).
 
-**Elimination techniques (ranks 3–15) — completion detection:**
+**Elimination techniques (rank 3 and above) — completion detection:**
 
 During an active elimination-technique session, every `PENCIL_TOGGLE` action triggers a
-completion check. The completion condition is: all digits in `step.digits` have been
-cleared from all `step.roles.elimTarget` cells in the user's current pencil state.
+completion check. The completion condition is: every candidate the technique actually
+eliminates — each `{cell, digit}` pair the move removes — has been cleared from the user's
+current pencil state. Digits the technique leaves in place are not part of the condition:
+a Unique Rectangle, for example, names a pair `{a,b}` but removes only the extra digit and
+keeps the locked one, so only the removed digit must be cleared.
 
 When the completion condition is met:
 
@@ -945,7 +948,7 @@ The following table summarizes all coach session state transitions:
 | Coaching | User fills coached cell (placement technique, correct digit) | Recap | Panel closes; normal recap opens; highlights clear |
 | Coaching | User fills coached cell (placement technique, incorrect digit) | Recap | Panel closes; error-variant recap opens; highlights clear |
 | Coaching | User fills coached cell (elimination technique, any digit) | Idle | Panel closes; session ends silently; auto-revealed candidates revert; no recap |
-| Coaching | PENCIL_TOGGLE; completion condition met (all `step.digits` cleared from all `step.roles.elimTarget` cells) | Recap (elim) | Panel closes; elim recap opens; highlights clear |
+| Coaching | PENCIL_TOGGLE; completion condition met (every eliminated `{cell, digit}` pair cleared from pencil) | Recap (elim) | Panel closes; elim recap opens; highlights clear |
 | Coaching | Hint fills coached cell | Idle | All highlights clear; panel closes; auto-revealed candidates revert; no recap |
 | Coaching | User fills or erases non-coached cell | Idle | All highlights clear; panel closes; auto-revealed candidates revert |
 | Coaching | Coach button pressed again | Coaching | Fresh analysis; previous session state fully reset before new highlights drawn |

@@ -326,10 +326,12 @@ function _hideRecap() {
  * @returns {string}
  */
 function _composeElimRecapDetail(step) {
-  const D = step.digits[0];
-  const n = step.roles.elimTarget.length > 0
-    ? step.roles.elimTarget.length
-    : new Set(step.eliminations.map(e => e.cellIndex)).size;
+  // Source the removed digit and affected-cell count from the actual eliminations,
+  // not from step.digits — a technique's headline digits can differ from what it
+  // removes (e.g. a Unique Rectangle reports its pair {a,b} but strips only the
+  // extra digit, so step.digits[0] would name a digit that was never removed).
+  const D = step.eliminations[0].digit;
+  const n = new Set(step.eliminations.map(e => e.cellIndex)).size;
   const unitLabel = step.unit ? _formatUnitLabel(step.unit) : 'the grid';
   return `${step.technique} in ${unitLabel}: digit ${D} removed from ${n} cell${n === 1 ? '' : 's'}.`;
 }
