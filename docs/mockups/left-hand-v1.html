@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Left-Hand Layout (v1)</title>
+<style>
+/* ──── css/themes.css (current app) ──── */
+/* ── Default / Minimalist theme values ───────────────────────────────── */
+:root,
+body.theme-minimalist {
+  --bg:            #f7f6f2;
+  --surface:       #ffffff;
+  --border:        #c8c4bb;
+  --border-strong: #2e2b25;
+  --text:          #1c1a16;
+  --text-muted:    #7a7570;
+  --text-given:    #1c1a16;
+  --given-bg:      #eceae4;
+  --accent:        #2c5282;
+  --accent-light:  #dbeafe;
+  --conflict:      #b91c1c;
+  --conflict-bg:   #fef2f2;
+  --pencil:        #5a6778;
+  --btn-bg:        #f0ede6;
+  --btn-hover:     #e4e0d7;
+  --btn-border:    #c8c4bb;
+  --active-mode:   #2c5282;
+  --win:           #15803d;
+  --stats-row-sep: #f0ede6;
+  --header-bg:     var(--surface);
+  --modal-bg:      var(--surface);
+  --win-banner-bg: rgba(255,255,255,0.92);
+  --primary-hover: #1e3a6e;
+  --coach:               #7c3aed;
+  --coach-light:         #ede9fe;
+  --coach-mid:           #c4b5fd;
+  --pencil-on-coach:       #ffffff;
+  --pencil-on-coach-light: var(--pencil);
+}
+
+/* ── Coffee Shop ──────────────────────────────────────────────────────── */
+body.theme-coffee {
+  --bg:            #3b2a1a;
+  --surface:       #f5ede0;
+  --border:        #c9a97a;
+  --border-strong: #7c4f22;
+  --text:          #2b1d0e;
+  --text-muted:    #8c6642;
+  --text-given:    #2b1d0e;
+  --given-bg:      #e8d5b8;
+  --accent:        #8b4513;
+  --accent-light:  #fde8cc;
+  --conflict:      #c0392b;
+  --conflict-bg:   #fdf0ee;
+  --pencil:        #7a5c3a;
+  --btn-bg:        #ecdfc8;
+  --btn-hover:     #e0cead;
+  --btn-border:    #c9a97a;
+  --active-mode:   #8b4513;
+  --win:           #a06b1a;
+  --stats-row-sep: #ecdfc8;
+  --header-bg:     #2b1d0e;
+  --modal-bg:      #f5ede0;
+  --win-banner-bg: rgba(245,237,224,0.93);
+  --primary-hover: #6b3410;
+  --coach:               #c2410c;
+  --coach-light:         #ffedd5;
+  --coach-mid:           #fb923c;
+  --pencil-on-coach:       #ffffff;
+  --pencil-on-coach-light: var(--pencil);
+}
+
+/* ── School ───────────────────────────────────────────────────────────── */
+body.theme-school {
+  --bg:            #f8f5e6;
+  --surface:       #fdfaf0;
+  --border:        #b8c4d4;
+  --border-strong: #4a5568;
+  --text:          #2d3748;
+  --text-muted:    #718096;
+  --text-given:    #1a202c;
+  --given-bg:      #edf0f5;
+  --accent:        #4a5568;
+  --accent-light:  #e2e8f0;
+  --conflict:      #c53030;
+  --conflict-bg:   #fff5f5;
+  --pencil:        #718096;
+  --btn-bg:        #edf2f7;
+  --btn-hover:     #e2e8f0;
+  --btn-border:    #b8c4d4;
+  --active-mode:   #4a5568;
+  --win:           #276749;
+  --stats-row-sep: #edf2f7;
+  --header-bg:     #fdfaf0;
+  --modal-bg:      #fdfaf0;
+  --win-banner-bg: rgba(253,250,240,0.93);
+  --primary-hover: #2d3748;
+  --coach:               #1d4ed8;
+  --coach-light:         #dbeafe;
+  --coach-mid:           #93c5fd;
+  --pencil-on-coach:       #ffffff;
+  --pencil-on-coach-light: var(--pencil);
+}
+
+/* ── Mountain ─────────────────────────────────────────────────────────── */
+body.theme-mountain {
+  --bg:            #e8f0f7;
+  --surface:       #f7fafc;
+  --border:        #adc6de;
+  --border-strong: #1a3a52;
+  --text:          #0f2233;
+  --text-muted:    #4d7a99;
+  --text-given:    #1a4d2e;
+  --given-bg:      #dce8f2;
+  --accent:        #1a6b8a;
+  --accent-light:  #cfe8f3;
+  --conflict:      #b91c1c;
+  --conflict-bg:   #fef2f2;
+  --pencil:        #2d6e4e;
+  --btn-bg:        #dce8f2;
+  --btn-hover:     #c8dcea;
+  --btn-border:    #adc6de;
+  --active-mode:   #1a6b8a;
+  --win:           #1a6b4e;
+  --stats-row-sep: #dce8f2;
+  --header-bg:     #1a3a52;
+  --modal-bg:      #f7fafc;
+  --win-banner-bg: rgba(247,250,252,0.93);
+  --primary-hover: #145a75;
+  --coach:               #0f766e;
+  --coach-light:         #ccfbf1;
+  --coach-mid:           #5eead4;
+  --pencil-on-coach:       #ffffff;
+  --pencil-on-coach-light: var(--pencil);
+}
+
+/* ── Digital Terminal ─────────────────────────────────────────────────── */
+body.theme-terminal {
+  --bg:            #0d0d0d;
+  --surface:       #111111;
+  --border:        #1f4a1f;
+  --border-strong: #39ff14;
+  --text:          #b0ffb0;
+  --text-muted:    #3d7a3d;
+  --text-given:    #39ff14;
+  --given-bg:      #0a1a0a;
+  --accent:        #39ff14;
+  --accent-light:  #0a2a0a;
+  --conflict:      #ff4444;
+  --conflict-bg:   #1a0505;
+  --pencil:        #3d7a3d;
+  --btn-bg:        #0f1f0f;
+  --btn-hover:     #162b16;
+  --btn-border:    #1f4a1f;
+  --active-mode:   #39ff14;
+  --win:           #39ff14;
+  --stats-row-sep: #0f1f0f;
+  --header-bg:     #090909;
+  --modal-bg:      #111111;
+  --win-banner-bg: rgba(11,11,11,0.95);
+  --primary-hover: #22cc00;
+  --coach:               #0e7490;
+  --coach-mid:           #155e75;
+  --coach-light:         #0a1f28;
+  --pencil-on-coach:       #b0ffb0;
+  --pencil-on-coach-light: #b0ffb0;
+}
+
+/* ──── css/base.css (current app) ──── */
+/* ── Reset & base typography ──────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif);
+  font-size: 15px;
+  line-height: 1.4;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* Terminal: monospace throughout */
+body.theme-terminal {
+  font-family: "Courier New", Courier, monospace;
+}
+
+/* ── Visually hidden utility (a11y) ────────────────────────────────────── */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Screen reader live region ────────────────────────────────────────── */
+#sr-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--header-bg);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body.theme-terminal header {
+  border-bottom: 1px solid var(--accent);
+  box-shadow: 0 1px 0 0 var(--accent);
+}
+
+body.theme-terminal header h1 {
+  color: var(--accent);
+  text-shadow: 0 0 8px rgba(57,255,20,0.4);
+  letter-spacing: 0.15em;
+}
+
+body.theme-mountain header {
+  color: #e8f0f7;
+  border-bottom-color: #2d5878;
+}
+
+body.theme-mountain header h1 {
+  color: #f7fafc;
+  letter-spacing: 0.06em;
+}
+
+body.theme-coffee header {
+  color: #f5ede0;
+  border-bottom-color: #7c4f22;
+}
+
+body.theme-coffee header h1 {
+  color: #f5ede0;
+}
+
+body.theme-school header {
+  border-bottom: 2px solid #b8c4d4;
+}
+
+/* ── Theme control (header right) ────────────────────────────────────── */
+.theme-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+body.theme-mountain .theme-control {
+  color: #adc6de;
+}
+
+body.theme-coffee .theme-control {
+  color: #c9a97a;
+}
+
+.theme-control label {
+  white-space: nowrap;
+}
+
+/* ── Main layout ──────────────────────────────────────────────────────── */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 32px;
+  gap: 24px;
+}
+
+body.theme-coffee main {
+  background: linear-gradient(160deg, #3b2a1a 0%, #4a3020 50%, #3b2a1a 100%);
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+footer {
+  text-align: center;
+  padding: 20px 16px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+footer a {
+  color: inherit;
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
+body.theme-school main {
+  background-color: #f8f5e6;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 27px,
+    #a8b8cc 27px,
+    #a8b8cc 28px
+  );
+  background-position: 0 14px;
+}
+
+body.theme-mountain main {
+  background: linear-gradient(175deg, #d4e8f5 0%, #e8f0f7 40%, #f0f5fa 100%);
+}
+
+body.theme-terminal main {
+  background: #0d0d0d;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.15) 2px,
+    rgba(0,0,0,0.15) 4px
+  );
+}
+
+/* ── Game area layout ─────────────────────────────────────────────────── */
+.game-area {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 32px;
+  width: 100%;
+  max-width: 860px;
+  justify-content: center;
+}
+
+.left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 220px;
+  flex-shrink: 0;
+}
+
+/* ── Responsive: mobile ───────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  header {
+    padding: 12px 16px;
+  }
+
+  header h1 {
+    font-size: 16px;
+  }
+
+  main {
+    padding: 16px 12px 28px;
+    gap: 16px;
+  }
+
+  .game-area {
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .left-col {
+    width: 100%;
+    align-items: center;
+  }
+
+  .right-col {
+    width: 100%;
+    max-width: 414px;
+  }
+}
+
+/* ──── css/grid.css (current app) ──── */
+/* ── Difficulty row ───────────────────────────────────────────────────── */
+.difficulty-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.difficulty-row label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+body.theme-terminal .difficulty-row label {
+  letter-spacing: 0.1em;
+}
+
+#difficulty-select {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 28px 6px 10px;
+  border: 1px solid var(--btn-border);
+  border-radius: 5px;
+  background-color: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  font-family: inherit;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+body.theme-coffee #difficulty-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238c6642'/%3E%3C/svg%3E");
+}
+
+body.theme-school #difficulty-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23718096'/%3E%3C/svg%3E");
+}
+
+body.theme-terminal #difficulty-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2339ff14'/%3E%3C/svg%3E");
+  border-color: var(--accent);
+}
+
+body.theme-mountain #difficulty-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234d7a99'/%3E%3C/svg%3E");
+}
+
+#difficulty-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Grid wrapper & grid ──────────────────────────────────────────────── */
+.grid-wrapper {
+  position: relative;
+}
+
+.sudoku-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  border: 2.5px solid var(--border-strong);
+  border-radius: 3px;
+  overflow: hidden;
+  width: 414px;
+  height: 414px;
+  background: var(--surface);
+  user-select: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+body.theme-terminal .sudoku-grid {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(57,255,20,0.2), inset 0 0 4px rgba(57,255,20,0.05);
+  border-radius: 0;
+}
+
+body.theme-coffee .sudoku-grid {
+  box-shadow: 0 4px 16px rgba(59,42,26,0.4);
+}
+
+body.theme-school .sudoku-grid {
+  box-shadow: 2px 2px 8px rgba(74,85,104,0.12);
+}
+
+body.theme-mountain .sudoku-grid {
+  box-shadow: 0 2px 16px rgba(26,58,82,0.15);
+}
+
+/* ── Cells ────────────────────────────────────────────────────────────── */
+.cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 22px;
+  font-weight: 500;
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--text);
+  background: var(--surface);
+  transition: background 0.08s;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.theme-terminal .cell {
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+body.theme-school .cell {
+  font-family: Georgia, serif;
+}
+
+body.theme-coffee .cell {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+/* Last column: no right border */
+.cell:nth-child(9n) {
+  border-right: none;
+}
+
+/* Box dividers: right side of columns 3, 6 */
+.cell[data-col="3"],
+.cell[data-col="6"] {
+  border-right: 2.5px solid var(--border-strong);
+}
+
+/* Box dividers: bottom of rows 3, 6 */
+.cell[data-row="3"],
+.cell[data-row="6"] {
+  border-bottom: 2.5px solid var(--border-strong);
+}
+
+/* Last row: no bottom border */
+.cell[data-row="9"] {
+  border-bottom: none;
+}
+
+/* ── Cell states ──────────────────────────────────────────────────────── */
+.cell.given {
+  background: var(--given-bg);
+  color: var(--text-given);
+  font-weight: 700;
+  cursor: default;
+}
+
+body.theme-terminal .cell.given {
+  text-shadow: 0 0 6px rgba(57,255,20,0.5);
+}
+
+body.theme-school .cell.given {
+  color: #1a202c;
+  font-weight: 700;
+}
+
+.cell.pen {
+  color: var(--accent);
+}
+
+body.theme-school .cell.pen {
+  color: #4a5568;
+  font-style: italic;
+  font-weight: 400;
+}
+
+body.theme-terminal .cell.pen {
+  color: #b0ffb0;
+  text-shadow: 0 0 4px rgba(176,255,176,0.3);
+}
+
+body.theme-coffee .cell.pen {
+  color: #8b4513;
+}
+
+body.theme-mountain .cell.pen {
+  color: #1f6b45;
+}
+
+.cell.selected {
+  background: var(--accent-light) !important;
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+body.theme-terminal .cell.selected {
+  box-shadow: inset 0 0 8px rgba(57,255,20,0.25);
+}
+
+.cell.conflict {
+  background: var(--conflict-bg) !important;
+  color: var(--conflict) !important;
+}
+
+.cell.conflict.selected {
+  outline-color: var(--conflict);
+}
+
+body.theme-terminal .cell.conflict {
+  text-shadow: 0 0 6px rgba(255,68,68,0.6);
+}
+
+/* Incorrect highlight (Check results) */
+.cell.incorrect {
+  color: var(--conflict) !important;
+}
+
+.cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+/* ── Pencil marks ─────────────────────────────────────────────────────── */
+.pencil-marks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+}
+
+.pencil-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-weight: 500;
+  color: var(--pencil);
+  line-height: 1;
+}
+
+body.theme-terminal .pencil-mark {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 8px;
+}
+
+body.theme-school .pencil-mark {
+  font-style: italic;
+  font-size: 8px;
+  color: #718096;
+}
+
+body.theme-mountain .pencil-mark {
+  color: #2d6e4e;
+}
+
+.pencil-mark.empty {
+  visibility: hidden;
+}
+
+/* ── Coach-revealed pencil marks ─────────────────────────────────────── */
+.pencil-mark.coach-reveal {
+  color: var(--coach);
+  font-weight: 700;
+}
+
+/* ── Coached cell states ──────────────────────────────────────────────── */
+.cell.coached-cause {
+  background: var(--coach-light) !important;
+  box-shadow: inset 0 0 0 2px var(--coach-mid);
+  z-index: 2;
+}
+
+.cell.coached-target {
+  background: var(--coach-light) !important;
+  box-shadow: inset 0 0 0 2px var(--coach);
+  z-index: 2;
+}
+
+.cell.coached-elim-target {
+  outline: 2px dashed var(--coach);
+  outline-offset: -2px;
+  z-index: 2;
+  /* No background override */
+}
+
+.cell.coached-elim-target.selected,
+.cell.coached-sc-b.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.cell.coached-unit-member {
+  background: var(--coach-light) !important;
+  /* No outline override */
+}
+
+.cell.coached-sc-a {
+  background: var(--coach) !important;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 2px var(--coach);
+  z-index: 2;
+}
+
+.cell.coached-sc-a .pencil-mark {
+  color: var(--pencil-on-coach);
+}
+
+.cell.coached-sc-b {
+  background: var(--coach-light) !important;
+  outline: 2.5px dashed var(--coach);
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+.cell.coached-sc-b .pencil-mark {
+  color: var(--pencil-on-coach-light);
+}
+
+/* Finned-fish fin cell (vspec-003 §6): mid fill, dotted ring, "fin" tag. */
+.cell.coached-fin {
+  position: relative;
+  background: var(--coach-mid) !important;
+  outline: 2px dotted var(--coach);
+  outline-offset: -3px;
+  z-index: 2;
+}
+
+.cell.coached-fin::after {
+  content: "fin";
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--coach);
+  pointer-events: none;
+}
+
+.cell.coached-fin.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Focus ring overrides — coached cells use the coach accent color */
+.cell.coached-target:not(.selected):focus-visible,
+.cell.coached-cause:not(.selected):focus-visible {
+  outline-color: var(--coach);
+}
+
+/* ── Coach SVG overlay ────────────────────────────────────────────────── */
+#coach-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 414px;
+  height: 414px;
+  pointer-events: none;
+  z-index: 5;
+  display: none;
+  color: var(--coach);
+}
+
+#coach-overlay.visible {
+  display: block;
+}
+
+/* ── Win banner ───────────────────────────────────────────────────────── */
+.win-banner {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: var(--win-banner-bg);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 3px;
+  z-index: 10;
+}
+
+body.theme-terminal .win-banner {
+  border-radius: 0;
+}
+
+.win-banner.show {
+  display: flex;
+  pointer-events: auto;
+}
+
+.win-banner .win-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--win);
+  letter-spacing: 0.02em;
+}
+
+body.theme-terminal .win-banner .win-title {
+  text-shadow: 0 0 16px rgba(57,255,20,0.6);
+  letter-spacing: 0.1em;
+}
+
+.win-banner .win-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .sudoku-grid {
+    width: min(calc(100vw - 32px), 414px);
+    height: min(calc(100vw - 32px), 414px);
+  }
+
+  #coach-overlay {
+    width: min(calc(100vw - 32px), 414px);
+    height: min(calc(100vw - 32px), 414px);
+  }
+
+  .cell {
+    font-size: clamp(14px, 4.5vw, 22px);
+  }
+
+  .pencil-mark {
+    font-size: clamp(6px, 2vw, 9px);
+  }
+}
+
+@media (max-width: 375px) {
+  .sudoku-grid {
+    width: calc(100vw - 32px);
+    height: calc(100vw - 32px);
+  }
+
+  #coach-overlay {
+    width: calc(100vw - 32px);
+    height: calc(100vw - 32px);
+  }
+}
+
+/* ──── css/controls.css (current app) ──── */
+/* ── Number pad ───────────────────────────────────────────────────────── */
+.numpad {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.numpad-digits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.numpad-utils {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.numpad-bottom-row1 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.numpad-bottom-row2 {
+  width: 100%;
+}
+
+.numpad-bottom-row2 .btn-check {
+  width: 100%;
+}
+
+.numpad-undo-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+/* ── Base button ──────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border: 1px solid var(--btn-border);
+  border-radius: 5px;
+  background: var(--btn-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: var(--btn-hover);
+  border-color: var(--border);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Terminal */
+body.theme-terminal .btn {
+  border-radius: 0;
+  border-color: var(--border);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+body.theme-terminal .btn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 6px rgba(57,255,20,0.2);
+}
+
+/* Coffee */
+body.theme-coffee .btn {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(59,42,26,0.15);
+}
+
+/* School */
+body.theme-school .btn {
+  border-radius: 3px;
+}
+
+/* Mountain */
+body.theme-mountain .btn {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(26,58,82,0.1);
+}
+
+/* ── Digit buttons ────────────────────────────────────────────────────── */
+.btn-digit {
+  font-size: 20px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  padding: 12px 6px;
+}
+
+body.theme-terminal .btn-digit {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.theme-school .btn-digit {
+  font-family: Georgia, serif;
+  font-style: italic;
+}
+
+/* ── Mode toggle button ───────────────────────────────────────────────── */
+.btn-mode {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-mode.mode-pen {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.btn-mode.mode-pencil {
+  background: var(--surface);
+  border-color: var(--pencil);
+  color: var(--pencil);
+  font-weight: 600;
+}
+
+body.theme-terminal .btn-mode.mode-pen {
+  box-shadow: 0 0 8px rgba(57,255,20,0.25);
+}
+
+.btn-mode .mode-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.btn-mode .mode-main {
+  font-size: 13px;
+}
+
+body.theme-terminal .btn-mode .mode-main {
+  font-size: 12px;
+}
+
+.btn-mode .mode-sub {
+  font-size: 10px;
+  opacity: 0.7;
+  font-family: inherit;
+}
+
+/* ── Hint button ──────────────────────────────────────────────────────── */
+.btn-hint {
+  position: relative;
+}
+
+.hint-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--surface);
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  line-height: 1;
+  transition: background 0.2s, color 0.2s;
+}
+
+body.theme-terminal .hint-badge {
+  border-radius: 0;
+  color: #000;
+}
+
+.btn:disabled .hint-badge {
+  background: var(--text-muted);
+}
+
+/* ── Coach button ─────────────────────────────────────────────────────── */
+.btn-coach {
+  /* No additional rules — inherits .btn appearance in idle state */
+}
+
+.btn-coach.coaching {
+  background: var(--coach-light);
+  border-color: var(--coach);
+  color: var(--coach);
+  font-weight: 600;
+  box-shadow: 0 0 0 2px var(--coach-light), 0 0 0 3px var(--coach);
+  animation: coach-pulse 2s ease-in-out infinite;
+}
+
+@keyframes coach-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--coach-light), 0 0 0 3px var(--coach); }
+  50%       { box-shadow: 0 0 0 4px var(--coach-light), 0 0 0 5px var(--coach-mid); }
+}
+
+/* ── Explanation panel ────────────────────────────────────────────────── */
+.coach-panel-wrap {
+  overflow: hidden;
+  max-height: 0;
+  transition: none;
+}
+
+.coach-panel-wrap.open {
+  max-height: 220px;
+  transition: max-height 0.15s ease-out;
+}
+
+.coach-panel {
+  margin-top: 10px;
+  border: 1.5px solid var(--coach);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 14px 16px;
+  width: 414px;
+}
+
+body.theme-terminal .coach-panel {
+  border-radius: 0;
+}
+
+.coach-panel-technique {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--coach);
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+}
+
+.coach-panel-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+.coach-panel-text em {
+  color: var(--coach);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.coach-panel-text.coach-panel-note {
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
+/* ── Recap / error toast ──────────────────────────────────────────────── */
+.coach-recap {
+  display: none;
+  margin-top: 10px;
+  width: 414px;
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--coach);
+  background: var(--surface);
+  animation: fadein 0.15s ease;
+}
+
+.coach-recap.visible {
+  display: block;
+}
+
+.coach-recap.error {
+  border-left-color: var(--conflict);
+}
+
+.coach-recap.error .coach-recap-line1 {
+  color: var(--conflict);
+}
+
+.coach-recap-line1 {
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.coach-recap-line2 {
+  color: var(--text-muted);
+}
+
+@keyframes fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+body.theme-terminal .coach-recap {
+  border-radius: 0;
+}
+
+/* ── Action row ───────────────────────────────────────────────────────── */
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* ── Primary button (dialog confirm) ─────────────────────────────────── */
+.btn-primary {
+  background: var(--accent);
+  color: var(--surface);
+  border-color: var(--accent);
+}
+
+body.theme-terminal .btn-primary {
+  color: #000;
+  font-weight: 700;
+}
+
+body.theme-school .btn-primary {
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+body.theme-terminal .btn-primary:hover {
+  box-shadow: 0 0 10px rgba(57,255,20,0.4);
+}
+
+/* ── Confirmation dialog / modal ──────────────────────────────────────── */
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+body.theme-terminal .modal-backdrop {
+  background: rgba(0,0,0,0.75);
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal {
+  background: var(--modal-bg);
+  border-radius: 10px;
+  padding: 28px 28px 22px;
+  max-width: 340px;
+  width: 90%;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  border: 1px solid var(--border);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+body.theme-terminal .modal {
+  border-radius: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 24px rgba(57,255,20,0.2);
+}
+
+body.theme-coffee .modal {
+  box-shadow: 0 8px 40px rgba(59,42,26,0.4);
+}
+
+.modal h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.modal p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 22px;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ── Theme select (header) ────────────────────────────────────────────── */
+#theme-select {
+  font-size: 13px;
+  padding: 4px 24px 4px 8px;
+  border: 1px solid var(--btn-border);
+  border-radius: 4px;
+  background-color: var(--btn-bg);
+  color: var(--text);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  font-family: inherit;
+}
+
+body.theme-coffee #theme-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238c6642'/%3E%3C/svg%3E");
+}
+
+body.theme-school #theme-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23718096'/%3E%3C/svg%3E");
+}
+
+body.theme-terminal #theme-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2339ff14'/%3E%3C/svg%3E");
+  border-color: var(--accent);
+}
+
+body.theme-mountain .theme-control #theme-select {
+  background-color: #2d5878;
+  color: #e8f0f7;
+  border-color: #4d7a99;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23adc6de'/%3E%3C/svg%3E");
+}
+
+body.theme-coffee .theme-control #theme-select {
+  background-color: #3b2a1a;
+  color: #f5ede0;
+  border-color: #7c4f22;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c9a97a'/%3E%3C/svg%3E");
+}
+
+#theme-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Generation busy / progress card (vspec-003 §4) ───────────────────── */
+.busy-card {
+  margin-top: 10px;
+  width: 414px;
+  max-width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 22px 24px;
+  text-align: center;
+}
+
+body.theme-terminal .busy-card {
+  border-radius: 0;
+}
+
+.busy-spinner {
+  width: 22px;
+  height: 22px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  border: 3px solid var(--accent-light);
+  border-top-color: var(--accent);
+  animation: busy-spin 0.9s linear infinite;
+}
+
+@keyframes busy-spin {
+  to { transform: rotate(360deg); }
+}
+
+.busy-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.busy-progress {
+  font-size: 13px;
+  color: var(--text-muted);
+  min-height: 18px;
+  margin-bottom: 16px;
+}
+
+.busy-cancel {
+  margin-top: 0;
+}
+
+/* ──── css/stats.css (current app) ──── */
+/* ── Statistics panel ─────────────────────────────────────────────────── */
+.stats-panel {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  overflow: hidden;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+body.theme-terminal .stats-panel {
+  border-radius: 0;
+}
+
+body.theme-terminal .stats-panel:hover,
+body.theme-terminal .stats-panel:focus-within {
+  border-color: var(--accent);
+}
+
+.stats-heading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+body.theme-terminal .stats-heading {
+  color: var(--accent);
+  letter-spacing: 0.15em;
+  font-size: 10px;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.stats-table th {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: right;
+  padding: 6px 12px 4px;
+}
+
+.stats-table th:first-child {
+  text-align: left;
+}
+
+.stats-table td {
+  padding: 5px 12px;
+  text-align: right;
+  border-top: 1px solid var(--stats-row-sep);
+}
+
+.stats-table td:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+/* Active difficulty row */
+.stats-table tr.active-diff td {
+  background: var(--accent-light);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+body.theme-terminal .stats-table tr.active-diff td {
+  text-shadow: 0 0 4px rgba(57,255,20,0.3);
+}
+
+.stats-table tr.active-diff td:first-child::after {
+  content: " \25CF"; /* bullet */
+  font-size: 8px;
+  vertical-align: middle;
+}
+
+body.theme-terminal .stats-table tr.active-diff td:first-child::after {
+  content: " >";
+  font-size: 10px;
+}
+
+
+/* ════ NEW for left-hand layout (fspec-004) ════════════════════════════ */
+
+/* base.css — header right-side group */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* base.css — column swap on wide viewports only (exact complement of the 720px breakpoint) */
+@media not all and (max-width: 720px) {
+  html[data-hand="left"] .game-area {
+    flex-direction: row-reverse;
+  }
+}
+
+/* controls.css — handedness switch */
+.hand-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.1s;
+}
+
+.header-controls .hand-switch:hover {
+  color: inherit;
+}
+
+.hand-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hand-switch-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  border: 1px solid var(--text-muted);
+  border-radius: 9px;
+  background: var(--btn-bg);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.hand-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform 0.15s, background 0.15s;
+}
+
+.hand-switch[aria-checked="true"] .hand-switch-track {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.hand-switch[aria-checked="true"] .hand-switch-thumb {
+  transform: translateX(14px);
+  background: var(--surface);
+}
+
+/* Dark headers: theme accents lack contrast against the header, so use the header's muted tone */
+body.theme-coffee .hand-switch { color: #c9a97a; }
+body.theme-coffee .hand-switch:focus-visible { outline-color: #c9a97a; }
+body.theme-coffee .hand-switch-track { border-color: #c9a97a; background: #3b2a1a; }
+body.theme-coffee .hand-switch-thumb { background: #c9a97a; }
+body.theme-coffee .hand-switch[aria-checked="true"] .hand-switch-track { background: #c9a97a; }
+body.theme-coffee .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #2b1d0e; }
+
+body.theme-mountain .hand-switch { color: #adc6de; }
+body.theme-mountain .hand-switch:focus-visible { outline-color: #adc6de; }
+body.theme-mountain .hand-switch-track { border-color: #adc6de; background: #2d5878; }
+body.theme-mountain .hand-switch-thumb { background: #adc6de; }
+body.theme-mountain .hand-switch[aria-checked="true"] .hand-switch-track { background: #adc6de; }
+body.theme-mountain .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #1a3a52; }
+
+body.theme-terminal .hand-switch-track { border-color: var(--accent); border-radius: 0; }
+body.theme-terminal .hand-switch-thumb { border-radius: 0; }
+body.theme-terminal .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #000; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hand-switch-track,
+  .hand-switch-thumb {
+    transition: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .hand-switch {
+    display: none;
+  }
+}
+
+
+/* ════ Mockup-only ═════════════════════════════════════════════════════ */
+.mock-notes {
+  max-width: 860px; width: 100%; font-size: 12.5px; line-height: 1.5;
+  color: var(--text-muted); border: 1px dashed var(--border); border-radius: 6px;
+  padding: 10px 14px; background: var(--surface);
+}
+.mock-notes output { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body class="theme-minimalist">
+
+  <header>
+    <h1>Sudoku</h1>
+    <div class="header-controls">
+      <button type="button" id="hand-toggle" class="hand-switch" role="switch" aria-checked="false">
+        <span class="hand-switch-label">Left-handed</span>
+        <span class="hand-switch-track" aria-hidden="true"><span class="hand-switch-thumb"></span></span>
+      </button>
+      <div class="theme-control">
+        <label for="theme-select">Theme</label>
+        <select id="theme-select" aria-label="Select visual theme">
+          <option value="minimalist" selected>Minimalist</option>
+          <option value="coffee">Coffee Shop</option>
+          <option value="school">School</option>
+          <option value="terminal">Digital Terminal</option>
+          <option value="mountain">Mountain</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="app-root" class="game-area">
+
+      <!-- Left column: difficulty selector + grid -->
+      <div class="left-col">
+
+        <!-- Difficulty selector (mounted by controls.js) -->
+        <div id="controls-root">
+    <div class="difficulty-row">
+      <label for="difficulty-select">Difficulty</label>
+      <select id="difficulty-select" aria-label="Select difficulty level">
+        <option value="kiddie">Kiddie</option>
+        <option value="easy">Easy</option>
+        <option value="medium" selected="">Medium</option>
+        <option value="hard">Hard</option>
+        <option value="expert">Expert</option>
+        <option value="diabolical">Diabolical</option>
+        <option value="nightmare">Nightmare</option>
+      </select>
+    </div>
+  </div>
+
+        <!-- Grid wrapper: contains win banner overlay + grid + coach overlay -->
+        <div class="grid-wrapper">
+          <!-- Win banner overlay (mounted by winBanner.js, positioned absolute) -->
+          <div id="win-banner-root" style="position:absolute;inset:0;z-index:10;pointer-events:none;">
+    <div class="win-banner" id="win-banner" aria-hidden="true">
+      <div class="win-title">Puzzle Complete!</div>
+      <div class="win-sub">Well done.</div>
+    </div>
+  </div>
+
+          <!-- Grid root: contains .sudoku-grid; mounted by grid.js -->
+          <div id="grid-root">
+            <div class="sudoku-grid" role="grid" aria-label="Sudoku puzzle" tabindex="0"><div class="cell selected" data-index="0" data-row="1" data-col="1" role="gridcell" tabindex="0" aria-selected="true" aria-label="Row 1, column 1: empty (selected)"></div><div class="cell" data-index="1" data-row="1" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 2: empty"></div><div class="cell" data-index="2" data-row="1" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 3: empty"></div><div class="cell" data-index="3" data-row="1" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 4: empty"></div><div class="cell" data-index="4" data-row="1" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 5: empty"></div><div class="cell given" data-index="5" data-row="1" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 6: 1 (given)" aria-readonly="true">1</div><div class="cell given" data-index="6" data-row="1" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 7: 8 (given)" aria-readonly="true">8</div><div class="cell given" data-index="7" data-row="1" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 8: 4 (given)" aria-readonly="true">4</div><div class="cell" data-index="8" data-row="1" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 9: empty"></div><div class="cell given" data-index="9" data-row="2" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 1: 5 (given)" aria-readonly="true">5</div><div class="cell given" data-index="10" data-row="2" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 2: 4 (given)" aria-readonly="true">4</div><div class="cell" data-index="11" data-row="2" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 3: empty"></div><div class="cell given" data-index="12" data-row="2" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 4: 8 (given)" aria-readonly="true">8</div><div class="cell" data-index="13" data-row="2" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 5: empty"></div><div class="cell" data-index="14" data-row="2" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 6: empty"></div><div class="cell" data-index="15" data-row="2" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 7: empty"></div><div class="cell given" data-index="16" data-row="2" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 8: 1 (given)" aria-readonly="true">1</div><div class="cell given" data-index="17" data-row="2" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 9: 9 (given)" aria-readonly="true">9</div><div class="cell given" data-index="18" data-row="3" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 1: 1 (given)" aria-readonly="true">1</div><div class="cell" data-index="19" data-row="3" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 2: empty"></div><div class="cell given" data-index="20" data-row="3" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 3: 8 (given)" aria-readonly="true">8</div><div class="cell" data-index="21" data-row="3" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 4: empty"></div><div class="cell" data-index="22" data-row="3" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 5: empty"></div><div class="cell" data-index="23" data-row="3" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 6: empty"></div><div class="cell given" data-index="24" data-row="3" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 7: 2 (given)" aria-readonly="true">2</div><div class="cell" data-index="25" data-row="3" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 8: empty"></div><div class="cell" data-index="26" data-row="3" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 9: empty"></div><div class="cell given" data-index="27" data-row="4" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 1: 6 (given)" aria-readonly="true">6</div><div class="cell given" data-index="28" data-row="4" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 2: 1 (given)" aria-readonly="true">1</div><div class="cell given" data-index="29" data-row="4" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 3: 2 (given)" aria-readonly="true">2</div><div class="cell" data-index="30" data-row="4" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 4: empty"></div><div class="cell" data-index="31" data-row="4" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 5: empty"></div><div class="cell" data-index="32" data-row="4" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 6: empty"></div><div class="cell given" data-index="33" data-row="4" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 7: 5 (given)" aria-readonly="true">5</div><div class="cell" data-index="34" data-row="4" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 8: empty"></div><div class="cell given" data-index="35" data-row="4" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 9: 4 (given)" aria-readonly="true">4</div><div class="cell" data-index="36" data-row="5" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 1: empty"></div><div class="cell given" data-index="37" data-row="5" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 2: 7 (given)" aria-readonly="true">7</div><div class="cell given" data-index="38" data-row="5" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 3: 4 (given)" aria-readonly="true">4</div><div class="cell given" data-index="39" data-row="5" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 4: 6 (given)" aria-readonly="true">6</div><div class="cell given" data-index="40" data-row="5" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 5: 9 (given)" aria-readonly="true">9</div><div class="cell given" data-index="41" data-row="5" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 6: 5 (given)" aria-readonly="true">5</div><div class="cell given" data-index="42" data-row="5" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 7: 3 (given)" aria-readonly="true">3</div><div class="cell" data-index="43" data-row="5" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 8: empty"></div><div class="cell given" data-index="44" data-row="5" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 9: 1 (given)" aria-readonly="true">1</div><div class="cell given" data-index="45" data-row="6" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 1: 9 (given)" aria-readonly="true">9</div><div class="cell" data-index="46" data-row="6" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 2: empty"></div><div class="cell" data-index="47" data-row="6" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 3: empty"></div><div class="cell given" data-index="48" data-row="6" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 4: 1 (given)" aria-readonly="true">1</div><div class="cell given" data-index="49" data-row="6" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 5: 2 (given)" aria-readonly="true">2</div><div class="cell" data-index="50" data-row="6" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 6: empty"></div><div class="cell" data-index="51" data-row="6" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 7: empty"></div><div class="cell" data-index="52" data-row="6" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 8: empty"></div><div class="cell" data-index="53" data-row="6" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 9: empty"></div><div class="cell" data-index="54" data-row="7" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 1: empty"></div><div class="cell given" data-index="55" data-row="7" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 2: 2 (given)" aria-readonly="true">2</div><div class="cell" data-index="56" data-row="7" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 3: empty"></div><div class="cell" data-index="57" data-row="7" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 4: empty"></div><div class="cell" data-index="58" data-row="7" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 5: empty"></div><div class="cell given" data-index="59" data-row="7" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 6: 8 (given)" aria-readonly="true">8</div><div class="cell given" data-index="60" data-row="7" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 7: 4 (given)" aria-readonly="true">4</div><div class="cell" data-index="61" data-row="7" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 8: empty"></div><div class="cell given" data-index="62" data-row="7" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 9: 3 (given)" aria-readonly="true">3</div><div class="cell given" data-index="63" data-row="8" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 1: 3 (given)" aria-readonly="true">3</div><div class="cell" data-index="64" data-row="8" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 2: empty"></div><div class="cell given" data-index="65" data-row="8" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 3: 5 (given)" aria-readonly="true">5</div><div class="cell" data-index="66" data-row="8" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 4: empty"></div><div class="cell" data-index="67" data-row="8" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 5: empty"></div><div class="cell" data-index="68" data-row="8" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 6: empty"></div><div class="cell given" data-index="69" data-row="8" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 7: 1 (given)" aria-readonly="true">1</div><div class="cell" data-index="70" data-row="8" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 8: empty"></div><div class="cell given" data-index="71" data-row="8" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 9: 7 (given)" aria-readonly="true">7</div><div class="cell" data-index="72" data-row="9" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 1: empty"></div><div class="cell" data-index="73" data-row="9" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 2: empty"></div><div class="cell" data-index="74" data-row="9" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 3: empty"></div><div class="cell" data-index="75" data-row="9" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 4: empty"></div><div class="cell" data-index="76" data-row="9" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 5: empty"></div><div class="cell given" data-index="77" data-row="9" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 6: 7 (given)" aria-readonly="true">7</div><div class="cell" data-index="78" data-row="9" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 7: empty"></div><div class="cell" data-index="79" data-row="9" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 8: empty"></div><div class="cell given" data-index="80" data-row="9" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 9: 2 (given)" aria-readonly="true">2</div></div>
+          </div>
+
+          <!-- Coach overlay (SVG arrows). Positioned absolute over the grid; mounted by coachOverlay.js. -->
+          <svg id="coach-overlay" width="414" height="414" viewBox="0 0 414 414" aria-hidden="true">
+            <defs>
+              <marker id="coach-arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+                <polygon points="0 0, 6 2, 0 4" fill="currentColor" opacity="0.7"></polygon>
+              </marker>
+            </defs>
+            <g id="coach-overlay-content"></g>
+          </svg>
+        </div>
+
+        <!-- Generation busy / progress card (mounted by busy.js). -->
+        <div id="busy-root" hidden=""></div>
+
+        <!-- Coach explanation panel (mounted by coach.js). -->
+        <div id="coach-panel-wrap" class="coach-panel-wrap"></div>
+
+        <!-- Coach recap / error toast (mounted by coach.js). -->
+        <div id="coach-recap" class="coach-recap" role="status" aria-live="polite"></div>
+
+      </div><!-- /left-col -->
+
+      <!-- Right column: numpad + action buttons + stats -->
+      <div class="right-col">
+
+        <!-- Number pad (mounted by numpad.js) -->
+        <div id="numpad-root">
+    <div class="numpad" role="toolbar" aria-label="Number pad">
+      <div class="numpad-digits" id="numpad-digits"><button class="btn btn-digit" aria-label="Enter 1">1</button><button class="btn btn-digit" aria-label="Enter 2">2</button><button class="btn btn-digit" aria-label="Enter 3">3</button><button class="btn btn-digit" aria-label="Enter 4">4</button><button class="btn btn-digit" aria-label="Enter 5">5</button><button class="btn btn-digit" aria-label="Enter 6">6</button><button class="btn btn-digit" aria-label="Enter 7">7</button><button class="btn btn-digit" aria-label="Enter 8">8</button><button class="btn btn-digit" aria-label="Enter 9">9</button></div>
+      <div class="numpad-utils">
+        <button class="btn" id="btn-clear" aria-label="Clear selected cell">Clear</button>
+        <button class="btn btn-mode mode-pen" id="btn-mode" aria-label="Switch to Pencil mode" aria-pressed="false">
+          <span class="mode-label">
+            <span class="mode-main" id="mode-label-main">Pen</span>
+            <span class="mode-sub" id="mode-label-sub">tap for pencil</span>
+          </span>
+        </button>
+      </div>
+      <div class="numpad-undo-row">
+        <button class="btn btn-erase-all" id="btn-erase-all" aria-label="Erase all pencil marks" disabled="">Erase all pencil</button>
+        <button class="btn btn-undo" id="btn-undo" aria-label="Undo last move" disabled="">Undo</button>
+      </div>
+      <div class="numpad-bottom-row1">
+        <button class="btn btn-hint" id="btn-hint" aria-label="Hint, 3 remaining">
+          Hint <span class="hint-badge" id="hint-count">3</span>
+        </button>
+        <button class="btn btn-coach" id="btn-coach" aria-label="Coach">Coach</button>
+      </div>
+      <div class="numpad-bottom-row2">
+        <button class="btn btn-check" id="btn-check" aria-label="Check answers">Check</button>
+      </div>
+      <div class="completion-msg" id="completion-msg" aria-live="polite" hidden=""></div>
+    </div>
+  </div>
+
+        <!-- Action buttons -->
+        <div class="action-row">
+          <button class="btn" id="btn-new" aria-label="Start new puzzle">New Puzzle</button>
+          <button class="btn" id="btn-reset" aria-label="Reset current puzzle">Reset</button>
+        </div>
+
+        <!-- Statistics panel (mounted by stats.js) -->
+        <div id="stats-root">
+    <div class="stats-panel">
+      <div class="stats-heading">Statistics</div>
+      <table class="stats-table" aria-label="Game statistics by difficulty">
+        <thead>
+          <tr>
+            <th scope="col">Level</th>
+            <th scope="col">Tried</th>
+            <th scope="col">Won</th>
+          </tr>
+        </thead>
+        <tbody id="stats-tbody"><tr aria-label="Kiddie: 0 attempted, 0 won">
+      <td>Kiddie</td>
+      <td>0</td>
+      <td>0</td>
+    </tr><tr class="active-diff" aria-label="Easy: 0 attempted, 0 won">
+      <td>Easy</td>
+      <td>0</td>
+      <td>0</td>
+    </tr><tr aria-label="Medium: 0 attempted, 0 won">
+      <td>Medium</td>
+      <td>0</td>
+      <td>0</td>
+    </tr><tr aria-label="Hard: 0 attempted, 0 won">
+      <td>Hard</td>
+      <td>0</td>
+      <td>0</td>
+    </tr><tr aria-label="Expert: 0 attempted, 0 won">
+      <td>Expert</td>
+      <td>0</td>
+      <td>0</td>
+    </tr><tr aria-label="Diabolical: 0 attempted, 0 won">
+      <td>Diabolical</td>
+      <td>0</td>
+      <td>0</td>
+    </tr><tr aria-label="Nightmare: 0 attempted, 0 won">
+      <td>Nightmare</td>
+      <td>0</td>
+      <td>0</td>
+    </tr></tbody>
+      </table>
+    </div>
+  </div>
+
+      </div><!-- /right-col -->
+
+    </div><!-- /app-root -->
+  
+    <aside class="mock-notes" aria-label="Mockup notes">
+      <strong>Mockup v1 — left-hand layout.</strong>
+      Game controls are static; only the header is live.
+      Try: the <em>Left-handed</em> switch · every theme · Tab to the switch and press Space/Enter
+      (focus ring, announcement text below) · narrow the window under 720px (switch hides, layout stacks).
+      <div>Last announcement: <output id="mock-announce">—</output></div>
+    </aside>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 <a href="https://briancody.org">Brian Cody</a></p>
+  </footer>
+
+<script>
+  const toggle = document.getElementById('hand-toggle');
+  const out = document.getElementById('mock-announce');
+  toggle.addEventListener('click', () => {
+    const left = toggle.getAttribute('aria-checked') !== 'true';
+    toggle.setAttribute('aria-checked', String(left));
+    if (left) document.documentElement.setAttribute('data-hand', 'left');
+    else document.documentElement.removeAttribute('data-hand');
+    out.textContent = left
+      ? 'Left-handed layout on. Controls are left of the puzzle.'
+      : 'Left-handed layout off. Controls are right of the puzzle.';
+  });
+  document.getElementById('theme-select').addEventListener('change', e => {
+    document.body.className = 'theme-' + e.target.value;
+  });
+</script>
+</body>
+</html>

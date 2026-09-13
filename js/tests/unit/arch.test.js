@@ -15,6 +15,7 @@ const UI_MODULES = [
   '/js/ui/dialog.js',
   '/js/ui/srLive.js',
   '/js/ui/themes.js',
+  '/js/ui/handedness.js',
   '/js/ui/keyboard.js',
 ];
 

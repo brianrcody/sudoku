@@ -6,16 +6,18 @@
   <title>Sudoku</title>
 
   <!--
-    Apply saved theme before CSS loads to prevent a flash of the default theme.
-    Sets a data-theme attribute on the root element immediately, then replaces
-    body.className on DOMContentLoaded so the CSS theme class is in place before
-    first paint.
+    Apply saved theme and handedness before CSS loads to prevent a flash of the
+    defaults. Sets data-theme (and data-hand when left-handed) on the root element
+    immediately, then replaces body.className on DOMContentLoaded so the CSS theme
+    class is in place before first paint.
   -->
   <script>
     (function() {
       var m = document.cookie.match(/(?:^|; )sudoku\.theme=([^;]+)/);
       var v = m ? decodeURIComponent(m[1]) : 'minimalist';
       document.documentElement.setAttribute('data-theme', v);
+      var h = document.cookie.match(/(?:^|; )sudoku\.hand=([^;]+)/);
+      if (h && h[1] === 'left') document.documentElement.setAttribute('data-hand', 'left');
       document.addEventListener('DOMContentLoaded', function() {
         document.body.className = 'theme-' + v;
       });
@@ -39,15 +41,21 @@
   <!-- Header -->
   <header>
     <h1>Sudoku</h1>
-    <div class="theme-control">
-      <label for="theme-select">Theme</label>
-      <select id="theme-select" aria-label="Select visual theme">
-        <option value="minimalist" selected>Minimalist</option>
-        <option value="coffee">Coffee Shop</option>
-        <option value="school">School</option>
-        <option value="terminal">Digital Terminal</option>
-        <option value="mountain">Mountain</option>
-      </select>
+    <div class="header-controls">
+      <button type="button" id="hand-toggle" class="hand-switch" role="switch" aria-checked="false">
+        <span class="hand-switch-label">Left-handed</span>
+        <span class="hand-switch-track" aria-hidden="true"><span class="hand-switch-thumb"></span></span>
+      </button>
+      <div class="theme-control">
+        <label for="theme-select">Theme</label>
+        <select id="theme-select" aria-label="Select visual theme">
+          <option value="minimalist" selected>Minimalist</option>
+          <option value="coffee">Coffee Shop</option>
+          <option value="school">School</option>
+          <option value="terminal">Digital Terminal</option>
+          <option value="mountain">Mountain</option>
+        </select>
+      </div>
     </div>
   </header>
 

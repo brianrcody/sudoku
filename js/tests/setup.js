@@ -27,6 +27,9 @@ beforeEach(function () {
 
   // Reset body class to default theme.
   document.body.className = 'theme-minimalist';
+
+  // Reset handedness to the default (attribute absent).
+  document.documentElement.removeAttribute('data-hand');
 });
 
 // ---------------------------------------------------------------------------

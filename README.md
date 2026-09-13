@@ -42,6 +42,11 @@ says so honestly and offers the hardest one it generated instead.
 **Visual themes** — Minimalist, Coffee Shop, School, Digital Terminal, Mountain. Theme
 persisted in a cookie; applied before first paint (no flash).
 
+**Left-handed layout** — a header switch moves the number pad, action buttons, and
+statistics to the left of the board on wide screens (phones keep the stacked layout, and
+the switch is hidden there). Keyboard and screen reader order are the same in both modes.
+The preference is persisted in a cookie and applied before first paint.
+
 **Accessibility** — keyboard navigable, ARIA roles, screen reader compatible.
 
 ## Architecture

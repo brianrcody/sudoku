@@ -700,8 +700,9 @@ describe('integration/game-flows', () => {
     await new Promise(r => setTimeout(r, 50));
     expect(gameState.getState().undoSnapshot).to.not.be.null;
 
-    // Focus a button so the focus guard fires.
-    const anyBtn = iframe.contentDocument.querySelector('button');
+    // Focus a button so the focus guard fires. Target one that is displayed in
+    // this 1px iframe — the header's handedness switch is display:none here.
+    const anyBtn = iframe.contentDocument.getElementById('btn-new');
     anyBtn?.focus();
     await new Promise(r => setTimeout(r, 50));
 

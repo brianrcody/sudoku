@@ -43,8 +43,8 @@
 
 Strict order — no step may be reordered:
 
-1. (Inline head script from `aspec-themes.md` §3 has already set the body theme class before this module runs.)
-2. `initTheme()` — reconcile cookie with `classList` in case of drift between inline script and module load.
+1. (Inline head script from `aspec-themes.md` §3 has already set the body theme class — and `<html data-hand>` per `aspec-left-hand.md` §5 — before this module runs.)
+2. `initTheme()` — reconcile cookie with `classList` in case of drift between inline script and module load. Then `initHandedness()` (`aspec-left-hand.md` §4) — same reconciliation for the handedness cookie.
 3. Import the `cookieStatsStore` singleton (named export from `providers/cookieStatsStore.js`), then `createStatsProvider(cookieStatsStore)` and `createStatistics(provider)`; `await stats.init()` — so the stats panel renders with real values on first paint.
 4. Assemble `puzzleProvider` from named imports: `{ requestPuzzle, peekReady, primeNext }` (from `providers/puzzleProvider.js`). No constructor call.
 5. Assemble `hintProvider` from named imports: `{ nextHint }` (from `providers/hintProvider.js`). No constructor call.
@@ -60,7 +60,7 @@ Strict order — no step may be reordered:
      6. `dispatch({ type: 'DESELECT' })`.
      7. `dispatch({ type: 'RESTORE_SESSION', attemptRecorded, hintsRemaining })` — restores session flags that `PUZZLE_LOADED` reset to defaults, and clears `undoSnapshot` (the PEN_ENTER restore loop above sets it as a side-effect; RESTORE_SESSION resets it so moves from a prior session cannot be undone).
    - If absent: `dispatch SET_GENERATING` true, call `puzzleProvider.requestPuzzle({ difficulty: currentDifficulty })`, dispatch `PUZZLE_LOADED` on resolution; on error log and `dispatch SET_GENERATING false`.
-8. Mount UI modules in order: `srLive`, `themes` (select control), `controls`, `grid`, `numpad`, `stats`, `winBanner`, `dialog`, `keyboard`.
+8. Mount UI modules in order: `srLive`, `themes` (select control), `handedness` (header switch, `aspec-left-hand.md` §8), `controls`, `grid`, `numpad`, `stats`, `winBanner`, `dialog`, `keyboard`.
 9. Subscribe the persistence writer (`aspec-persistence.md` §5) to state `'changed'` events.
 10. Call `puzzleProvider.primeNext(currentDifficulty)`.
 

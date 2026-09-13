@@ -143,6 +143,7 @@ sudoku/
 │   │   ├── dialog.js                 # Reusable confirmation dialog
 │   │   ├── srLive.js                 # Screen reader live region helper
 │   │   ├── themes.js                 # Theme class swap + cookie persistence
+│   │   ├── handedness.js             # V4: left-hand layout preference + header switch (aspec-left-hand.md)
 │   │   ├── keyboard.js               # Desktop keyboard shortcuts
 │   │   ├── coach.js                  # Coach button, panel, recap, toast, lifecycle (aspec-coach-ui.md)
 │   │   ├── coachOverlay.js           # SVG arrow overlay renderer (aspec-coach-ui.md)
@@ -188,6 +189,7 @@ sudoku/
 │       │   ├── cookies.test.js
 │       │   ├── storage.test.js
 │       │   ├── hintProvider.test.js
+│       │   ├── ui-handedness.test.js # V4 (aspec-left-hand.md §9)
 │       │   └── coach/
 │       │       ├── analyzer.test.js  # Coach analyzer unit tests (aspec-coach-analyzer.md §13)
 │       │       └── session.test.js   # CoachSession reducer unit tests (aspec-coach-ui.md §16.1)
@@ -330,6 +332,12 @@ c8 with `--include=js/**` and `--exclude=js/tests/**`. Target: **100% branch cov
 43. Provider `{puzzle, fallback}` + progress; `ui/busy.js`; main.js cancel/fallback flows
 44. Coach mappers + sealed-schema `fin` amendment; soundness sweep in permanent suite
 
+**Phase 12 — Left-Hand Layout (V4)** (see `aspec-left-hand.md`)
+45. `ui/handedness.js`
+46. `index.html` head script + header switch; `base.css` swap rule; `controls.css` switch styles
+47. `main.js` wiring (steps 2 and 8)
+48. Unit, arch, and system tests
+
 **Milestone exits:**
 - Phase 2: solver correctly rates 100% of a curated 50-puzzle regression set at known difficulty.
 - Phase 3: `generateForTier` produces a correctly-rated puzzle for all five tiers within budget.
@@ -416,3 +424,4 @@ All other fspec and vspec requirements map cleanly onto this plan.
 | `aspec-undo.md` | One-level undo — `undoSnapshot` field, `UNDO` action, numpad button, Ctrl/Cmd+Z | Implementor (Phase 9), Reviewer, QE |
 | `aspec-harder-tiers.md` | V3 harder tiers — 21-rank ladder, tier IDs/migration, generation progress/cancel/fallback, coach mappers + `fin` role | Implementor (Phase 11), Reviewer, QE |
 | `aspec-erase-pencil.md` | Erase-all-pencil — `ERASE_ALL_PENCIL` action, numpad button, 2-column undo row | Implementor (Phase 10), Reviewer, QE |
+| `aspec-left-hand.md` | V4 left-hand layout — `<html data-hand>`, `ui/handedness.js`, head-script extension, CSS column swap, header switch | Implementor (Phase 12), Reviewer, QE |

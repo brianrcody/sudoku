@@ -101,6 +101,13 @@ body.theme-school header {
   border-bottom: 2px solid #b8c4d4;
 }
 
+/* ── Header right-side group: handedness switch + theme control ─────── */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 /* ── Theme control (header right) ────────────────────────────────────── */
 .theme-control {
   display: flex;
@@ -203,6 +210,15 @@ body.theme-terminal main {
   gap: 20px;
   min-width: 220px;
   flex-shrink: 0;
+}
+
+/* Left-hand mode swaps the columns on wide viewports only. The query is the exact
+   complement of the mobile breakpoint below, so this higher-specificity rule never
+   overrides the stacked layout. */
+@media not all and (max-width: 720px) {
+  html[data-hand="left"] .game-area {
+    flex-direction: row-reverse;
+  }
 }
 
 /* ── Responsive: mobile ───────────────────────────────────────────────── */

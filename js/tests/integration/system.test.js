@@ -175,3 +175,159 @@ describe('system tests', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Left-hand layout (SYS5–SYS10, tspec-left-hand §2.3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Off-screen iframe with real dimensions, so media queries evaluate at the
+ * given viewport width (the 1px helper above always hits the mobile layout).
+ */
+function createSizedIframe(width, height) {
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText =
+    `width:${width}px;height:${height}px;border:0;position:fixed;left:-20000px;top:0;`;
+  const loaded = new Promise(r => iframe.addEventListener('load', r, { once: true }));
+  iframe.src = '/index.html';
+  document.body.appendChild(iframe);
+  return { iframe, loaded };
+}
+
+function setHandCookie(value) {
+  document.cookie = `sudoku.hand=${value}; path=/`;
+}
+
+function leftOf(doc, selector) {
+  return doc.querySelector(selector).getBoundingClientRect().left;
+}
+
+describe('system tests: left-hand layout', () => {
+  let iframe;
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  it('SYS5: a saved left preference renders controls left of the board on a wide viewport', async function () {
+    this.timeout(20000);
+    setHandCookie('left');
+    ({ iframe } = createSizedIframe(1100, 800));
+    await waitForPuzzle(iframe);
+
+    const doc = iframe.contentDocument;
+    expect(doc.documentElement.getAttribute('data-hand')).to.equal('left');
+    expect(doc.getElementById('hand-toggle').getAttribute('aria-checked')).to.equal('true');
+    expect(leftOf(doc, '#numpad-root')).to.be.below(leftOf(doc, '.sudoku-grid'));
+    expect(doc.querySelector('.right-col').getBoundingClientRect().right)
+      .to.be.at.most(doc.querySelector('.left-col').getBoundingClientRect().left);
+  });
+
+  it('SYS6: the head script applies only a saved left preference, before the stylesheets load', async () => {
+    const html = await (await fetch('/index.html')).text();
+    const head = html.slice(0, html.indexOf('</head>'));
+    const match = head.match(/<script>([\s\S]*?)<\/script>/);
+    expect(match, 'inline head script').to.not.be.null;
+    expect(head.indexOf(match[0])).to.be.below(head.indexOf('<link rel="stylesheet"'));
+
+    // Run the script against a fake document; the real one has already loaded.
+    function dataHandFor(cookie) {
+      const attrs = {};
+      const fakeDocument = {
+        cookie,
+        documentElement: { setAttribute: (name, value) => { attrs[name] = value; } },
+        addEventListener() {},
+      };
+      new Function('document', match[1])(fakeDocument);
+      return attrs['data-hand'];
+    }
+
+    expect(dataHandFor('sudoku.hand=left')).to.equal('left');
+    expect(dataHandFor('x=1; sudoku.hand=left')).to.equal('left');
+    expect(dataHandFor('sudoku.hand=right')).to.be.undefined;
+    expect(dataHandFor('')).to.be.undefined;
+    expect(dataHandFor('sudoku.hand=sideways')).to.be.undefined;
+  });
+
+  it('SYS7: toggling the switch swaps the layout without disturbing game state', async function () {
+    this.timeout(20000);
+    ({ iframe } = createSizedIframe(1100, 800));
+    await waitForPuzzle(iframe);
+
+    const doc = iframe.contentDocument;
+    const gs = iframe.contentWindow.gameState;
+    const state = gs.getState();
+    const idx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
+    gs.dispatch({ type: 'SELECT_CELL', index: idx });
+    gs.dispatch({ type: 'PEN_ENTER', digit: 1 });
+
+    const toggle = doc.getElementById('hand-toggle');
+    expect(leftOf(doc, '#numpad-root')).to.be.above(leftOf(doc, '.sudoku-grid'));
+
+    toggle.focus();
+    const t0 = performance.now();
+    toggle.click();
+    const numpadNowLeft = leftOf(doc, '#numpad-root') < leftOf(doc, '.sudoku-grid');
+    const elapsed = performance.now() - t0;
+
+    expect(numpadNowLeft).to.be.true;
+    expect(elapsed).to.be.below(1000);
+    expect(gs.getState().pen[idx]).to.equal(1);
+    // Like any click outside the grid and number pad, this deselects (fspec-001 §4.2).
+    expect(gs.getState().selected).to.be.null;
+    expect(doc.activeElement).to.equal(toggle);
+
+    toggle.click();
+    expect(leftOf(doc, '#numpad-root')).to.be.above(leftOf(doc, '.sudoku-grid'));
+  });
+
+  it('SYS8: the switch is hidden and the layout stacks on a narrow viewport', async function () {
+    this.timeout(20000);
+    setHandCookie('left');
+    let loaded;
+    ({ iframe, loaded } = createSizedIframe(400, 800));
+    await loaded;
+
+    const doc = iframe.contentDocument;
+    const win = iframe.contentWindow;
+    expect(win.getComputedStyle(doc.getElementById('hand-toggle')).display).to.equal('none');
+    expect(win.getComputedStyle(doc.querySelector('.game-area')).flexDirection).to.equal('column');
+    expect(doc.documentElement.getAttribute('data-hand')).to.equal('left');
+  });
+
+  it('SYS9: document order keeps the grid before the controls in left-hand mode', async function () {
+    this.timeout(20000);
+    setHandCookie('left');
+    let loaded;
+    ({ iframe, loaded } = createSizedIframe(1100, 800));
+    await loaded;
+
+    const doc = iframe.contentDocument;
+    const precedes = (a, b) =>
+      Boolean(doc.querySelector(a).compareDocumentPosition(doc.querySelector(b))
+        & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    expect(doc.documentElement.getAttribute('data-hand')).to.equal('left');
+    expect(precedes('#hand-toggle', '.sudoku-grid')).to.be.true;
+    expect(precedes('.sudoku-grid', '#numpad-root')).to.be.true;
+    expect(precedes('#numpad-root', '#stats-root')).to.be.true;
+  });
+
+  it('SYS10: the header switch exposes switch semantics with its visible label as name', async function () {
+    this.timeout(20000);
+    let loaded;
+    ({ iframe, loaded } = createSizedIframe(1100, 800));
+    await loaded;
+
+    const doc = iframe.contentDocument;
+    const toggle = doc.getElementById('hand-toggle');
+    expect(toggle.tagName).to.equal('BUTTON');
+    expect(toggle.getAttribute('type')).to.equal('button');
+    expect(toggle.getAttribute('role')).to.equal('switch');
+    expect(toggle.textContent.trim()).to.equal('Left-handed');
+    expect(toggle.querySelector('.hand-switch-track').getAttribute('aria-hidden')).to.equal('true');
+    expect(toggle.compareDocumentPosition(doc.getElementById('theme-select'))
+      & Node.DOCUMENT_POSITION_FOLLOWING).to.be.ok;
+  });
+});

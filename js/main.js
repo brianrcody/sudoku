@@ -6,6 +6,7 @@
  */
 
 import { initTheme, bindThemeSelect } from './ui/themes.js';
+import { initHandedness, bindHandToggle } from './ui/handedness.js';
 import { mount as mountSrLive, announce } from './ui/srLive.js';
 import { mount as mountDialog, open as openDialog } from './ui/dialog.js';
 import { mount as mountGrid } from './ui/grid.js';
@@ -28,10 +29,12 @@ import { createGameState } from './game/state.js';
 import { getItem, setItem, removeItem } from './persist/storage.js';
 import { DIFFICULTY_ORDER, HINT_LIMITS, TIER_LABELS } from './config.js';
 
-// ── Step 2: reconcile cookie with classList ────────────────────────────────
-// The inline head <script> already applied the theme class to <body>. initTheme()
-// reads the cookie and re-applies, handling any drift between the two.
+// ── Step 2: reconcile cookies with the document ────────────────────────────
+// The inline head <script> already applied the theme class to <body> and the
+// data-hand attribute to <html>. These read the cookies and re-apply, handling
+// any drift between the two.
 initTheme();
+initHandedness();
 
 // ── Step 2.5: one-time V3 tier-ID migration (death-march → expert) ─────────
 // Must run before any module reads persisted difficulty/state. The stats
@@ -132,6 +135,7 @@ mountDialog(document.getElementById('dialog-root'));
 
 const themeSelect = document.getElementById('theme-select');
 if (themeSelect) bindThemeSelect(themeSelect);
+bindHandToggle(document.getElementById('hand-toggle'));
 
 mountControls(
   document.getElementById('controls-root'),

@@ -459,6 +459,105 @@ body.theme-coffee .theme-control #theme-select {
   outline-offset: 2px;
 }
 
+/* Dark headers: the theme accent is near-invisible against them. */
+body.theme-coffee .theme-control #theme-select:focus {
+  outline-color: #c9a97a;
+}
+
+body.theme-mountain .theme-control #theme-select:focus {
+  outline-color: #adc6de;
+}
+
+/* ── Handedness switch (vspec-004) ────────────────────────────────────── */
+.hand-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.1s;
+}
+
+.header-controls .hand-switch:hover {
+  color: inherit;
+}
+
+.hand-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hand-switch-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  border: 1px solid var(--text-muted);
+  border-radius: 9px;
+  background: var(--btn-bg);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.hand-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform 0.15s, background 0.15s;
+}
+
+.hand-switch[aria-checked="true"] .hand-switch-track {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.hand-switch[aria-checked="true"] .hand-switch-thumb {
+  transform: translateX(14px);
+  background: var(--surface);
+}
+
+/* Dark headers: theme accents lack contrast against the header, so use the header's muted tone */
+body.theme-coffee .hand-switch { color: #c9a97a; }
+body.theme-coffee .hand-switch:focus-visible { outline-color: #c9a97a; }
+body.theme-coffee .hand-switch-track { border-color: #c9a97a; background: #3b2a1a; }
+body.theme-coffee .hand-switch-thumb { background: #c9a97a; }
+body.theme-coffee .hand-switch[aria-checked="true"] .hand-switch-track { background: #c9a97a; }
+body.theme-coffee .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #2b1d0e; }
+
+body.theme-mountain .hand-switch { color: #adc6de; }
+body.theme-mountain .hand-switch:focus-visible { outline-color: #adc6de; }
+body.theme-mountain .hand-switch-track { border-color: #adc6de; background: #2d5878; }
+body.theme-mountain .hand-switch-thumb { background: #adc6de; }
+body.theme-mountain .hand-switch[aria-checked="true"] .hand-switch-track { background: #adc6de; }
+body.theme-mountain .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #1a3a52; }
+
+body.theme-terminal .hand-switch-track { border-color: var(--accent); border-radius: 0; }
+body.theme-terminal .hand-switch-thumb { border-radius: 0; }
+body.theme-terminal .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #000; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hand-switch-track,
+  .hand-switch-thumb {
+    transition: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .hand-switch {
+    display: none;
+  }
+}
+
 /* ── Generation busy / progress card (vspec-003 §4) ───────────────────── */
 .busy-card {
   margin-top: 10px;
