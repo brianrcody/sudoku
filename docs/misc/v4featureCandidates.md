@@ -4,7 +4,11 @@
 
 ## Tier 1 — Top Priorities
 
-### Left-Hand Layout Mode
+### Left-Hand Layout Mode — ✅ Done (2026-09-13)
+
+> Shipped in `f81f343` and deployed. Specs: `rspec-004-left-hand`, `fspec-004-left-hand`,
+> `vspec-004-left-hand`, `aspec-left-hand`. Implemented as a "Left-handed" header switch;
+> hidden on narrow viewports, where the layout already stacks.
 
 Move the control panel (number pad, mode toggles, action buttons) to the left of the
 board. Persistent preference. The board stays centered within the panel arrangement.
