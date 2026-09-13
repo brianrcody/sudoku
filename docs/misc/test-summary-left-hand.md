@@ -26,3 +26,4 @@
 | Performance < 1 s | ✓ SYS7 asserts toggle + reflow < 1 s (single attribute change) |
 | Accessibility | ✓ `role="switch"`/`aria-checked`, visible name, announcements (UH9/10/17/18, SYS10); order unchanged (SYS9); hidden from AT when narrow (SYS8) |
 | Visual design approved | ✓ mockup `left-hand-v1.html` approved 2026-09-13 |
+| UX approved at milestone | ✓ Product Director signed off on the deployed feature 2026-09-13 (toggle-click deselection accepted as intended) |
