@@ -145,8 +145,9 @@ confirms, and the Orchestrator then authors the rspec and engages the Functional
 
 We will adjust this boundary as we learn through experience.
 
-**Git push:** Always requires explicit user approval before executing. Stage and commit
-freely, but stop and confirm with the user before any `git push`.
+**Git commit and push:** Both require explicit user approval before executing. Stage
+freely, but stop and confirm with the user before any `git commit` and before any
+`git push`. Approval of one commit or push does not extend to the next.
 
 ---
 
