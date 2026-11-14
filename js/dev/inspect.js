@@ -93,6 +93,8 @@ export function stepCells(step) {
  * @property {string} technique
  * @property {string} text - `formatStep` output.
  * @property {{place: number[], elim: number[], pattern: number[]}} cells
+ * @property {{cellIndex: number, digit: number}|null} placement - The digit
+ *   this step places, or null for an elimination step.
  */
 
 /**
@@ -113,9 +115,27 @@ export function runInspector(board) {
     technique: step.technique,
     text: formatStep(step),
     cells: stepCells(step),
+    placement: step.digit !== null ? { cellIndex: step.cellIndex, digit: step.digit } : null,
   }));
   const remaining = result.board.reduce((n, v) => n + (v === 0 ? 1 : 0), 0);
   return { steps, solved: result.solved, remaining, hardest: result.hardestRank, alreadyFull };
+}
+
+/**
+ * The board as the solver leaves it after a given step: `base` plus every
+ * digit placed by steps 0…`upTo`. Elimination steps place nothing.
+ *
+ * @param {Uint8Array} base - The board the inspector was run on.
+ * @param {InspectorStep[]} steps
+ * @param {number} upTo - Index of the last step to include.
+ * @returns {Uint8Array} A new board; `base` is not modified.
+ */
+export function boardAtStep(base, steps, upTo) {
+  const board = base.slice();
+  for (const { placement } of steps.slice(0, upTo + 1)) {
+    if (placement) board[placement.cellIndex] = placement.digit;
+  }
+  return board;
 }
 
 /**

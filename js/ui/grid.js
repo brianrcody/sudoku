@@ -99,7 +99,7 @@ function _buildGrid(state) {
 
   // Deselect when clicking outside grid (but not when interacting with the
   // numpad — those clicks must preserve cell selection so successive taps apply
-  // to the same cell).
+  // to the same cell — or with any element marked data-keep-selection).
   //
   // Use composedPath() rather than e.target: the synchronous render triggered
   // by _handleClick replaces pencil-mark span elements mid-propagation, so
@@ -110,7 +110,8 @@ function _buildGrid(state) {
     if (
       path.includes(_gridEl) ||
       path.some(n => n?.id === 'dialog-root') ||
-      path.some(n => n?.id === 'numpad-root')
+      path.some(n => n?.id === 'numpad-root') ||
+      path.some(n => n?.dataset?.keepSelection !== undefined)
     ) return;
     _gameState.dispatch({ type: 'DESELECT' });
   });

@@ -37,6 +37,7 @@ off; unrecognized value with saved on / off; parameter among others; non-`true` 
 | IN1 | `cellRef` | corners and row wrap |
 | IN2–IN4 | `formatStep` | placement; single-digit elimination; multi-digit clauses in digit order |
 | IN5–IN12 | `stepCells` | placement; de-duplicated eliminations; scalar and array cell keys; digit keys ignored; nested chain nodes; XY-Chain cells; colour groups; null field; role precedence |
+| IN14b–IN14c | `placement` on steps; `boardAtStep` | placement vs elimination; cumulative digits; elimination adds none; last step full; input untouched |
 | IN13–IN19 | `runInspector`, `summarize` | solved with rank + tier; ordering; input untouched; stall at 0 steps; already full; singular wording; one-step solve |
 | IN20–IN25 | `candidateDiff` | filled → null; unmarked → all agree; exact; missing; extra; pencil untouched |
 | IN26–IN29 | `overlayLabel` | plain; missing; extra; no candidates |
@@ -49,7 +50,9 @@ off; unrecognized value with saved on / off; parameter among others; non-`true` 
 |---|---|
 | DP1–DP6 | Panel region, badge link + focus, stylesheet, note, five collapsed disclosure sections |
 | DP7–DP11 | Label; checking state; loaded outcome + announce + field kept; inline error; error cleared |
-| DP12–DP26 | Listing + summary + announce; board untouched; player digits included; select/move/deselect; plural elimination highlight; stray list click; highlight survives re-render; stale on pen and puzzle, not pencil; no stale message without results; Clear; re-run |
+| DP12–DP26 | Listing + summary + announce; board untouched; player digits included; select (with board cursor)/move/re-click stays selected; plural elimination highlight; stray list click; highlight survives re-render; stale on pen and puzzle, not pencil; no stale message without results; Clear; re-run |
+| DP48–DP52 | Keyboard selection: Up/Down move focus + selection + cursor like a click; ends, Home/End; keys stopped before the global handler; other keys and list-level keys untouched; Escape deselects and propagates |
+| DP53–DP63 | Set board to step: Restore disabled initially; Enter; applied/current marks; Space on unselected step; double-click; backwards; base includes player digits; own write not stale; Restore; reset by stale/Clear/re-run; step click does not deselect the board |
 | DP27–DP35 | Switch state; overlay in every empty cell; filled cells untouched; divergence classes; accessible names; selected suffix; live update; off restores and never modified; overlay + highlight combined |
 | DP36–DP42 | No session; JSON; follows session; copy success/failure; status cleared; default copy |
 | DP43–DP47 | Table; loaded; updates; recomputed profile; no puzzle |
@@ -69,6 +72,8 @@ off; unrecognized value with saved on / off; parameter among others; non-`true` 
 | DVI10–DVI15 | Load valid (multi-line, `.`), malformed, non-unique, confirm + decline, Unrated; field keeps its digits (R5) |
 | DVI16 | [perf] cold and warm load-from-string < 1 s, rateable and unrateable (R11; rspec-006 R12) |
 | DVI17–DVI18 | Inspector on the live app: list, highlight, read-only, stale; explicit stall; [perf] (R6) |
+| DVI25–DVI27 | Live app: cursor follows click and arrow selection, board unchanged; Enter/double-click set the board forwards and backwards, Restore; last step fills without a win or stats; player digit then stales |
+| DVI28–DVI29 | Panel right of the game at 1400px in both hand modes, bounded height; under the game at 1399px; no horizontal scroll |
 | DVI19 | Overlay divergence, non-colour cues from computed style, marks untouched (R7) |
 | DVI20 | Coach viewer equals the live `CoachStep`; follows session end (R8) |
 | DVI21 | Diagnostics for a generated puzzle; identical after reload; loaded message (R9) |
@@ -102,3 +107,8 @@ off; unrecognized value with saved on / off; parameter among others; non-`true` 
   Chromium does. AR-D1–AR-D3 provide the same guarantee structurally.
 - **DVI22 counts on native focusability.** It focuses each control programmatically; Tab
   order is the DOM order of native controls and is not separately simulated.
+
+
+## Addendum (2026-11-14): inspector stepping and side layout
+
+`DEV_SET_BOARD` in `game/state.js` is covered by `unit/state-devboard.test.js` (SD1–SD9): replace/remove digits, givens protected, no undo or attempt, conflicts, no win, incorrect marks and timer cleared, coach session ended, ignored with no puzzle and when won. The grid's `data-keep-selection` opt-out is UG13b.

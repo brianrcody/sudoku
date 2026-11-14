@@ -699,6 +699,29 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
         break;
       }
 
+      case 'DEV_SET_BOARD': {
+        // Developer tools only (fspec-005 §5.4): replace the non-given cells
+        // wholesale. Not a move — no undo snapshot, no statistics, and no
+        // completion check, so a board set to its solution is not a win.
+        if (!state.puzzle || state.won) break;
+        for (let i = 0; i < 81; i++) {
+          state.pen[i] = state.puzzle.givens[i] || action.pen[i];
+        }
+        state.conflicts = computeConflicts(state.pen);
+        state.incorrect = new Set();
+        state.incorrectShownUntil = 0;
+        state.completionMessage = '';
+        if (clearIncorrectTimer !== null) { clearTimeout(clearIncorrectTimer); clearIncorrectTimer = null; }
+        if (state.coachSession !== null) {
+          _revertPencil(state.coachSession);
+          state.coachSession = null;
+        }
+        state.undoSnapshot = null;
+        _emit(action, 'pen', 'pencil', 'conflicts', 'incorrect', 'incorrectShownUntil',
+              'completionMessage', 'coachSession', 'undoSnapshot');
+        break;
+      }
+
       case 'SET_GENERATING': {
         state.generating = action.flag;
         state.generatingMessage = action.message ?? '';

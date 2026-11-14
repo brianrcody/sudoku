@@ -1,5 +1,5 @@
 /**
- * @fileoverview Integration tests for developer mode (DVI1–DVI22): the real
+ * @fileoverview Integration tests for developer mode (DVI1–DVI29): the real
  * app in an iframe with `?dev=1`, `?dev=0`, and no parameter.
  * tspec-dev-mode §2.4.
  */
@@ -15,6 +15,8 @@ import {
 
 const DEV_KEY = 'sudoku.dev.v1';
 const EMPTY = KIDDIE.indexOf('0');
+/** Givens plus the digits currently on the board. */
+const penString = iframe => Array.from(gsOf(iframe).getState().pen).join('');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const $ = (iframe, sel) => iframe.contentDocument.querySelector(sel);
 const $$ = (iframe, sel) => [...iframe.contentDocument.querySelectorAll(sel)];
@@ -256,6 +258,82 @@ describe('integration: developer mode', function () {
       expect($$(iframe, '.cell.dev-hl-place')).to.have.length(0);
     });
 
+    it('DVI25: selecting a step by click or arrow key moves the board cursor to its cell without changing the board', async () => {
+      await openDev();
+      const gs = gsOf(iframe);
+      const before = penString(iframe);
+      $(iframe, '#dev-inspector').open = true;
+      $(iframe, '#dev-inspect-run').click();
+      const list = $$(iframe, '#dev-inspect-list button');
+      const cellOf = (b) => { const [, r, c] = b.textContent.match(/at r(\d)c(\d)$/); return (r - 1) * 9 + (c - 1); };
+
+      list[0].focus();
+      list[0].click();
+      expect(gs.getState().selected).to.equal(cellOf(list[0]));
+      expect($(iframe, '.cell.selected').dataset.index).to.equal(String(cellOf(list[0])));
+
+      const win = iframe.contentWindow;
+      list[0].dispatchEvent(new win.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      expect(iframe.contentDocument.activeElement).to.equal(list[1]);
+      // The step's own cell — not one row below the previous cursor, which is
+      // where the global arrow handler would have put it.
+      expect(gs.getState().selected).to.equal(cellOf(list[1]));
+      expect($$(iframe, '.cell.dev-hl-place').map(c => Number(c.dataset.index))).to.deep.equal([cellOf(list[1])]);
+      expect(penString(iframe)).to.equal(before);
+      expect($$(iframe, '#dev-inspect-list button')).to.have.length(51);
+    });
+
+    it('DVI26: Enter and double-click set the board to a step, forwards and backwards, and Restore undoes it', async () => {
+      await openDev();
+      const gs = gsOf(iframe);
+      const win = iframe.contentWindow;
+      const filled = () => penString(iframe).split('').filter(d => d !== '0').length;
+      const givens = filled();
+      $(iframe, '#dev-inspector').open = true;
+      $(iframe, '#dev-inspect-run').click();
+      const list = $$(iframe, '#dev-inspect-list button');
+
+      list[9].focus();
+      list[9].dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      expect(filled()).to.equal(givens + 10);
+      expect(gs.getState().undoSnapshot).to.be.null;
+      expect($(iframe, '#dev-inspect-board').textContent).to.equal('Board set to step 10 of 51.');
+      // Still usable: the tool's own write did not make the listing stale.
+      expect($$(iframe, '#dev-inspect-list button')).to.have.length(51);
+      for (let i = 0; i < 81; i++) {
+        const v = gs.getState().pen[i];
+        if (v !== 0) expect(String(v), `cell ${i}`).to.equal(KIDDIE_SOLUTION[i]);
+      }
+
+      list[2].dispatchEvent(new win.MouseEvent('dblclick', { bubbles: true }));
+      expect(filled()).to.equal(givens + 3);
+
+      $(iframe, '#dev-inspect-restore').click();
+      expect(penString(iframe)).to.equal(KIDDIE);
+      expect($$(iframe, '#dev-inspect-list button')).to.have.length(51);
+    });
+
+    it('DVI27: setting the board to the last step fills it without a win, and a player digit afterwards makes the listing stale', async () => {
+      await openDev();
+      const gs = gsOf(iframe);
+      const win = iframe.contentWindow;
+      $(iframe, '#dev-inspector').open = true;
+      $(iframe, '#dev-inspect-run').click();
+      const list = $$(iframe, '#dev-inspect-list button');
+
+      list[50].dispatchEvent(new win.MouseEvent('dblclick', { bubbles: true }));
+      expect(penString(iframe)).to.equal(KIDDIE_SOLUTION);
+      expect(gs.getState().won).to.be.false;
+      expect(readStats(iframe).Kiddie.won).to.equal(0);
+
+      list[5].dispatchEvent(new win.MouseEvent('dblclick', { bubbles: true }));
+      const empty = penString(iframe).indexOf('0');
+      enter(iframe, empty, Number(KIDDIE_SOLUTION[empty]));
+      expect($$(iframe, '#dev-inspect-list button')).to.have.length(0);
+      expect($(iframe, '#dev-inspect-summary').textContent).to.equal('Board changed — run the solver again.');
+      expect($(iframe, '#dev-inspect-restore').disabled).to.be.true;
+    });
+
     it('DVI18: the inspector says so explicitly when the solver stalls', async () => {
       await openDev();
       await loadString(UNRATED);
@@ -362,6 +440,41 @@ describe('integration: developer mode', function () {
       expect(rect.left).to.be.at.least(0);
       expect(rect.right).to.be.at.most(320);
       expect(iframe.contentDocument.documentElement.scrollWidth).to.be.at.most(320);
+    });
+
+    it('DVI28: on a wide screen the panel sits to the right of the game, in either hand mode', async () => {
+      await openDev({ size: { width: 1400, height: 900 } });
+      const win = iframe.contentWindow;
+      await waitFor(() => win.getComputedStyle($(iframe, '#dev-badge')).position === 'fixed', 5000, 'dev.css');
+      const rects = () => ({
+        panel: $(iframe, '#dev-root').getBoundingClientRect(),
+        game: $(iframe, '#app-root').getBoundingClientRect(),
+      });
+      let { panel, game } = rects();
+      expect(panel.left).to.be.at.least(game.right);
+      expect(panel.top).to.equal(game.top);
+      expect(panel.right).to.be.at.most(1400);
+      expect(iframe.contentDocument.documentElement.scrollWidth).to.be.at.most(1400);
+
+      // A long step list scrolls inside the panel rather than stretching it past the viewport.
+      for (const d of $$(iframe, '#dev-root details')) d.open = true;
+      $(iframe, '#dev-inspect-run').click();
+      expect($(iframe, '#dev-root').getBoundingClientRect().height).to.be.at.most(900);
+
+      $(iframe, '#hand-toggle').click();
+      await appFrame(iframe);
+      ({ panel, game } = rects());
+      expect(panel.left).to.be.at.least(game.right);
+    });
+
+    it('DVI29: below the side-by-side width the panel flows under the game', async () => {
+      await openDev({ size: { width: 1399, height: 900 } });
+      const win = iframe.contentWindow;
+      await waitFor(() => win.getComputedStyle($(iframe, '#dev-badge')).position === 'fixed', 5000, 'dev.css');
+      const panel = $(iframe, '#dev-root').getBoundingClientRect();
+      const game = $(iframe, '#app-root').getBoundingClientRect();
+      expect(panel.top).to.be.at.least(game.bottom);
+      expect(iframe.contentDocument.documentElement.scrollWidth).to.be.at.most(1399);
     });
 
     it('DVI24: developer UI is legible in every theme and unaffected by left-hand mode', async () => {

@@ -30,7 +30,8 @@ correctness outrank polish.
 
 **Terminology:**
 - *Dev mode* — the on/off setting of §2.
-- *Developer panel* — the region holding the five tools, below the game area.
+- *Developer panel* — the region holding the five tools: to the right of the game area
+  when the window is wide enough for both, below it otherwise.
 - *Current board* — givens plus the player's pen digits. Pencil marks are not part of it.
 - *Cell reference* — `r<row>c<col>`, both 1-based (`r1c1` is top-left).
 
@@ -55,7 +56,8 @@ nothing exposed to assistive technology — and the developer tooling is not dow
 **When on:**
 - A small **DEV** badge is fixed to the bottom-left corner of the viewport at all times.
   It is a link that moves focus to the developer panel.
-- The developer panel appears below the game area with the heading "Developer tools" and
+- The developer panel appears to the right of the game area when the window is wide
+  enough for both side by side, and below it otherwise (in either hand mode), with the heading "Developer tools" and
   the note "Statistics are not recorded while developer mode is on. Load the app with
   ?dev=0 to turn it off."
 - Each tool is a collapsible section, collapsed initially, operable with the keyboard.
@@ -93,7 +95,8 @@ A rejection leaves the current game untouched. An empty field is a wrong-length 
 
 ## 5. Tool: Solver Step Inspector
 
-Controls: **Run solver**, **Clear**, a summary line, and an ordered list of steps.
+Controls: **Run solver**, **Clear**, **Restore board**, a summary line, a board-status
+line, and an ordered list of steps.
 
 ### 5.1 Running
 
@@ -112,12 +115,21 @@ Controls: **Run solver**, **Clear**, a summary line, and an ordered list of step
    - "The board is already full."
 5. The summary is announced.
 
-The inspector never changes the board, pencil marks, selection, hints, or statistics.
+Running the solver changes nothing in the game. The inspector never changes pencil marks,
+hints, or statistics; it moves the board cursor when a step is selected (§5.2) and changes
+the board only when the developer sets it to a step (§5.4).
 
 ### 5.2 Selecting a step
 
-- Each step is a toggle button. Activating one selects it (and deselects any other);
-  activating the selected one deselects it.
+- Clicking a step selects it (and deselects any other). Clicking the selected step leaves
+  it selected.
+- With focus on a step, Up/Down move focus and selection to the previous/next step, and
+  Home/End to the first/last; the list stops at its ends. Selection by key behaves
+  exactly like a click. These keys do not also move the board cursor.
+- Escape, with focus on a step, clears the selection. Clear (§5.3) also clears it.
+- Selecting a step moves the board cursor to the cell the step acts on: the placement
+  cell, or for an elimination step the first cell it eliminates from. Keyboard focus stays
+  in the list.
 - While a step is selected, the cells it involves are highlighted on the grid in three
   roles: the **placement** cell, **elimination** cells, and other **pattern** cells the
   technique reported (pivot, wings, fins, chain nodes, colour groups, rectangle corners,
@@ -129,8 +141,27 @@ The inspector never changes the board, pencil marks, selection, hints, or statis
 
 When the current board changes (any pen digit placed, erased, undone, reset, or a new
 puzzle), the list and highlights are cleared and the summary reads "Board changed — run
-the solver again." Pencil-mark changes do not clear it. **Clear** empties the list,
-highlights, and summary.
+the solver again." Pencil-mark changes do not clear it, and neither do the inspector's own
+board changes (§5.4). **Clear** empties the list, highlights, summary, and board status; it
+leaves the board as it is.
+
+### 5.4 Setting the board to a step
+
+- Double-clicking a step, or pressing Enter or Space with focus on it, sets the board to
+  the solver's position after that step: the board the solver was run on, plus every
+  digit placed by steps 1 to *n*. Elimination steps place nothing. The step is also
+  selected.
+- This works in both directions: choosing an earlier step removes the digits of the later
+  ones.
+- The board status reads "Board set to step *n* of *N*." and is announced. Steps 1 to *n*
+  are marked in the list, and step *n* is marked as the board's current position.
+- **Restore board** puts back the board the solver was run on and reads "Board restored
+  to where the solver started." It is disabled until the board has been set to a step.
+- Setting the board is not a move: it cannot be undone with Undo, clears any existing
+  undo step, never counts as a win (even at the last step of a full solve), ends an active
+  coach session, and leaves pencil marks alone.
+- The list stays usable afterwards. A change made by the player makes it stale as in §5.3;
+  the board then stays as the player left it.
 
 ---
 
@@ -233,5 +264,6 @@ All dev controls show the standard focus ring.
 
 ## 11. Out of Scope
 
-Per rspec-005 §3: force technique; server-side logging or remote diagnostics; editing or
-stepping the board from the inspector.
+Per rspec-005 §3: force technique; server-side logging or remote diagnostics; editing the
+board from the inspector. (Stepping the board from the inspector was out of scope in
+rspec-005 and was added at the Product Director's request on 2026-11-14; see §5.4.)

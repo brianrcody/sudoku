@@ -31,12 +31,13 @@ The badge does not move in left-hand mode.
 
 ## 3. Developer Panel
 
-Placed in `<main>` after the game area, so it sits below the board and controls at every
-width and in both hand modes.
+Placed in `<main>` after the game area. At viewport widths of 1400px and up it sits to
+the right of the game area (see §4); below that it sits under the board and controls. It
+is on the right in both hand modes.
 
 | Property | Value |
 |---|---|
-| Width | 100%, `max-width: 860px` (the game area's max width) |
+| Width | Under the game: 100%, `max-width: 860px` (the game area's max width). Beside it: 480px |
 | Background | `var(--surface)` |
 | Border | 1px dashed `var(--border-strong)` |
 | Radius | 6px (Terminal: 0) |
@@ -78,6 +79,8 @@ background, no border, `var(--text)`.
 | Hover | `var(--btn-hover)` background |
 | Focus-visible | 2px solid `var(--accent)` outline, offset -2px |
 | Selected (`aria-pressed="true"`) | `var(--accent)` background, `var(--surface)` text |
+| Board set through this step (`data-applied`) | 3px `var(--win)` bar on the left edge |
+| Board's current step (`aria-current="step"`) | Bar as above plus a bold " ◀ board" suffix |
 
 ### 3.4 Grid highlight (selected step)
 
@@ -127,6 +130,10 @@ entry per line.
 
 ## 4. Responsive and Handedness
 
-The panel is a full-width block under the game area and wraps naturally; nothing in it
+From 1400px (game area 860 + 24 gap + panel 480 + page padding) `<main>` becomes a row:
+game area, then the panel at a fixed 480px, top-aligned. The panel is `position: sticky`
+(`top: 16px`) with `max-height: calc(100vh - 32px)` and scrolls internally, and the step
+list grows to `max-height: 45vh`, so a long solve stays beside the board. Below 1400px the
+panel is a full-width block under the game area and wraps naturally. Nothing in it
 depends on the 720px breakpoint or on `data-hand`. The step list and JSON block scroll
 internally so the panel never forces horizontal page scroll.

@@ -75,14 +75,14 @@ Diagnostic tools for the solver, coach, and generator, hidden from players.
 | `?dev=0` | Turn it off and clear the saved setting |
 
 When it is on, a **DEV** badge sits in the bottom-left corner and a *Developer tools*
-panel appears below the game. **No statistics are recorded while developer mode is on.**
+panel appears beside the game (below it on narrower windows). **No statistics are recorded while developer mode is on.**
 When it is off, none of the tooling is downloaded (`js/dev/devPanel.js`, `js/dev/inspect.js`,
 and `css/dev.css` are loaded on demand).
 
 | Tool | What it does |
 |---|---|
 | Load puzzle from string | Paste 81 cells (`1`–`9`; `0` or `.` for empty; whitespace ignored) and load them, bypassing the generator. Same validation, rating, and Unrated handling as a share link |
-| Solver step inspector | Runs the logical solver on the current board (givens plus your digits) and lists every step. Select a step to highlight its placement, elimination, and pattern cells. Read-only; reports a stall explicitly |
+| Solver step inspector | Runs the logical solver on the current board (givens plus your digits) and lists every step. Select a step (click or arrow keys) to highlight its placement, elimination, and pattern cells. Double-click, Enter, or Space sets the board to the solver's position after that step; Restore board undoes it. Reports a stall explicitly |
 | Candidate overlay | Shows computed candidates in every empty cell in place of pencil marks. Candidates you haven't marked are underlined; marks that aren't candidates are struck through. Your marks are never changed |
 | Coach step data | The `CoachStep` object handed to the coach renderer, as JSON, with a copy button |
 | Generation diagnostics | Requested vs. achieved tier, fallback, attempts, rejections (unsolvable / wrong tier, by tier), and the technique profile of the solve |

@@ -3,7 +3,7 @@
  */
 
 import {
-  cellRef, formatStep, stepCells, runInspector, summarize,
+  cellRef, formatStep, stepCells, runInspector, summarize, boardAtStep,
   candidateDiff, overlayLabel, techniqueProfile, describeGeneration,
 } from '../../dev/inspect.js';
 import { generateForTier } from '../../generator/pipeline.js';
@@ -109,6 +109,29 @@ describe('dev/inspect.js', () => {
       expect(steps[0].technique).to.equal('Naked Single');
       expect(steps[0].text).to.match(/^Naked Single — place [1-9] at r[1-9]c[1-9]$/);
       expect(steps[0].cells.place).to.have.length(1);
+    });
+
+    it('IN14b: placement steps carry their cell and digit; elimination steps carry null', () => {
+      const { steps } = runInspector(toGivens(HARD));
+      const place = steps.find(s => s.cells.place.length === 1);
+      expect(place.placement).to.deep.equal({ cellIndex: place.cells.place[0], digit: Number(place.text.match(/place (\d)/)[1]) });
+      const elim = steps.find(s => s.cells.place.length === 0);
+      expect(elim.placement).to.be.null;
+    });
+
+    it('IN14c: boardAtStep adds the digits placed up to and including the step, on a copy', () => {
+      const base = toGivens(HARD);
+      const { steps } = runInspector(base);
+      const firstElim = steps.findIndex(s => s.placement === null);
+      const count = n => boardAtStep(base, steps, n).filter(v => v !== 0).length;
+      const givens = base.filter(v => v !== 0).length;
+      const placedThrough = n => steps.slice(0, n + 1).filter(s => s.placement).length;
+
+      expect(count(0)).to.equal(givens + placedThrough(0));
+      // An elimination step places nothing.
+      expect(count(firstElim)).to.equal(count(firstElim - 1));
+      expect(boardAtStep(base, steps, steps.length - 1).includes(0)).to.be.false;
+      expect(Array.from(base).join('')).to.equal(HARD);
     });
 
     it('IN15: runInspector never modifies the board it is given', () => {

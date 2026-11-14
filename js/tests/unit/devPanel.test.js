@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for js/dev/devPanel.js (DP1–DP38).
+ * @fileoverview Unit tests for js/dev/devPanel.js (DP1–DP63).
  *
  * The panel is mounted in the Mocha page against a fake game state and a real
  * ui/grid.js mount, so the grid-decorator tools are tested through the actual
@@ -82,12 +82,35 @@ describe('dev/devPanel.js', () => {
   // board change made by the tools.
   const boardActions = () => gs.dispatch.calls.filter(a => a.type !== 'DESELECT');
   const emit = (...keys) => gs._emit('changed', { action: { type: 'TEST' }, changed: new Set(keys) });
+  const steps = () => [...$('dev-inspect-list').querySelectorAll('button')];
+  /** Cell index a placement step's button names ("… place 4 at r1c3"). */
+  const placedCell = (button) => {
+    const [, r, c] = button.textContent.match(/at r(\d)c(\d)$/);
+    return (r - 1) * 9 + (c - 1);
+  };
+  const key = (el, k) => {
+    const e = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+    el.dispatchEvent(e);
+    return e;
+  };
+  /** KIDDIE plus the solution digits of the cells the first `n` steps place. */
+  const kiddieThrough = (n) => {
+    const pen = toGivens(KIDDIE);
+    const solution = toGivens(KIDDIE_SOLUTION);
+    for (const b of steps().slice(0, n)) pen[placedCell(b)] = solution[placedCell(b)];
+    return Array.from(pen).join('');
+  };
+  const lastBoardSet = () => {
+    const sets = gs.dispatch.calls.filter(a => a.type === 'DEV_SET_BOARD');
+    return sets.length ? Array.from(sets[sets.length - 1].pen).join('') : null;
+  };
 
   // ── Shell ────────────────────────────────────────────────────────────────
 
   describe('shell', () => {
     it('DP1: mount adds the panel to <main> as a labelled, focusable region', () => {
       mountPanel();
+      expect(main.classList.contains('dev-host')).to.be.true;
       const panel = $('dev-root');
       expect(panel.parentElement).to.equal(main);
       expect(panel.tagName).to.equal('SECTION');
@@ -240,6 +263,7 @@ describe('dev/devPanel.js', () => {
       expect(placed[0].getAttribute('aria-label')).to.match(/ — solver step: placement$/);
       await frame();
       expect(sr.textContent).to.equal(`Step 1: ${first.textContent}. 1 cell highlighted.`);
+      expect(boardActions()).to.deep.equal([{ type: 'SELECT_CELL', index: placedCell(first) }]);
     });
 
     it('DP16: selecting another step moves the selection', () => {
@@ -253,19 +277,14 @@ describe('dev/devPanel.js', () => {
       expect(gridRoot.querySelectorAll('.cell.dev-hl-place')).to.have.length(1);
     });
 
-    it('DP17: activating the selected step deselects it and removes the highlight without announcing', async () => {
+    it('DP17: clicking the selected step again keeps it selected', () => {
       mountPanel();
       $('dev-inspect-run').click();
       const first = $('dev-inspect-list').querySelector('button');
       first.click();
-      await frame();
-      sr.textContent = '';
       first.click();
-      await frame();
-      expect(first.getAttribute('aria-pressed')).to.equal('false');
-      expect(gridRoot.querySelectorAll('[class*="dev-hl-"]')).to.have.length(0);
-      expect(cell(0).getAttribute('aria-label')).to.not.include('solver step');
-      expect(sr.textContent).to.equal('');
+      expect(first.getAttribute('aria-pressed')).to.equal('true');
+      expect(gridRoot.querySelectorAll('.cell.dev-hl-place')).to.have.length(1);
     });
 
     it('DP18: an elimination step highlights several cells and says so in the plural', async () => {
@@ -279,6 +298,8 @@ describe('dev/devPanel.js', () => {
       expect(cell(38).getAttribute('aria-label')).to.match(/ — solver step: elimination$/);
       await frame();
       expect(sr.textContent).to.match(/\. 2 cells highlighted\.$/);
+      // The board cursor goes to the first cell the step eliminates from.
+      expect(boardActions()).to.deep.equal([{ type: 'SELECT_CELL', index: 38 }]);
     });
 
     it('DP19: a click on the list outside any step button does nothing', () => {
@@ -343,6 +364,206 @@ describe('dev/devPanel.js', () => {
       $('dev-inspect-run').click();
       expect($('dev-inspect-list').querySelector('[aria-pressed="true"]')).to.be.null;
       expect(gridRoot.querySelectorAll('[class*="dev-hl-"]')).to.have.length(0);
+    });
+
+    // ── Selection by keyboard ──────────────────────────────────────────────
+
+    describe('keyboard selection', () => {
+      let seen;
+      const spy = e => seen.push(e.key);
+      beforeEach(() => { seen = []; document.addEventListener('keydown', spy); });
+      afterEach(() => document.removeEventListener('keydown', spy));
+
+      function run() {
+        mountPanel();
+        $('dev-inspector').open = true;
+        $('dev-inspect-run').click();
+        return steps();
+      }
+
+      it('DP48: ArrowDown and ArrowUp move focus and selection exactly as a click would', async () => {
+        const list = run();
+        list[0].click();
+        gs.dispatch.calls.length = 0;
+
+        const down = key(list[0], 'ArrowDown');
+        expect(down.defaultPrevented).to.be.true;
+        expect(document.activeElement).to.equal(list[1]);
+        expect(list[1].getAttribute('aria-pressed')).to.equal('true');
+        expect(list[0].getAttribute('aria-pressed')).to.equal('false');
+        expect(boardActions()).to.deep.equal([{ type: 'SELECT_CELL', index: placedCell(list[1]) }]);
+        expect(gridRoot.querySelectorAll('.cell.dev-hl-place')).to.have.length(1);
+        await frame();
+        expect(sr.textContent).to.equal(`Step 2: ${list[1].textContent}. 1 cell highlighted.`);
+
+        key(list[1], 'ArrowUp');
+        expect(document.activeElement).to.equal(list[0]);
+        expect(list[0].getAttribute('aria-pressed')).to.equal('true');
+      });
+
+      it('DP49: the list stops at its ends; Home and End jump to them', () => {
+        const list = run();
+        key(list[0], 'ArrowUp');
+        expect(list[0].getAttribute('aria-pressed')).to.equal('true');
+        key(list[0], 'End');
+        expect(document.activeElement).to.equal(list[50]);
+        expect(list[50].getAttribute('aria-pressed')).to.equal('true');
+        key(list[50], 'ArrowDown');
+        expect(list[50].getAttribute('aria-pressed')).to.equal('true');
+        key(list[50], 'Home');
+        expect(document.activeElement).to.equal(list[0]);
+      });
+
+      it('DP50: navigation and activation keys never reach the global key handler', () => {
+        const list = run();
+        for (const k of ['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' ']) key(list[0], k);
+        expect(seen).to.deep.equal([]);
+      });
+
+      it('DP51: other keys, and keys on the list itself, are left alone', () => {
+        const list = run();
+        gs.dispatch.calls.length = 0;
+        const typed = key(list[0], 'a');
+        expect(typed.defaultPrevented).to.be.false;
+        key($('dev-inspect-list'), 'ArrowDown');
+        expect(seen).to.deep.equal(['a', 'ArrowDown']);
+        expect($('dev-inspect-list').querySelector('[aria-pressed="true"]')).to.be.null;
+        expect(gs.dispatch.calls).to.have.length(0);
+      });
+
+      it('DP52: Escape drops the selection and highlight, and still propagates', () => {
+        const list = run();
+        list[0].click();
+        gs.dispatch.calls.length = 0;
+        const esc = key(list[0], 'Escape');
+        expect(esc.defaultPrevented).to.be.false;
+        expect(seen).to.deep.equal(['Escape']);
+        expect(list[0].getAttribute('aria-pressed')).to.equal('false');
+        expect(gridRoot.querySelectorAll('[class*="dev-hl-"]')).to.have.length(0);
+        expect(gs.dispatch.calls).to.have.length(0);
+        expect(steps()).to.have.length(51);
+      });
+    });
+
+    // ── Set board to step ──────────────────────────────────────────────────
+
+    describe('set board to step', () => {
+      function run(state) {
+        mountPanel(state ? { state } : undefined);
+        $('dev-inspect-run').click();
+        return steps();
+      }
+
+      it('DP53: Restore board is disabled until the board has been set to a step', () => {
+        run();
+        expect($('dev-inspect-restore').disabled).to.be.true;
+        expect($('dev-inspect-board').textContent).to.equal('');
+      });
+
+      it('DP54: Enter on a selected step sets the board to the solver\'s position after it', async () => {
+        const list = run();
+        list[4].click();
+        const enter = key(list[4], 'Enter');
+        expect(enter.defaultPrevented).to.be.true;
+        expect(lastBoardSet()).to.equal(kiddieThrough(5));
+        expect($('dev-inspect-board').textContent).to.equal('Board set to step 5 of 51.');
+        expect($('dev-inspect-restore').disabled).to.be.false;
+        await frame();
+        expect(sr.textContent).to.equal('Board set to step 5 of 51.');
+      });
+
+      it('DP55: the steps the board has been set through are marked, the last as current', () => {
+        const list = run();
+        key(list[4], 'Enter');
+        expect(list.map(b => b.hasAttribute('data-applied')).lastIndexOf(true)).to.equal(4);
+        expect(list.slice(0, 5).every(b => b.hasAttribute('data-applied'))).to.be.true;
+        expect(list.filter(b => b.getAttribute('aria-current') === 'step')).to.deep.equal([list[4]]);
+      });
+
+      it('DP56: Space on a step that is not yet selected selects it and sets the board', () => {
+        const list = run();
+        key(list[2], ' ');
+        expect(list[2].getAttribute('aria-pressed')).to.equal('true');
+        expect(boardActions().map(a => a.type)).to.deep.equal(['SELECT_CELL', 'DEV_SET_BOARD']);
+        expect(lastBoardSet()).to.equal(kiddieThrough(3));
+      });
+
+      it('DP57: double-clicking a step sets the board to it', () => {
+        const list = run();
+        list[9].dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        expect(lastBoardSet()).to.equal(kiddieThrough(10));
+        $('dev-inspect-list').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        expect(gs.dispatch.calls.filter(a => a.type === 'DEV_SET_BOARD')).to.have.length(1);
+      });
+
+      it('DP58: going to an earlier step removes the digits of the later ones', () => {
+        const list = run();
+        key(list[9], 'Enter');
+        key(list[1], 'Enter');
+        expect(lastBoardSet()).to.equal(kiddieThrough(2));
+        expect(list.filter(b => b.hasAttribute('data-applied'))).to.have.length(2);
+        expect(list[9].hasAttribute('aria-current')).to.be.false;
+        expect($('dev-inspect-board').textContent).to.equal('Board set to step 2 of 51.');
+      });
+
+      it('DP59: positions are built on the board the solver was run on, player digits included', () => {
+        const pen = toGivens(KIDDIE_SOLUTION);
+        pen[40] = 0;
+        pen[41] = 0;
+        const list = run({ pen });
+        key(list[0], 'Enter');
+        const set = lastBoardSet();
+        expect(set.split('').filter(d => d === '0')).to.have.length(1);
+      });
+
+      it('DP60: the inspector\'s own board write does not make its results stale', () => {
+        const list = run();
+        key(list[4], 'Enter');
+        gs._emit('changed', { action: { type: 'DEV_SET_BOARD' }, changed: new Set(['pen']) });
+        expect(steps()).to.have.length(51);
+        expect($('dev-inspect-board').textContent).to.equal('Board set to step 5 of 51.');
+      });
+
+      it('DP61: Restore board puts back the board the solver started from', async () => {
+        const list = run();
+        key(list[4], 'Enter');
+        $('dev-inspect-restore').click();
+        expect(lastBoardSet()).to.equal(KIDDIE);
+        expect(list.some(b => b.hasAttribute('data-applied'))).to.be.false;
+        expect(list.some(b => b.hasAttribute('aria-current'))).to.be.false;
+        expect($('dev-inspect-restore').disabled).to.be.true;
+        expect($('dev-inspect-board').textContent).to.equal('Board restored to where the solver started.');
+        expect(steps()).to.have.length(51);
+      });
+
+      it('DP62: a player\'s board change, Clear, and a re-run all reset the set-to-step state', () => {
+        let list = run();
+        key(list[4], 'Enter');
+        emit('pen');
+        expect($('dev-inspect-board').textContent).to.equal('');
+        expect($('dev-inspect-restore').disabled).to.be.true;
+
+        $('dev-inspect-run').click();
+        list = steps();
+        key(list[4], 'Enter');
+        $('dev-inspect-clear').click();
+        expect($('dev-inspect-board').textContent).to.equal('');
+        expect($('dev-inspect-restore').disabled).to.be.true;
+
+        $('dev-inspect-run').click();
+        key(steps()[4], 'Enter');
+        $('dev-inspect-run').click();
+        expect($('dev-inspect-board').textContent).to.equal('');
+        expect($('dev-inspect-restore').disabled).to.be.true;
+        expect(steps().some(b => b.hasAttribute('data-applied'))).to.be.false;
+      });
+
+      it('DP63: clicking a step does not deselect the board cell the tool just selected', () => {
+        const list = run();
+        gs.dispatch.calls.length = 0;
+        list[0].click();
+        expect(gs.dispatch.calls.map(a => a.type)).to.deep.equal(['SELECT_CELL']);
+      });
     });
   });
 

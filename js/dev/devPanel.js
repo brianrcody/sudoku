@@ -4,9 +4,11 @@
  * dev.css are never requested.
  *
  * Builds all of its own DOM: the DEV badge, the panel, and its stylesheet
- * link. The tools read game state and never dispatch; load-from-string goes
- * through the shared loader injected by main.js. Grid drawing (step highlights
- * and the candidate overlay) goes through the grid's cell-decorator hook.
+ * link. Load-from-string goes through the shared loader injected by main.js.
+ * The step inspector is the only tool that dispatches: it moves the board
+ * cursor to a selected step's cell, and sets the board to a chosen step with
+ * DEV_SET_BOARD. Grid drawing (step highlights and the candidate overlay) goes
+ * through the grid's cell-decorator hook.
  */
 
 import { announce } from '../ui/srLive.js';
@@ -14,7 +16,7 @@ import { setCellDecorator, refresh as refreshGrid } from '../ui/grid.js';
 import { copyText } from '../util/clipboard.js';
 import { rate } from '../generator/rater.js';
 import {
-  runInspector, summarize, candidateDiff, overlayLabel, describeGeneration,
+  runInspector, summarize, boardAtStep, candidateDiff, overlayLabel, describeGeneration,
 } from './inspect.js';
 
 const STYLESHEET_URL = new URL('../../css/dev.css', import.meta.url);
@@ -37,12 +39,16 @@ let _overlayOn = false;
 let _inspection = null;
 /** @type {number|null} Index into `_inspection.steps`. */
 let _selectedStep = null;
+/** @type {Uint8Array|null} The board `_inspection` was run on. */
+let _base = null;
+/** @type {number|null} The step the board is currently set to, if any. */
+let _appliedStep = null;
 
 /**
  * Mount the developer tools.
  *
  * @param {object} deps
- * @param {{ getState: function, on: function }} deps.gameState
+ * @param {{ getState: function, on: function, dispatch: function }} deps.gameState
  * @param {function(string): Promise<{status: string, message: string}>} deps.loadPuzzle
  *   The shared puzzle loader, bound to the `string` source.
  * @param {function(string): Promise<boolean>} [deps.copy]
@@ -52,6 +58,8 @@ export function mount({ gameState, loadPuzzle, copy = copyText }) {
   _overlayOn = false;
   _inspection = null;
   _selectedStep = null;
+  _base = null;
+  _appliedStep = null;
 
   const link = document.createElement('link');
   link.rel = 'stylesheet';
@@ -95,9 +103,13 @@ export function mount({ gameState, loadPuzzle, copy = copyText }) {
         <div class="dev-buttons">
           <button type="button" class="btn" id="dev-inspect-run">Run solver</button>
           <button type="button" class="btn" id="dev-inspect-clear">Clear</button>
+          <button type="button" class="btn" id="dev-inspect-restore" disabled>Restore board</button>
         </div>
+        <p class="dev-note">Click a step, or use the arrow keys, to show it on the board.
+          Double-click it, or press Enter or Space, to set the board to that step.</p>
         <p class="dev-status" id="dev-inspect-summary" role="status"></p>
-        <ol class="dev-steps" id="dev-inspect-list" aria-label="Solver steps"></ol>
+        <p class="dev-status" id="dev-inspect-board"></p>
+        <ol class="dev-steps" id="dev-inspect-list" aria-label="Solver steps" data-keep-selection></ol>
       </div>
     </details>
 
@@ -132,7 +144,9 @@ export function mount({ gameState, loadPuzzle, copy = copyText }) {
       <div class="dev-tool-body" id="dev-gen-body"></div>
     </details>
   `;
-  document.querySelector('main').appendChild(_panel);
+  const main = document.querySelector('main');
+  main.classList.add('dev-host');
+  main.appendChild(_panel);
 
   // The badge is an in-page link; make the jump land keyboard focus too.
   badge.addEventListener('click', () => _panel.focus());
@@ -142,8 +156,10 @@ export function mount({ gameState, loadPuzzle, copy = copyText }) {
   _wireOverlay();
   _wireCoach(copy);
 
-  gameState.on('changed', ({ changed }) => {
-    if (_inspection !== null && (changed.has('pen') || changed.has('puzzle'))) {
+  gameState.on('changed', ({ action, changed }) => {
+    // The inspector's own board writes do not make its results stale.
+    const ownWrite = action.type === 'DEV_SET_BOARD';
+    if (_inspection !== null && !ownWrite && (changed.has('pen') || changed.has('puzzle'))) {
       _clearInspection(STALE_MESSAGE);
     }
     if (changed.has('coachSession')) _renderCoach();
@@ -178,10 +194,15 @@ function _wireLoad(loadPuzzle) {
 // ---------------------------------------------------------------------------
 
 function _wireInspector() {
+  const list = _el('dev-inspect-list');
+
   _el('dev-inspect-run').addEventListener('click', () => {
-    _inspection = runInspector(_gameState.getState().pen);
+    _base = _gameState.getState().pen.slice();
+    _inspection = runInspector(_base);
     _selectedStep = null;
+    _appliedStep = null;
     _renderSteps();
+    _setBoardStatus('');
     const summary = summarize(_inspection);
     _el('dev-inspect-summary').textContent = summary;
     announce(summary);
@@ -190,22 +211,108 @@ function _wireInspector() {
 
   _el('dev-inspect-clear').addEventListener('click', () => _clearInspection(''));
 
-  _el('dev-inspect-list').addEventListener('click', (e) => {
-    const button = e.target.closest('button[data-step]');
-    if (!button) return;
-    const index = Number(button.dataset.step);
-    _selectedStep = _selectedStep === index ? null : index;
-    for (const b of _el('dev-inspect-list').querySelectorAll('button')) {
-      b.setAttribute('aria-pressed', String(Number(b.dataset.step) === _selectedStep));
-    }
-    refreshGrid();
-
-    if (_selectedStep !== null) {
-      const step = _inspection.steps[index];
-      const k = step.cells.place.length + step.cells.elim.length + step.cells.pattern.length;
-      announce(`Step ${index + 1}: ${step.text}. ${k} cell${k === 1 ? '' : 's'} highlighted.`);
-    }
+  _el('dev-inspect-restore').addEventListener('click', () => {
+    _appliedStep = null;
+    _gameState.dispatch({ type: 'DEV_SET_BOARD', pen: _base.slice() });
+    _markSteps();
+    _setBoardStatus('Board restored to where the solver started.');
   });
+
+  const stepOf = e => {
+    const button = e.target.closest('button[data-step]');
+    return button ? Number(button.dataset.step) : null;
+  };
+
+  list.addEventListener('click', (e) => {
+    const index = stepOf(e);
+    if (index !== null) _selectStep(index);
+  });
+
+  list.addEventListener('dblclick', (e) => {
+    const index = stepOf(e);
+    if (index !== null) _applyStep(index);
+  });
+
+  // Keys are handled here and stopped, so the global handler does not also
+  // move the board cursor (arrows, Home) underneath the list.
+  list.addEventListener('keydown', (e) => {
+    const index = stepOf(e);
+    if (index === null) return;
+    const last = _inspection.steps.length - 1;
+    const target = {
+      ArrowDown: Math.min(index + 1, last),
+      ArrowUp: Math.max(index - 1, 0),
+      Home: 0,
+      End: last,
+    }[e.key];
+
+    if (target !== undefined) {
+      list.querySelector(`button[data-step="${target}"]`).focus();
+      _selectStep(target);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      _selectStep(index);
+      _applyStep(index);
+    } else if (e.key === 'Escape') {
+      _selectedStep = null;
+      _markSteps();
+      refreshGrid();
+      return;   // let Escape reach the global handler too
+    } else {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+  });
+}
+
+/**
+ * Select a step: highlight its cells, move the board cursor to the cell it
+ * acts on, and announce it. Click and keyboard navigation both come here.
+ */
+function _selectStep(index) {
+  const step = _inspection.steps[index];
+  _selectedStep = index;
+  _markSteps();
+  refreshGrid();
+  _gameState.dispatch({
+    type: 'SELECT_CELL',
+    index: step.placement ? step.placement.cellIndex : step.cells.elim[0],
+  });
+
+  const k = step.cells.place.length + step.cells.elim.length + step.cells.pattern.length;
+  announce(`Step ${index + 1}: ${step.text}. ${k} cell${k === 1 ? '' : 's'} highlighted.`);
+}
+
+/**
+ * Set the board to the solver's position after step `index`: the board the
+ * solver started from plus every digit placed up to and including that step.
+ * Works in both directions, so an earlier step undoes later ones.
+ */
+function _applyStep(index) {
+  _appliedStep = index;
+  _gameState.dispatch({
+    type: 'DEV_SET_BOARD',
+    pen: boardAtStep(_base, _inspection.steps, index),
+  });
+  _markSteps();
+  _setBoardStatus(`Board set to step ${index + 1} of ${_inspection.steps.length}.`);
+}
+
+function _setBoardStatus(message) {
+  _el('dev-inspect-board').textContent = message;
+  _el('dev-inspect-restore').disabled = _appliedStep === null;
+  if (message) announce(message);
+}
+
+/** Sync each step button with the selected and applied steps. */
+function _markSteps() {
+  for (const button of _el('dev-inspect-list').querySelectorAll('button')) {
+    const index = Number(button.dataset.step);
+    button.setAttribute('aria-pressed', String(index === _selectedStep));
+    button.toggleAttribute('data-applied', _appliedStep !== null && index <= _appliedStep);
+    if (index === _appliedStep) button.setAttribute('aria-current', 'step');
+    else button.removeAttribute('aria-current');
+  }
 }
 
 function _renderSteps() {
@@ -226,8 +333,11 @@ function _renderSteps() {
 function _clearInspection(message) {
   _inspection = null;
   _selectedStep = null;
+  _base = null;
+  _appliedStep = null;
   _el('dev-inspect-list').innerHTML = '';
   _el('dev-inspect-summary').textContent = message;
+  _setBoardStatus('');
   refreshGrid();
 }
 

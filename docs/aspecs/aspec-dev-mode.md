@@ -38,9 +38,15 @@ Three layers, so that an app with dev mode off pays for one tiny module and noth
 | Pure logic | `js/dev/inspect.js` | Only via `devPanel.js` |
 | UI | `js/dev/devPanel.js` + `css/dev.css` | `import()` from `main.js` only when the flag is on |
 
-The tools read game state through the public `getState`/`on` API and never dispatch,
-with one exception: load-from-string calls the shared loader (aspec-puzzle-sharing §4.4)
-through a function injected by `main.js`. The two tools that draw on the grid do so
+The tools read game state through the public `getState`/`on` API. Two write paths exist:
+load-from-string calls the shared loader (aspec-puzzle-sharing §4.4) through a function
+injected by `main.js`, and the step inspector dispatches `SELECT_CELL` (cursor follows the
+selected step) and `DEV_SET_BOARD` (set board to a step). `DEV_SET_BOARD` is a reducer
+action in `game/state.js` — `{ type, pen }` — that replaces the non-given cells, recomputes
+conflicts, clears incorrect marks and the undo snapshot, ends any coach session, and
+deliberately skips completion evaluation and statistics; it is ignored with no puzzle or
+on a won board. Session restore was considered instead and rejected: it replays
+`PEN_ENTER` and cannot remove digits or avoid the win check. The two tools that draw on the grid do so
 through a single decorator hook on `ui/grid.js`.
 
 ## 2. Files Touched
@@ -117,6 +123,7 @@ export function cellRef(index)                         // 'r3c7'
 export function formatStep(step)                       // fspec-005 §5.1 text
 export function stepCells(step)                        // { place:number[], elim:number[], pattern:number[] }
 export function runInspector(board)                    // { steps, solved, remaining, hardest, alreadyFull }
+export function boardAtStep(base, steps, upTo)         // base + digits placed by steps 0…upTo (copy)
 export function summarize(result)                      // summary line
 export function candidateDiff(pen, pencil)             // Array(81): null | { agree, missing, extra } bitmasks
 export function overlayLabel(index, diff)              // accessible-name body for an overlay cell
@@ -125,7 +132,8 @@ export function describeGeneration(puzzle, getTrace)   // { message } | { rows: 
 ```
 
 - `runInspector` copies `board`, calls `solveLogically`, and maps the trace to
-  `{ index, technique, text, cells }`. `hardest` is the solver's `hardestRank` (0 when no
+  `{ index, technique, text, cells, placement }` (`placement` is `{ cellIndex, digit }` or
+  null for an elimination step). `hardest` is the solver's `hardestRank` (0 when no
   technique fired); `summarize` renders it with its tier via `tierForRank` +
   `TIER_LABELS`, so no technique-name↔rank table is needed.
 - `stepCells`: `place` = the step's cell when `digit !== null`; `elim` = distinct
@@ -149,12 +157,14 @@ export function mount(deps)
 ```
 
 Module state: `_overlayOn`, `_inspection` (last `runInspector` result or null),
-`_selectedStep` (index or null).
+`_selectedStep` (index or null), `_base` (the board the inspection ran on), `_appliedStep`
+(index the board is set to, or null). `mount` adds `dev-host` to `<main>`, which the
+side-by-side media query in `dev.css` keys on.
 
 | Tool | Wiring |
 |---|---|
 | Load | Click → status "Checking puzzle…" → `await loadPuzzle(text)` → status + `announce(message)` |
-| Inspector | Run → `runInspector(state.pen)` → render list + summary. Step click → toggle `_selectedStep`, `grid.refresh()`. On `changed` with `pen` or `puzzle` → clear with the stale message |
+| Inspector | Run → `runInspector(state.pen)` → render list + summary. Step click, or Up/Down/Home/End on a step (focus moves, event stopped so `keyboard.js` does not also act) → `_selectStep`: set `_selectedStep`, `grid.refresh()`, dispatch `SELECT_CELL` for the step's cell, announce. Escape → deselect. Double-click or Enter/Space → `_applyStep`: dispatch `DEV_SET_BOARD` with `boardAtStep(_base, steps, n)`. Restore → `DEV_SET_BOARD` with `_base`. The list carries `data-keep-selection`, a generic opt-out honoured by the grid's outside-click deselect. On `changed` with `pen` or `puzzle` → clear with the stale message, unless the action is the tool's own `DEV_SET_BOARD` |
 | Overlay | Switch click → flip `_overlayOn`, `aria-checked`, announce, `grid.refresh()` |
 | Coach data | On `changed` with `coachSession` (and at mount) → `<pre>` text = `JSON.stringify(session.step, null, 2)` or the empty message |
 | Diagnostics | On `changed` with `puzzle` (and at mount) → `describeGeneration` → table or message |

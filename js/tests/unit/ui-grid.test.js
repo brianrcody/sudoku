@@ -209,6 +209,23 @@ describe('ui/grid.js', () => {
     expect(deselectCall).to.not.exist;
   });
 
+  it('UG13b: clicking inside an element marked data-keep-selection does not dispatch DESELECT', () => {
+    root = makeGridRoot();
+    fakeGs = makeFakeGameState({ puzzle: makePuzzle() });
+    mount(root, fakeGs);
+
+    const keeper = document.createElement('div');
+    keeper.dataset.keepSelection = '';
+    const btn = document.createElement('button');
+    keeper.appendChild(btn);
+    document.body.appendChild(keeper);
+
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    keeper.remove();
+
+    expect(fakeGs.dispatch.calls.find(a => a.type === 'DESELECT')).to.not.exist;
+  });
+
   // ── Cell decorator seam (V4 — developer mode) ───────────────────────────
 
   describe('cell decorator', () => {

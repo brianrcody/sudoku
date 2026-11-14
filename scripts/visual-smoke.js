@@ -19,7 +19,8 @@
  *   link-unrated-coffee   ?p= with an unrateable puzzle, Coffee theme
  *   link-rejected-mobile  ?p= malformed, 390px wide
  *   share-fallback-mobile Share with the clipboard unavailable, 390px wide
- *   dev-<theme>           ?dev=1 with every tool open and in use, each theme
+ *   dev-<theme>           ?dev=1 with every tool open and in use, each theme,
+ *                         1440px wide so the panel sits beside the game
  *                         (School is taken in left-hand mode)
  *   dev-mobile            ?dev=1 at 390px wide
  *   dev-off               ?dev=0
@@ -103,6 +104,7 @@ async function exerciseDevTools(page) {
     for (const digit of [1, 2, 3]) gs.dispatch({ type: 'PENCIL_TOGGLE', digit });
   });
   await page.click('#dev-overlay-toggle');
+  await page.dblclick('#dev-inspect-list li:nth-child(6) button');
   await page.click('#dev-inspect-list li:nth-child(3) button');
   await page.keyboard.press('c');   // start a coach session for the JSON viewer
 
@@ -156,6 +158,7 @@ try {
   for (const theme of THEMES) {
     await shot(`dev-${theme}`, '?dev=1', {
       theme,
+      width: 1440,
       leftHanded: theme === 'school',
       actions: exerciseDevTools,
     });

@@ -179,6 +179,16 @@
   background: var(--accent);
 }
 
+/* Steps the board has been set through; the last of them carries a marker. */
+.dev-steps button[data-applied] {
+  box-shadow: inset 3px 0 0 var(--win);
+}
+
+.dev-steps button[aria-current="step"]::after {
+  content: " ◀ board";
+  font-weight: 700;
+}
+
 /* ── Grid highlight for the selected step ─────────────────────────────── */
 .cell.dev-hl-place {
   box-shadow: inset 0 0 0 3px var(--win);
@@ -317,6 +327,31 @@
 .dev-table td {
   font-family: ui-monospace, "Courier New", monospace;
   white-space: pre-line;
+}
+
+/* ── Side-by-side layout ──────────────────────────────────────────────────
+   The panel sits to the right of the game when there is room for both (game
+   area 860px + gap + panel), and flows underneath otherwise. It stays on the
+   right in left-hand mode. */
+@media (min-width: 1400px) {
+  main.dev-host {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  main.dev-host .dev-panel {
+    position: sticky;
+    top: 16px;
+    flex: 0 0 480px;
+    width: 480px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+
+  main.dev-host .dev-steps {
+    max-height: 45vh;
+  }
 }
 
 /* ── Theme and motion adjustments ─────────────────────────────────────── */

@@ -17,7 +17,8 @@ answers which question.
 | Open the app with `?dev=0` | Off, and the saved setting is cleared |
 
 When it is on, a red **DEV** badge sits in the bottom-left corner (click it to jump to the
-panel) and a *Developer tools* panel appears below the game. Each tool is a collapsed
+panel) and a *Developer tools* panel appears to the right of the game (below it when the
+window is narrower than 1400px). Each tool is a collapsed
 section; open the ones you need.
 
 Three things to know before you start:
@@ -121,7 +122,13 @@ You want to know whether a technique fires, when, and on which cells.
    - **dashed accent ring** — other cells in the pattern (pivot, wings, fins, chain
      nodes, colour groups, rectangle corners, ALS members), where the technique reports
      them
-5. Click the step again to clear, or another step to move.
+5. Click another step to move, or use Up/Down (Home/End) to walk the list; the highlight
+   and the board cursor follow. Escape clears the selection.
+6. Double-click a step, or press Enter or Space on it, to **set the board to that step**:
+   the board you ran the solver on plus every digit placed up to there. Go to an earlier
+   step and the later digits come off again. *Restore board* returns to where you
+   started. This is not a move: no undo, no win, no statistics. Elimination steps place
+   nothing, so the board shows only the digits, not the solver's reduced candidates.
 
 The summary line gives you the rating directly: `Solved in N steps. Hardest rank R (Tier).`
 Rank-to-tier, for reference:
@@ -321,7 +328,7 @@ to use for manual UX testing and for demos.
 | Tool | Input | Output | Changes the game? |
 |---|---|---|---|
 | Load puzzle from string | 81 cells, `0`/`.` empty, whitespace ignored | Outcome line; new puzzle on success | Yes — replaces the puzzle (asks if you have progress) |
-| Solver step inspector | Current givens + pen digits | Ordered steps; summary; grid highlight on selection | No |
+| Solver step inspector | Current givens + pen digits | Ordered steps; summary; grid highlight on selection | Selecting moves the board cursor; set-to-step replaces your digits (Restore board undoes it) |
 | Candidate overlay | Current board + your pencil marks | Computed candidates with divergence marked | No |
 | Coach step data | The active coach session | `CoachStep` as JSON; clipboard copy | No |
 | Generation diagnostics | The current puzzle | Generation-run table | No |
