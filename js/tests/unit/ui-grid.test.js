@@ -2,7 +2,7 @@
  * @fileoverview Unit tests for js/ui/grid.js (UG1–UG13).
  */
 
-import { mount } from '../../ui/grid.js';
+import { mount, setCellDecorator, refresh } from '../../ui/grid.js';
 
 const { makeFakeGameState } = window;
 
@@ -207,5 +207,74 @@ describe('ui/grid.js', () => {
 
     const deselectCall = fakeGs.dispatch.calls.find(a => a.type === 'DESELECT');
     expect(deselectCall).to.not.exist;
+  });
+
+  // ── Cell decorator seam (V4 — developer mode) ───────────────────────────
+
+  describe('cell decorator', () => {
+    afterEach(() => setCellDecorator(null));
+
+    function mountGrid(overrides = {}) {
+      root = makeGridRoot();
+      fakeGs = makeFakeGameState({ puzzle: makePuzzle(), ...overrides });
+      mount(root, fakeGs);
+    }
+
+    it('UG14: with no decorator, cells render exactly as before', () => {
+      mountGrid();
+      expect(root.querySelector('.cell').className).to.equal('cell');
+    });
+
+    it('UG15: setCellDecorator re-renders at once, calling the hook for all 81 cells in order', () => {
+      mountGrid();
+      const seen = [];
+      setCellDecorator((el, i, state) => { seen.push([el.dataset.index, i, state === fakeGs.getState()]); });
+      expect(seen).to.have.length(81);
+      seen.forEach(([dataIndex, i, sameState], n) => {
+        expect(i).to.equal(n);
+        expect(dataIndex).to.equal(String(n));
+        expect(sameState).to.be.true;
+      });
+    });
+
+    it('UG16: the hook runs after the cell is rebuilt, so its additions are visible', () => {
+      mountGrid();
+      setCellDecorator((el, i) => {
+        if (i === 3) {
+          el.classList.add('decorated');
+          el.setAttribute('aria-label', `${el.getAttribute('aria-label')} [x]`);
+          el.textContent = 'D';
+        }
+      });
+      const cell = root.querySelector('.cell[data-index="3"]');
+      expect(cell.classList.contains('decorated')).to.be.true;
+      expect(cell.getAttribute('aria-label')).to.equal('Row 1, column 4: empty [x]');
+      expect(cell.textContent).to.equal('D');
+    });
+
+    it('UG17: the hook runs again on every state-driven render', () => {
+      mountGrid();
+      let calls = 0;
+      setCellDecorator(() => { calls++; });
+      fakeGs._emit('changed', { action: { type: 'X' }, changed: new Set(['selected']) });
+      expect(calls).to.equal(162);
+    });
+
+    it('UG18: clearing the decorator re-renders and discards what it added', () => {
+      mountGrid();
+      setCellDecorator(el => el.classList.add('decorated'));
+      setCellDecorator(null);
+      expect(root.querySelectorAll('.decorated')).to.have.length(0);
+    });
+
+    it('UG19: refresh re-renders from current state without a change event', () => {
+      mountGrid({ pen: new Uint8Array(81) });
+      let calls = 0;
+      setCellDecorator(() => { calls++; });
+      fakeGs.getState().pen[10] = 7;
+      refresh();
+      expect(calls).to.equal(162);
+      expect(root.querySelector('.cell[data-index="10"]').textContent).to.equal('7');
+    });
   });
 });

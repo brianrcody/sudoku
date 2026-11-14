@@ -160,4 +160,77 @@ describe('ui/controls.js', () => {
 
     expect(select.value).to.equal('hard');
   });
+
+  // ── Unrated puzzles and generation resync (V4 — puzzle loading) ─────────
+
+  const unratedOption = () => root.querySelector('#difficulty-select option[value="unrated"]');
+
+  it('UC11: a rated puzzle has no Unrated option', () => {
+    mountControls();
+    expect(unratedOption()).to.be.null;
+    expect(root.querySelectorAll('#difficulty-select option')).to.have.length(7);
+  });
+
+  it('UC12: an Unrated puzzle adds an Unrated option and selects it', () => {
+    mountControls({ puzzle: makePuzzle({ difficulty: 'unrated' }) });
+    expect(unratedOption().textContent).to.equal('Unrated');
+    expect(root.querySelector('#difficulty-select').value).to.equal('unrated');
+  });
+
+  it('UC13: the Unrated option is not duplicated by later updates', () => {
+    const fakeGs = mountControls({ puzzle: makePuzzle({ difficulty: 'unrated' }) });
+    fakeGs._emit('changed', { action: { type: 'X' }, changed: new Set(['puzzle']) });
+    expect(root.querySelectorAll('#difficulty-select option[value="unrated"]')).to.have.length(1);
+  });
+
+  it('UC14: the Unrated option is removed when a rated puzzle replaces it', () => {
+    const fakeGs = mountControls({ puzzle: makePuzzle({ difficulty: 'unrated' }) });
+    fakeGs.getState().puzzle = makePuzzle({ difficulty: 'hard' });
+    fakeGs._emit('changed', { action: { type: 'NEW_PUZZLE' }, changed: new Set(['puzzle']) });
+    expect(unratedOption()).to.be.null;
+    expect(root.querySelector('#difficulty-select').value).to.equal('hard');
+  });
+
+  it('UC15: choosing a tier on an untouched Unrated puzzle dispatches CHANGE_DIFFICULTY', () => {
+    const fakeGs = mountControls({ puzzle: makePuzzle({ difficulty: 'unrated' }) });
+    const select = root.querySelector('#difficulty-select');
+    select.value = 'easy';
+    select.dispatchEvent(new Event('change'));
+    expect(fakeGs.dispatch.calls).to.deep.equal([{ type: 'CHANGE_DIFFICULTY', difficulty: 'easy' }]);
+  });
+
+  it('UC16: with progress on an Unrated puzzle the selector reverts to Unrated pending confirmation', () => {
+    const pen = new Uint8Array(81);
+    pen[3] = 4;
+    mountControls({ puzzle: makePuzzle({ difficulty: 'unrated' }), pen });
+    const select = root.querySelector('#difficulty-select');
+    select.value = 'easy';
+    select.dispatchEvent(new Event('change'));
+    expect(select.value).to.equal('unrated');
+    expect(dialogRoot.querySelector('#modal-backdrop').classList.contains('open')).to.be.true;
+  });
+
+  it('UC17: while generating, the selector keeps the player\'s choice', () => {
+    const fakeGs = mountControls({ puzzle: makePuzzle({ difficulty: 'unrated' }) });
+    const select = root.querySelector('#difficulty-select');
+    select.value = 'hard';
+    fakeGs.getState().generating = true;
+    fakeGs._emit('changed', { action: { type: 'SET_GENERATING' }, changed: new Set(['generating']) });
+    expect(select.value).to.equal('hard');
+  });
+
+  it('UC18: when generation ends without a new puzzle, the selector returns to the current puzzle', () => {
+    const fakeGs = mountControls({ puzzle: makePuzzle({ difficulty: 'unrated' }) });
+    const select = root.querySelector('#difficulty-select');
+    select.value = 'hard';
+    fakeGs.getState().generating = false;
+    fakeGs._emit('changed', { action: { type: 'SET_GENERATING' }, changed: new Set(['generating']) });
+    expect(select.value).to.equal('unrated');
+  });
+
+  it('UC19: with no puzzle the selector is left as it is', () => {
+    mountControls({ puzzle: null });
+    expect(root.querySelector('#difficulty-select').value).to.equal('medium');
+    expect(unratedOption()).to.be.null;
+  });
 });

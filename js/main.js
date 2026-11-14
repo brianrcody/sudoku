@@ -8,7 +8,7 @@
 import { initTheme, bindThemeSelect } from './ui/themes.js';
 import { initHandedness, bindHandToggle } from './ui/handedness.js';
 import { mount as mountSrLive, announce } from './ui/srLive.js';
-import { mount as mountDialog, open as openDialog } from './ui/dialog.js';
+import { mount as mountDialog, open as openDialog, close as closeDialog } from './ui/dialog.js';
 import { mount as mountGrid } from './ui/grid.js';
 import { mount as mountNumpad } from './ui/numpad.js';
 import { mount as mountControls } from './ui/controls.js';
@@ -18,6 +18,8 @@ import { mount as mountKeyboard } from './ui/keyboard.js';
 import { mount as mountCoach } from './ui/coach.js';
 import { mount as mountCoachOverlay } from './ui/coachOverlay.js';
 import { mount as mountBusy } from './ui/busy.js';
+import * as notice from './ui/notice.js';
+import { mount as mountShare } from './ui/share.js';
 
 import { cookieStatsStore } from './providers/cookieStatsStore.js';
 import { migrateTierIds } from './persist/migrate.js';
@@ -26,8 +28,14 @@ import { createStatistics } from './game/statistics.js';
 import { requestPuzzle, peekReady, primeNext } from './providers/puzzleProvider.js';
 import { nextHint } from './providers/hintProvider.js';
 import { createGameState } from './game/state.js';
+import { createPuzzleLoader } from './game/puzzleLoader.js';
+import { createLoadProvider } from './providers/loadProvider.js';
 import { getItem, setItem, removeItem } from './persist/storage.js';
-import { DIFFICULTY_ORDER, HINT_LIMITS, TIER_LABELS } from './config.js';
+import { initDevMode, isDevMode } from './dev/devMode.js';
+import { HINT_LIMITS, TIER_LABELS, UNRATED, SHARE_PARAM, isRatedTier } from './config.js';
+
+// ── Step 1.5: developer-mode flag (?dev=1 / ?dev=0, persisted) ─────────────
+const devMode = initDevMode(location.search);
 
 // ── Step 2: reconcile cookies with the document ────────────────────────────
 // The inline head <script> already applied the theme class to <body> and the
@@ -53,7 +61,7 @@ const puzzleProvider = { requestPuzzle, peekReady, primeNext };
 const hintProvider = { nextHint };
 
 // ── Step 6: game state ────────────────────────────────────────────────────
-const gameState = createGameState({ stats, hintProvider });
+const gameState = createGameState({ stats, hintProvider, statsSuppressed: isDevMode });
 if (typeof window !== 'undefined') window.gameState = gameState;
 
 // ── Step 7: restore or request puzzle ─────────────────────────────────────
@@ -66,22 +74,35 @@ const HONEST_FALLBACK_TIERS = new Set(['diabolical', 'nightmare']);
 /** @type {AbortController|null} Controller for the in-flight foreground request. */
 let _genAbort = null;
 
+// The tier the player last chose. Distinct from the current puzzle's
+// difficulty, which a loaded puzzle can set to another tier or to Unrated.
 const savedDiffPref = getItem(DIFF_KEY);
-let currentDifficulty = (savedDiffPref && DIFFICULTY_ORDER.includes(savedDiffPref))
-  ? savedDiffPref
-  : 'easy';
+let preferredTier = isRatedTier(savedDiffPref) ? savedDiffPref : 'easy';
+
+/**
+ * The tier New Puzzle and pre-generation use: the current puzzle's tier when
+ * it has one, otherwise the player's last choice.
+ *
+ * @param {object} state - GameState
+ * @returns {string}
+ */
+function _generationTier(state) {
+  const difficulty = state.puzzle?.difficulty;
+  return isRatedTier(difficulty) ? difficulty : preferredTier;
+}
 
 const savedBlob = getItem(STATE_KEY);
 
 if (savedBlob && savedBlob.version === 1 && savedBlob.puzzle) {
   // Restore in-progress game from localStorage.
-  currentDifficulty = savedBlob.difficulty ?? currentDifficulty;
   const puzzle = {
     id: savedBlob.puzzle.id,
-    difficulty: currentDifficulty,
+    difficulty: savedBlob.difficulty ?? preferredTier,
     givens: new Uint8Array(savedBlob.puzzle.givens),
     solution: new Uint8Array(savedBlob.puzzle.solution),
     solveTrace: [],
+    source: savedBlob.puzzle.source,
+    gen: savedBlob.puzzle.gen,
   };
 
   // Load the puzzle (copies givens into pen[]).
@@ -119,12 +140,12 @@ if (savedBlob && savedBlob.version === 1 && savedBlob.puzzle) {
   gameState.dispatch({
     type: 'RESTORE_SESSION',
     attemptRecorded: savedBlob.attemptRecorded ?? false,
-    hintsRemaining: savedBlob.hintsRemaining ?? HINT_LIMITS[currentDifficulty],
+    hintsRemaining: savedBlob.hintsRemaining ?? HINT_LIMITS[puzzle.difficulty],
   });
 
 } else {
   // No saved state — request a new puzzle.
-  _requestForeground(currentDifficulty, puzzle => {
+  _requestForeground(preferredTier, puzzle => {
     gameState.dispatch({ type: 'PUZZLE_LOADED', puzzle });
   });
 }
@@ -174,6 +195,9 @@ mountWinBanner(
 
 mountKeyboard(document.body, gameState);
 
+notice.mount(document.getElementById('notice-root'));
+mountShare(document.getElementById('btn-share'), gameState);
+
 // ── Wire action buttons (New Puzzle + Reset) ───────────────────────────────
 
 document.getElementById('btn-new')?.addEventListener('click', () => {
@@ -185,10 +209,10 @@ document.getElementById('btn-new')?.addEventListener('click', () => {
       title: 'Start a new puzzle?',
       body: 'Your current progress will be lost.',
       confirmLabel: 'New Puzzle',
-      onConfirm: () => _startNewPuzzle(state.puzzle?.difficulty ?? currentDifficulty),
+      onConfirm: () => _startNewPuzzle(_generationTier(state)),
     });
   } else {
-    _startNewPuzzle(state.puzzle?.difficulty ?? currentDifficulty);
+    _startNewPuzzle(_generationTier(state));
   }
 });
 
@@ -256,6 +280,7 @@ function _requestForeground(difficulty, onLoaded) {
         confirmLabel: `Play ${actual}`,
         onConfirm: () => {
           setItem(DIFF_KEY, puzzle.difficulty);
+          preferredTier = puzzle.difficulty;
           onLoaded(puzzle);
         },
       });
@@ -316,9 +341,16 @@ gameState.on('changed', ({ action, changed }) => {
   // stale request must not overwrite the user's most recent CHANGE_DIFFICULTY.
   if (action.type === 'CHANGE_DIFFICULTY') {
     setItem(DIFF_KEY, action.difficulty);
-    // A difficulty change while a foreground generation is pending acts as
-    // Cancel (fspec-003 §10.1); the user starts the next puzzle explicitly.
-    if (_genAbort !== null) _cancelForeground();
+    preferredTier = action.difficulty;
+    if (_genAbort !== null) {
+      // A difficulty change while a foreground generation is pending acts as
+      // Cancel (fspec-003 §10.1); the user starts the next puzzle explicitly.
+      _cancelForeground();
+    } else if (s.puzzle?.difficulty === UNRATED) {
+      // An Unrated puzzle can't be relabelled to a tier (the reducer leaves it
+      // alone), so choosing a tier starts a new puzzle there (fspec-006 §6).
+      _startNewPuzzle(action.difficulty);
+    }
   }
 
   // Debounced state write for in-progress saves.
@@ -341,6 +373,8 @@ function _saveState() {
       id: s.puzzle.id,
       givens: Array.from(s.puzzle.givens),
       solution: Array.from(s.puzzle.solution),
+      source: s.puzzle.source,
+      gen: s.puzzle.gen,
     },
     pen: Array.from(s.pen),
     pencil: Array.from(s.pencil),
@@ -351,4 +385,51 @@ function _saveState() {
 }
 
 // ── Step 10: prime next puzzle ─────────────────────────────────────────────
-puzzleProvider.primeNext(currentDifficulty);
+puzzleProvider.primeNext(_generationTier(gameState.getState()));
+
+// ── Step 11: loaded puzzles — share links and developer load-from-string ───
+const loader = createPuzzleLoader({
+  gameState,
+  rateGivens: createLoadProvider().rateGivens,
+  confirm: opts => new Promise(resolve => {
+    openDialog({
+      ...opts,
+      onConfirm: () => resolve(true),
+      onCancel: () => resolve(false),
+    });
+  }),
+  // The loaded puzzle wins over anything still on its way: drop the in-flight
+  // foreground generation (its late result fails the staleness check in
+  // _requestForeground) and any dialog offering a different puzzle.
+  beforeReplace() {
+    _genAbort?.abort();
+    _genAbort = null;
+    closeDialog();
+  },
+});
+
+const sharedPuzzle = new URLSearchParams(location.search).get(SHARE_PARAM);
+if (sharedPuzzle !== null) {
+  loader.load(sharedPuzzle, {
+    source: 'link',
+    onChecking: () => notice.show('Checking puzzle…', { variant: 'progress' }),
+  }).then(outcome => {
+    notice.show(outcome.message, outcome.status === 'rejected'
+      ? { variant: 'error' }
+      : { timeoutMs: 4000 });
+    announce(outcome.message);
+
+    // The link is spent whatever the outcome; a refresh must not replay it.
+    const url = new URL(location.href);
+    url.searchParams.delete(SHARE_PARAM);
+    history.replaceState(history.state, '', url);
+  });
+}
+
+// ── Step 12: developer tools (lazy — never fetched when the mode is off) ───
+if (devMode) {
+  import('./dev/devPanel.js').then(dev => dev.mount({
+    gameState,
+    loadPuzzle: text => loader.load(text, { source: 'string' }),
+  }));
+}

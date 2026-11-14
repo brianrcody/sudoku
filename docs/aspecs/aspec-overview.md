@@ -80,15 +80,18 @@ sudoku/
 │   ├── grid.css                      # Sudoku grid and cells
 │   ├── controls.css                  # Number pad, buttons, selectors, modals
 │   ├── stats.css                     # Statistics panel
-│   └── themes.css                    # All theme body classes + structural overrides
+│   ├── themes.css                    # All theme body classes + structural overrides
+│   └── dev.css                       # V4: developer-mode styles; injected by devPanel.js only
 ├── js/
 │   ├── main.js                       # App bootstrap; wires modules; mounts UI
-│   ├── config.js                     # Difficulty config, hint counts, budgets, constants
+│   ├── config.js                     # Difficulty config, hint counts, budgets, constants; V4: UNRATED, SHARE_PARAM
 │   ├── prng.js                       # mulberry32 seedable PRNG
 │   ├── util/
 │   │   ├── grid.js                   # Index↔(row,col,box), unit iteration, peers
 │   │   ├── bitset.js                 # 9-bit candidate sets (bitmask helpers)
-│   │   └── events.js                 # Tiny typed event emitter
+│   │   ├── events.js                 # Tiny typed event emitter
+│   │   ├── puzzleString.js           # V4: 81-cell puzzle-string codec (aspec-puzzle-sharing.md)
+│   │   └── clipboard.js              # V4: clipboard write with boolean outcome
 │   ├── solver/
 │   │   ├── uniqueness.js             # Norvig-style constraint-propagation solver
 │   │   ├── logical.js                # Logical solver driving the technique ladder
@@ -115,18 +118,21 @@ sudoku/
 │   │   ├── fillGrid.js               # Random filled solution via backtracking
 │   │   ├── removeCells.js            # Symmetric-or-random removal with uniqueness guard
 │   │   ├── rater.js                  # Runs logical solver, returns tier + trace
-│   │   └── pipeline.js               # generateForTier() orchestrator
+│   │   ├── pipeline.js               # generateForTier() orchestrator; V4: source/gen diagnostics
+│   │   └── loadPuzzle.js             # V4: givens → validated, rated Puzzle (aspec-puzzle-sharing.md)
 │   ├── worker/
 │   │   ├── generator.worker.js       # Worker entry: receives requests, calls pipeline
 │   │   └── protocol.js               # Message-type constants + envelope helpers (shared)
 │   ├── providers/
 │   │   ├── puzzleProvider.js         # Public facade: requestPuzzle, peekReady, primeNext
 │   │   ├── clientGenProvider.js      # Wraps the Worker; manages the pre-gen cache
+│   │   ├── loadProvider.js           # V4: dedicated worker for validating/rating loaded puzzles
 │   │   ├── hintProvider.js           # SolverHintProvider
 │   │   ├── statsProvider.js          # Stats facade; wraps a StatsStore adapter
 │   │   └── cookieStatsStore.js       # v1 StatsStore: cookie-backed
 │   ├── game/
 │   │   ├── state.js                  # In-memory game state reducer
+│   │   ├── puzzleLoader.js           # V4: the one loader — parse, rate, confirm, PUZZLE_LOADED
 │   │   ├── conflicts.js              # Conflict detection on row/col/box
 │   │   ├── correctness.js            # Per-tier checking (realtime/on-demand/on-complete[-silent])
 │   │   └── statistics.js             # Stats counters, persistence hook
@@ -147,9 +153,15 @@ sudoku/
 │   │   ├── keyboard.js               # Desktop keyboard shortcuts
 │   │   ├── coach.js                  # Coach button, panel, recap, toast, lifecycle (aspec-coach-ui.md)
 │   │   ├── coachOverlay.js           # SVG arrow overlay renderer (aspec-coach-ui.md)
-│   │   └── busy.js                   # V3: generation progress card + Cancel (aspec-harder-tiers.md §5.3)
+│   │   ├── busy.js                   # V3: generation progress card + Cancel (aspec-harder-tiers.md §5.3)
+│   │   ├── notice.js                 # V4: notice card under the board (aspec-puzzle-sharing.md §7)
+│   │   └── share.js                  # V4: Share button + share-link builder
 │   ├── coach/
 │   │   └── analyzer.js               # Pure-function coach analyzer (aspec-coach-analyzer.md)
+│   ├── dev/                          # V4 developer mode (aspec-dev-mode.md)
+│   │   ├── devMode.js                # Flag: ?dev=1/0 + localStorage. Always loaded
+│   │   ├── inspect.js                # Pure helpers: inspector, candidate diff, diagnostics. Lazy
+│   │   └── devPanel.js               # Panel UI, badge, grid decorator. Lazy (import() when flag on)
 │   └── tests/
 │       ├── setup.html                # Mocha/Chai test runner page
 │       ├── setup.js                  # Global beforeEach/afterEach, fixtures
@@ -190,6 +202,9 @@ sudoku/
 │       │   ├── storage.test.js
 │       │   ├── hintProvider.test.js
 │       │   ├── ui-handedness.test.js # V4 (aspec-left-hand.md §9)
+│       │   ├── (V4 loading/sharing)  # config, puzzleString, clipboard, loadPuzzle, loadProvider,
+│       │   │                         #   puzzleLoader, state-unrated, ui-notice, ui-share
+│       │   ├── (V4 developer mode)   # devMode, inspect, devPanel, pipeline-diagnostics
 │       │   └── coach/
 │       │       ├── analyzer.test.js  # Coach analyzer unit tests (aspec-coach-analyzer.md §13)
 │       │       └── session.test.js   # CoachSession reducer unit tests (aspec-coach-ui.md §16.1)
@@ -198,7 +213,10 @@ sudoku/
 │           ├── game-flows.test.js    # Tap→enter→conflict→erase lifecycles
 │           ├── persistence.test.js   # Resume behavior round trip
 │           ├── a11y.test.js          # ARIA/live-region assertions
-│           └── coach.test.js         # Full coach flow integration tests (aspec-coach-ui.md §16.2)
+│           ├── coach.test.js         # Full coach flow integration tests (aspec-coach-ui.md §16.2)
+│           ├── _app.js               # V4: shared iframe helpers (sized frames, precise waits, seeding)
+│           ├── sharing.test.js       # V4: share links, Unrated, Share action (tspec-puzzle-sharing.md)
+│           └── devmode.test.js       # V4: developer mode end to end (tspec-dev-mode.md)
 ├── test-runner/
 │   ├── run.js                        # Playwright script: boot browser, open tests/setup.html, harvest results + coverage
 │   └── serve.js                      # Tiny static file server (Node built-in http) for tests only
@@ -338,6 +356,13 @@ c8 with `--include=js/**` and `--exclude=js/tests/**`. Target: **100% branch cov
 47. `main.js` wiring (steps 2 and 8)
 48. Unit, arch, and system tests
 
+**Phase 13 — Puzzle Loading, Sharing, and Developer Mode (V4)** (see `aspec-puzzle-sharing.md`, `aspec-dev-mode.md`)
+49. Unrated tier; puzzle-string codec; `loadFromGivens`; load protocol + dedicated worker; `puzzleLoader`
+50. Stats gating + Unrated guards in `state.js`; `dialog.js` `onCancel`
+51. `notice.js`, `share.js`, markup, CSS; Unrated presentation in controls/numpad/coach; keyboard text-field guard
+52. `devMode.js`; pipeline diagnostics; grid decorator seam; `inspect.js`; `devPanel.js` + `dev.css`
+53. `main.js` wiring: generation tier, loader, link handling, lazy dev import
+
 **Milestone exits:**
 - Phase 2: solver correctly rates 100% of a curated 50-puzzle regression set at known difficulty.
 - Phase 3: `generateForTier` produces a correctly-rated puzzle for all five tiers within budget.
@@ -425,3 +450,5 @@ All other fspec and vspec requirements map cleanly onto this plan.
 | `aspec-harder-tiers.md` | V3 harder tiers — 21-rank ladder, tier IDs/migration, generation progress/cancel/fallback, coach mappers + `fin` role | Implementor (Phase 11), Reviewer, QE |
 | `aspec-erase-pencil.md` | Erase-all-pencil — `ERASE_ALL_PENCIL` action, numpad button, 2-column undo row | Implementor (Phase 10), Reviewer, QE |
 | `aspec-left-hand.md` | V4 left-hand layout — `<html data-hand>`, `ui/handedness.js`, head-script extension, CSS column swap, header switch | Implementor (Phase 12), Reviewer, QE |
+| `aspec-puzzle-sharing.md` | V4 puzzle loading and sharing — the Unrated tier, the single loader (codec → worker → `puzzleLoader`), load protocol, statistics gating, Share UI, notice, link handling | Implementor (Phase 13), Reviewer, QE |
+| `aspec-dev-mode.md` | V4 developer mode — flag, lazy loading, grid decorator seam, `inspect.js`, `devPanel.js`, generation diagnostics data | Implementor (Phase 13), Reviewer, QE |

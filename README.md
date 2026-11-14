@@ -47,7 +47,45 @@ statistics to the left of the board on wide screens (phones keep the stacked lay
 the switch is hidden there). Keyboard and screen reader order are the same in both modes.
 The preference is persisted in a cookie and applied before first paint.
 
+**Share links** — the **Share** button copies a link to the current puzzle. The link
+carries only the givens — 81 digits, `0` for an empty cell — in the `p` query parameter:
+
+```
+https://example.com/sudoku/?p=530070000600195000098000060800060003400803001700020006060000280000419005000080079
+```
+
+Your digits, pencil marks, and difficulty are never included. If the browser won't allow
+clipboard access, the link is shown in a field to copy by hand. Opening a link validates
+the puzzle (it must have exactly one solution), rates it with the same solver the
+generator uses, and loads it with an empty board; `.` is also accepted for empty cells. If
+you have a game in progress you are asked before it is replaced, and the parameter is
+removed from the address bar once the link has been handled. A puzzle the solver can't
+solve loads as **Unrated**: fully playable, with Check available, but without hints or
+coach, and it never counts in the statistics. No server is involved.
+
 **Accessibility** — keyboard navigable, ARIA roles, screen reader compatible.
+
+## Developer Mode
+
+Diagnostic tools for the solver, coach, and generator, hidden from players.
+
+| URL | Effect |
+|---|---|
+| `?dev=1` | Turn developer mode on. The setting is saved in `localStorage` and persists |
+| `?dev=0` | Turn it off and clear the saved setting |
+
+When it is on, a **DEV** badge sits in the bottom-left corner and a *Developer tools*
+panel appears below the game. **No statistics are recorded while developer mode is on.**
+When it is off, none of the tooling is downloaded (`js/dev/devPanel.js`, `js/dev/inspect.js`,
+and `css/dev.css` are loaded on demand).
+
+| Tool | What it does |
+|---|---|
+| Load puzzle from string | Paste 81 cells (`1`–`9`; `0` or `.` for empty; whitespace ignored) and load them, bypassing the generator. Same validation, rating, and Unrated handling as a share link |
+| Solver step inspector | Runs the logical solver on the current board (givens plus your digits) and lists every step. Select a step to highlight its placement, elimination, and pattern cells. Read-only; reports a stall explicitly |
+| Candidate overlay | Shows computed candidates in every empty cell in place of pencil marks. Candidates you haven't marked are underlined; marks that aren't candidates are struck through. Your marks are never changed |
+| Coach step data | The `CoachStep` object handed to the coach renderer, as JSON, with a copy button |
+| Generation diagnostics | Requested vs. achieved tier, fallback, attempts, rejections (unsolvable / wrong tier, by tier), and the technique profile of the solve |
 
 ## Architecture
 
@@ -62,9 +100,13 @@ js/
 │   ├── logical.js          # Technique-ladder logical solver
 │   └── techniques/         # Naked/hidden singles, subsets, X-Wing, XY-Wing,
 │                           #   Swordfish, Jellyfish, coloring, forcing chains
-├── generator/              # Puzzle generation, difficulty rating, attempt budgeting
-├── providers/              # SolverHintProvider
-├── game/                   # Game state machine
+├── generator/              # Puzzle generation, difficulty rating, attempt budgeting;
+│                           #   loadPuzzle.js validates + rates externally supplied givens
+├── providers/              # Puzzle, hint, stats, and load (share/dev) providers
+├── game/                   # Game state machine; puzzleLoader.js (the one path for
+│                           #   share links and developer load-from-string)
+├── dev/                    # Developer mode: devMode.js (flag, always loaded);
+│                           #   devPanel.js + inspect.js (lazy)
 ├── ui/                     # DOM rendering and event handling
 ├── persist/                # localStorage and cookie helpers
 ├── prng.js                 # mulberry32 seedable PRNG
@@ -101,7 +143,10 @@ Exit criteria: 100% branch coverage, all tests passing.
 ## Deployment
 
 Static files only. Upload the project root (excluding `node_modules`, `coverage`,
-`docs`, `test-runner`) to the hosting provider via SFTP/FTP.
+`docs`, `test-runner`) to the hosting provider via SFTP/FTP. Share links resolve against
+wherever `index.html` is served, so hosting under a sub-path needs no configuration.
+Developer-mode files ship with the site but are only fetched by a browser that has
+turned the mode on.
 
 ## License
 

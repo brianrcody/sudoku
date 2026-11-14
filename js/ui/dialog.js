@@ -8,6 +8,7 @@
 let _root = null;
 let _triggerEl = null;
 let _onConfirm = null;
+let _onCancel = null;
 let _backdrop = null;
 let _cancelBtn = null;
 let _confirmBtn = null;
@@ -79,10 +80,18 @@ export function mount(root) {
  * @param {string} opts.body
  * @param {string} opts.confirmLabel
  * @param {function} opts.onConfirm
+ * @param {function} [opts.onCancel] - Called when the dialog closes any other
+ *   way: Cancel, Escape, or being replaced by another `open`.
  */
-export function open({ title, body, confirmLabel, onConfirm }) {
+export function open({ title, body, confirmLabel, onConfirm, onCancel = null }) {
+  // Opening over a pending dialog cancels it.
+  const replaced = _onCancel;
+  _onCancel = null;
+  if (replaced) replaced();
+
   _triggerEl = document.activeElement;
   _onConfirm = onConfirm;
+  _onCancel = onCancel;
 
   _root.querySelector('#modal-title').textContent = title;
   _root.querySelector('#modal-body').textContent = body;
@@ -92,19 +101,26 @@ export function open({ title, body, confirmLabel, onConfirm }) {
   _cancelBtn.focus();
 }
 
-/** Closes the dialog and returns focus to the triggering element. */
+/**
+ * Closes the dialog, returns focus to the triggering element, and reports a
+ * cancellation to the opener's `onCancel` if one is pending.
+ */
 export function close() {
   if (!_backdrop) return;
   _backdrop.classList.remove('open');
   _onConfirm = null;
+  const cancelled = _onCancel;
+  _onCancel = null;
   if (_triggerEl && typeof _triggerEl.focus === 'function') {
     _triggerEl.focus();
   }
   _triggerEl = null;
+  if (cancelled) cancelled();
 }
 
 function _handleConfirm() {
   const cb = _onConfirm;
+  _onCancel = null;
   close();
   if (cb) cb();
 }

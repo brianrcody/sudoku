@@ -1,0 +1,565 @@
+/**
+ * @fileoverview Unit tests for js/dev/devPanel.js (DP1–DP38).
+ *
+ * The panel is mounted in the Mocha page against a fake game state and a real
+ * ui/grid.js mount, so the grid-decorator tools are tested through the actual
+ * renderer. `loadPuzzle` and `copy` are injected.
+ */
+
+import { mount } from '../../dev/devPanel.js';
+import { mount as mountGrid, setCellDecorator } from '../../ui/grid.js';
+import { mount as mountSrLive } from '../../ui/srLive.js';
+import { KIDDIE, KIDDIE_SOLUTION, HARD, toGivens } from '../fixtures/puzzles/loadable.js';
+
+const { makeFakeGameState } = window;
+
+const frame = () => new Promise(r => requestAnimationFrame(() => r()));
+const settle = async () => { await new Promise(r => setTimeout(r, 0)); await frame(); };
+
+/** r1c3 of KIDDIE — empty, computed candidates 1, 2, 4. */
+const EMPTY = 2;
+
+function makeGenerated(givensString = KIDDIE) {
+  return {
+    id: 'gen',
+    difficulty: 'kiddie',
+    givens: toGivens(givensString),
+    solution: toGivens(KIDDIE_SOLUTION),
+    solveTrace: [{ technique: 'Naked Single' }, { technique: 'Naked Single' }],
+    source: 'generated',
+    gen: {
+      requestedTier: 'kiddie', budget: 20, attempts: 2, fallback: false,
+      rejected: { unsolved: 0, wrongTier: 1, byTier: { easy: 1 } },
+    },
+  };
+}
+
+describe('dev/devPanel.js', () => {
+  let main, gridRoot, sr, gs;
+
+  beforeEach(() => {
+    main = document.createElement('main');
+    gridRoot = document.createElement('div');
+    gridRoot.id = 'grid-root';
+    gridRoot.innerHTML = '<div class="sudoku-grid" role="grid"></div>';
+    sr = document.createElement('div');
+    sr.id = 'sr-live';
+    document.body.append(main, gridRoot, sr);
+    mountSrLive(document.body);
+  });
+
+  afterEach(() => {
+    setCellDecorator(null);
+    main.remove();
+    gridRoot.remove();
+    sr.remove();
+    document.getElementById('dev-badge')?.remove();
+    document.getElementById('dev-stylesheet')?.remove();
+  });
+
+  function mountPanel({ state = {}, loadPuzzle, copy } = {}) {
+    const puzzle = state.puzzle === undefined ? makeGenerated() : state.puzzle;
+    gs = makeFakeGameState({
+      pen: puzzle ? Uint8Array.from(puzzle.givens) : new Uint8Array(81),
+      pencil: new Uint16Array(81),
+      coachSession: null,
+      ...state,
+      puzzle,
+    });
+    mountGrid(gridRoot, gs);
+    const calls = { load: [], copy: [] };
+    mount({
+      gameState: gs,
+      loadPuzzle: loadPuzzle ?? (async text => { calls.load.push(text); return { status: 'loaded', message: 'Puzzle loaded. Difficulty: Kiddie.' }; }),
+      copy: copy ?? (async text => { calls.copy.push(text); return true; }),
+    });
+    return calls;
+  }
+
+  const $ = id => document.getElementById(id);
+  const cell = i => gridRoot.querySelector(`.cell[data-index="${i}"]`);
+  // The grid deselects on any click outside itself; that is its rule, not a
+  // board change made by the tools.
+  const boardActions = () => gs.dispatch.calls.filter(a => a.type !== 'DESELECT');
+  const emit = (...keys) => gs._emit('changed', { action: { type: 'TEST' }, changed: new Set(keys) });
+
+  // ── Shell ────────────────────────────────────────────────────────────────
+
+  describe('shell', () => {
+    it('DP1: mount adds the panel to <main> as a labelled, focusable region', () => {
+      mountPanel();
+      const panel = $('dev-root');
+      expect(panel.parentElement).to.equal(main);
+      expect(panel.tagName).to.equal('SECTION');
+      expect(panel.getAttribute('aria-labelledby')).to.equal('dev-title');
+      expect($('dev-title').textContent).to.equal('Developer tools');
+      expect(panel.tabIndex).to.equal(-1);
+    });
+
+    it('DP2: mount adds the DEV badge as a labelled link to the panel', () => {
+      mountPanel();
+      const badge = $('dev-badge');
+      expect(badge.tagName).to.equal('A');
+      expect(badge.textContent).to.equal('DEV');
+      expect(badge.getAttribute('href')).to.equal('#dev-root');
+      expect(badge.getAttribute('aria-label')).to.equal('Developer mode on — skip to developer tools');
+    });
+
+    it('DP3: activating the badge moves focus to the panel', () => {
+      mountPanel();
+      $('dev-badge').addEventListener('click', e => e.preventDefault());  // keep the test page's URL
+      $('dev-badge').click();
+      expect(document.activeElement).to.equal($('dev-root'));
+    });
+
+    it('DP4: mount injects the dev stylesheet', () => {
+      mountPanel();
+      const link = $('dev-stylesheet');
+      expect(link.rel).to.equal('stylesheet');
+      expect(new URL(link.href).pathname).to.equal('/css/dev.css');
+    });
+
+    it('DP5: the panel says statistics are off and how to leave dev mode', () => {
+      mountPanel();
+      const note = $('dev-root').querySelector('.dev-note').textContent;
+      expect(note).to.include('Statistics are not recorded');
+      expect(note).to.include('?dev=0');
+    });
+
+    it('DP6: the five tools are native disclosure sections, collapsed initially', () => {
+      mountPanel();
+      const tools = [...$('dev-root').querySelectorAll('details.dev-tool')];
+      expect(tools.map(t => t.id)).to.deep.equal(['dev-load', 'dev-inspector', 'dev-overlay', 'dev-coach', 'dev-gen']);
+      for (const tool of tools) {
+        expect(tool.open, tool.id).to.be.false;
+        expect(tool.querySelector('summary'), tool.id).to.not.be.null;
+      }
+    });
+  });
+
+  // ── Load from string ─────────────────────────────────────────────────────
+
+  describe('load puzzle from string', () => {
+    it('DP7: the text field has a visible label', () => {
+      mountPanel();
+      const label = $('dev-root').querySelector('label[for="dev-load-input"]');
+      expect(label.textContent).to.include('Puzzle string');
+      expect($('dev-load-input').tagName).to.equal('TEXTAREA');
+    });
+
+    it('DP8: Load passes the field text to the loader and shows "Checking puzzle…" meanwhile', async () => {
+      let release;
+      const texts = [];
+      mountPanel({
+        loadPuzzle: text => { texts.push(text); return new Promise(r => { release = r; }); },
+      });
+      $('dev-load-input').value = KIDDIE;
+      $('dev-load-btn').click();
+      expect(texts).to.deep.equal([KIDDIE]);
+      expect($('dev-load-status').textContent).to.equal('Checking puzzle…');
+      release({ status: 'loaded', message: 'Puzzle loaded. Difficulty: Kiddie.' });
+      await settle();
+      expect($('dev-load-status').textContent).to.equal('Puzzle loaded. Difficulty: Kiddie.');
+    });
+
+    it('DP9: a loaded outcome is shown plainly and announced; the field keeps its text', async () => {
+      mountPanel();
+      $('dev-load-input').value = KIDDIE;
+      $('dev-load-btn').click();
+      await settle();
+      expect($('dev-load-status').classList.contains('dev-error')).to.be.false;
+      expect(sr.textContent).to.equal('Puzzle loaded. Difficulty: Kiddie.');
+      expect($('dev-load-input').value).to.equal(KIDDIE);
+    });
+
+    it('DP10: a rejection is shown as an inline error and announced', async () => {
+      const message = 'This puzzle can\'t be loaded. A puzzle needs exactly 81 cells; this one has 3.';
+      mountPanel({ loadPuzzle: async () => ({ status: 'rejected', reason: 'length', message }) });
+      $('dev-load-input').value = '123';
+      $('dev-load-btn').click();
+      await settle();
+      expect($('dev-load-status').textContent).to.equal(message);
+      expect($('dev-load-status').classList.contains('dev-error')).to.be.true;
+      expect($('dev-load-status').getAttribute('role')).to.equal('status');
+      expect(sr.textContent).to.equal(message);
+    });
+
+    it('DP11: the error styling is cleared by the next attempt', async () => {
+      let outcome = { status: 'rejected', reason: 'chars', message: 'bad' };
+      mountPanel({ loadPuzzle: async () => outcome });
+      $('dev-load-btn').click();
+      await settle();
+      outcome = { status: 'declined', message: 'Puzzle not loaded. Your game continues.' };
+      $('dev-load-btn').click();
+      await settle();
+      expect($('dev-load-status').classList.contains('dev-error')).to.be.false;
+      expect($('dev-load-status').textContent).to.equal('Puzzle not loaded. Your game continues.');
+    });
+  });
+
+  // ── Solver step inspector ────────────────────────────────────────────────
+
+  describe('solver step inspector', () => {
+    it('DP12: Run solver lists every step as a toggle button and shows the summary', async () => {
+      mountPanel();
+      $('dev-inspect-run').click();
+      const buttons = $('dev-inspect-list').querySelectorAll('li > button');
+      expect(buttons).to.have.length(51);
+      expect(buttons[0].textContent).to.match(/^Naked Single — place /);
+      expect(buttons[0].getAttribute('aria-pressed')).to.equal('false');
+      expect($('dev-inspect-summary').textContent).to.equal('Solved in 51 steps. Hardest rank 1 (Kiddie).');
+      await frame();
+      expect(sr.textContent).to.equal('Solved in 51 steps. Hardest rank 1 (Kiddie).');
+    });
+
+    it('DP13: running the solver changes nothing in the game', () => {
+      mountPanel();
+      const before = Array.from(gs.getState().pen).join('');
+      $('dev-inspect-run').click();
+      expect(Array.from(gs.getState().pen).join('')).to.equal(before);
+      expect(boardActions()).to.have.length(0);
+    });
+
+    it('DP14: the solver runs on givens plus the player\'s digits', () => {
+      const pen = toGivens(KIDDIE_SOLUTION);
+      pen[40] = 0;
+      mountPanel({ state: { pen } });
+      $('dev-inspect-run').click();
+      expect($('dev-inspect-list').querySelectorAll('button')).to.have.length(1);
+      expect($('dev-inspect-summary').textContent).to.equal('Solved in 1 step. Hardest rank 1 (Kiddie).');
+    });
+
+    it('DP15: selecting a step presses it, highlights its cell, and announces it', async () => {
+      mountPanel();
+      $('dev-inspect-run').click();
+      const first = $('dev-inspect-list').querySelector('button');
+      first.click();
+      expect(first.getAttribute('aria-pressed')).to.equal('true');
+      const placed = gridRoot.querySelectorAll('.cell.dev-hl-place');
+      expect(placed).to.have.length(1);
+      expect(placed[0].getAttribute('aria-label')).to.match(/ — solver step: placement$/);
+      await frame();
+      expect(sr.textContent).to.equal(`Step 1: ${first.textContent}. 1 cell highlighted.`);
+    });
+
+    it('DP16: selecting another step moves the selection', () => {
+      mountPanel();
+      $('dev-inspect-run').click();
+      const [a, b] = $('dev-inspect-list').querySelectorAll('button');
+      a.click();
+      b.click();
+      expect(a.getAttribute('aria-pressed')).to.equal('false');
+      expect(b.getAttribute('aria-pressed')).to.equal('true');
+      expect(gridRoot.querySelectorAll('.cell.dev-hl-place')).to.have.length(1);
+    });
+
+    it('DP17: activating the selected step deselects it and removes the highlight without announcing', async () => {
+      mountPanel();
+      $('dev-inspect-run').click();
+      const first = $('dev-inspect-list').querySelector('button');
+      first.click();
+      await frame();
+      sr.textContent = '';
+      first.click();
+      await frame();
+      expect(first.getAttribute('aria-pressed')).to.equal('false');
+      expect(gridRoot.querySelectorAll('[class*="dev-hl-"]')).to.have.length(0);
+      expect(cell(0).getAttribute('aria-label')).to.not.include('solver step');
+      expect(sr.textContent).to.equal('');
+    });
+
+    it('DP18: an elimination step highlights several cells and says so in the plural', async () => {
+      mountPanel({ state: { puzzle: makeGenerated(HARD) } });
+      $('dev-inspect-run').click();
+      const elim = [...$('dev-inspect-list').querySelectorAll('button')]
+        .find(b => b.textContent === 'Locked Candidates — eliminate 8 from r5c3, r5c4');
+      elim.click();
+      const highlighted = [...gridRoot.querySelectorAll('.cell.dev-hl-elim')].map(c => Number(c.dataset.index));
+      expect(highlighted).to.deep.equal([38, 39]);
+      expect(cell(38).getAttribute('aria-label')).to.match(/ — solver step: elimination$/);
+      await frame();
+      expect(sr.textContent).to.match(/\. 2 cells highlighted\.$/);
+    });
+
+    it('DP19: a click on the list outside any step button does nothing', () => {
+      mountPanel();
+      $('dev-inspect-run').click();
+      $('dev-inspect-list').click();
+      expect($('dev-inspect-list').querySelector('[aria-pressed="true"]')).to.be.null;
+    });
+
+    it('DP20: the highlight survives a grid re-render', () => {
+      mountPanel();
+      $('dev-inspect-run').click();
+      $('dev-inspect-list').querySelector('button').click();
+      emit('selected');
+      expect(gridRoot.querySelectorAll('.cell.dev-hl-place')).to.have.length(1);
+    });
+
+    it('DP21: a board change clears the list and highlight and says to run again', () => {
+      mountPanel();
+      $('dev-inspect-run').click();
+      $('dev-inspect-list').querySelector('button').click();
+      emit('pen');
+      expect($('dev-inspect-list').children).to.have.length(0);
+      expect($('dev-inspect-summary').textContent).to.equal('Board changed — run the solver again.');
+      expect(gridRoot.querySelectorAll('[class*="dev-hl-"]')).to.have.length(0);
+    });
+
+    it('DP22: a new puzzle also clears it', () => {
+      mountPanel();
+      $('dev-inspect-run').click();
+      emit('puzzle');
+      expect($('dev-inspect-summary').textContent).to.equal('Board changed — run the solver again.');
+    });
+
+    it('DP23: a pencil-only change keeps the results', () => {
+      mountPanel();
+      $('dev-inspect-run').click();
+      emit('pencil');
+      expect($('dev-inspect-list').children).to.have.length(51);
+    });
+
+    it('DP24: a board change with no results on show leaves the summary empty', () => {
+      mountPanel();
+      emit('pen');
+      expect($('dev-inspect-summary').textContent).to.equal('');
+    });
+
+    it('DP25: Clear empties the list, the highlight, and the summary', () => {
+      mountPanel();
+      $('dev-inspect-run').click();
+      $('dev-inspect-list').querySelector('button').click();
+      $('dev-inspect-clear').click();
+      expect($('dev-inspect-list').children).to.have.length(0);
+      expect($('dev-inspect-summary').textContent).to.equal('');
+      expect(gridRoot.querySelectorAll('[class*="dev-hl-"]')).to.have.length(0);
+    });
+
+    it('DP26: re-running drops the previous selection', () => {
+      mountPanel();
+      $('dev-inspect-run').click();
+      $('dev-inspect-list').querySelector('button').click();
+      $('dev-inspect-run').click();
+      expect($('dev-inspect-list').querySelector('[aria-pressed="true"]')).to.be.null;
+      expect(gridRoot.querySelectorAll('[class*="dev-hl-"]')).to.have.length(0);
+    });
+  });
+
+  // ── Candidate overlay ────────────────────────────────────────────────────
+
+  describe('candidate overlay', () => {
+    const marks = i => [...cell(i).querySelectorAll('.pencil-mark')].map(s => s.className.replace('pencil-mark ', ''));
+
+    it('DP27: the switch starts off and exposes its state', () => {
+      mountPanel();
+      const toggle = $('dev-overlay-toggle');
+      expect(toggle.getAttribute('role')).to.equal('switch');
+      expect(toggle.getAttribute('aria-checked')).to.equal('false');
+      expect(cell(EMPTY).textContent).to.equal('');
+    });
+
+    it('DP28: switching on shows computed candidates in every empty cell and announces it', async () => {
+      mountPanel();
+      $('dev-overlay-toggle').click();
+      expect($('dev-overlay-toggle').getAttribute('aria-checked')).to.equal('true');
+      expect(marks(EMPTY)).to.deep.equal(
+        ['dev-cand-agree', 'dev-cand-agree', 'empty', 'dev-cand-agree', 'empty', 'empty', 'empty', 'empty', 'empty']);
+      const emptyCells = [...KIDDIE].filter(c => c === '0').length;
+      expect(gridRoot.querySelectorAll('.cell .pencil-marks')).to.have.length(emptyCells);
+      await frame();
+      expect(sr.textContent).to.equal('Candidate overlay on.');
+    });
+
+    it('DP29: filled cells are untouched by the overlay', () => {
+      mountPanel();
+      $('dev-overlay-toggle').click();
+      expect(cell(0).textContent).to.equal('5');
+      expect(cell(0).getAttribute('aria-label')).to.equal('Row 1, column 1: 5 (given)');
+    });
+
+    it('DP30: divergences from the player\'s marks are distinguished', () => {
+      const pencil = new Uint16Array(81);
+      pencil[EMPTY] = 0b0011 | 0b100000000;   // 1, 2, 9 — lacks 4, has a stray 9
+      mountPanel({ state: { pencil } });
+      $('dev-overlay-toggle').click();
+      expect(marks(EMPTY)).to.deep.equal(
+        ['dev-cand-agree', 'dev-cand-agree', 'empty', 'dev-cand-missing', 'empty', 'empty', 'empty', 'empty', 'dev-cand-extra']);
+    });
+
+    it('DP31: an overlay cell\'s accessible name describes candidates and divergences', () => {
+      const pencil = new Uint16Array(81);
+      pencil[EMPTY] = 0b0011 | 0b100000000;
+      mountPanel({ state: { pencil } });
+      $('dev-overlay-toggle').click();
+      expect(cell(EMPTY).getAttribute('aria-label'))
+        .to.equal('Row 1, column 3: candidates 1, 2, 4. Missing from your marks: 4. Extra marks: 9');
+    });
+
+    it('DP32: the selected cell keeps its (selected) suffix under the overlay', () => {
+      mountPanel({ state: { selected: EMPTY } });
+      $('dev-overlay-toggle').click();
+      expect(cell(EMPTY).getAttribute('aria-label')).to.equal('Row 1, column 3: candidates 1, 2, 4 (selected)');
+    });
+
+    it('DP33: the overlay follows the board live', () => {
+      mountPanel();
+      $('dev-overlay-toggle').click();
+      gs.getState().pen[EMPTY + 1] = 2;   // r1c4 takes 2 → r1c3 loses it
+      emit('pen');
+      expect(marks(EMPTY)[1]).to.equal('empty');
+      expect(cell(EMPTY + 1).textContent).to.equal('2');
+    });
+
+    it('DP34: switching off restores the player\'s marks, which were never modified', async () => {
+      const pencil = new Uint16Array(81);
+      pencil[EMPTY] = 0b0011 | 0b100000000;
+      mountPanel({ state: { pencil } });
+      $('dev-overlay-toggle').click();
+      $('dev-overlay-toggle').click();
+      expect($('dev-overlay-toggle').getAttribute('aria-checked')).to.equal('false');
+      expect(pencil[EMPTY]).to.equal(0b0011 | 0b100000000);
+      expect(cell(EMPTY).getAttribute('aria-label')).to.equal('Row 1, column 3: pencil marks 1, 2, 9');
+      expect(cell(EMPTY).querySelector('[class*="dev-cand-"]')).to.be.null;
+      expect(boardActions()).to.have.length(0);
+      await frame();
+      expect(sr.textContent).to.equal('Candidate overlay off.');
+    });
+
+    it('DP35: overlay and step highlight combine on the same cell', () => {
+      mountPanel();
+      $('dev-inspect-run').click();
+      const first = $('dev-inspect-list').querySelector('button');
+      first.click();
+      $('dev-overlay-toggle').click();
+      const target = gridRoot.querySelector('.cell.dev-hl-place');
+      expect(target.querySelector('.pencil-marks')).to.not.be.null;
+      expect(target.getAttribute('aria-label')).to.match(/: candidates .* — solver step: placement$/);
+    });
+  });
+
+  // ── Coach step data ──────────────────────────────────────────────────────
+
+  describe('coach step data', () => {
+    const step = { technique: 'Naked Single', roles: { target: 5, cause: [1, 2] }, digits: [4] };
+
+    it('DP36: with no session it says so and Copy is disabled', () => {
+      mountPanel();
+      expect($('dev-coach-json').textContent).to.equal('No active coach session.');
+      expect($('dev-coach-copy').disabled).to.be.true;
+      expect($('dev-coach-json').getAttribute('aria-label')).to.equal('Coach step JSON');
+      expect($('dev-coach-json').tabIndex).to.equal(0);
+    });
+
+    it('DP37: an active session shows its CoachStep as two-space-indented JSON', () => {
+      mountPanel({ state: { coachSession: { step, coachedCells: new Set(), coachRevealedBits: new Uint16Array(81), recap: 'normal' } } });
+      expect($('dev-coach-json').textContent).to.equal(JSON.stringify(step, null, 2));
+      expect($('dev-coach-copy').disabled).to.be.false;
+    });
+
+    it('DP38: the view updates as the session starts and ends', () => {
+      mountPanel();
+      gs.getState().coachSession = { step, coachedCells: new Set(), coachRevealedBits: new Uint16Array(81), recap: 'normal' };
+      emit('coachSession');
+      expect(JSON.parse($('dev-coach-json').textContent)).to.deep.equal(step);
+      gs.getState().coachSession = null;
+      emit('coachSession');
+      expect($('dev-coach-json').textContent).to.equal('No active coach session.');
+      expect($('dev-coach-copy').disabled).to.be.true;
+    });
+
+    it('DP39: Copy JSON copies the displayed text and confirms', async () => {
+      const calls = mountPanel({ state: { coachSession: { step, coachedCells: new Set(), coachRevealedBits: new Uint16Array(81), recap: 'normal' } } });
+      $('dev-coach-copy').click();
+      await settle();
+      expect(calls.copy).to.deep.equal([JSON.stringify(step, null, 2)]);
+      expect($('dev-coach-status').textContent).to.equal('Copied.');
+      expect($('dev-coach-status').classList.contains('dev-error')).to.be.false;
+      expect(sr.textContent).to.equal('Copied.');
+    });
+
+    it('DP40: a failed copy explains the manual alternative', async () => {
+      mountPanel({
+        state: { coachSession: { step, coachedCells: new Set(), coachRevealedBits: new Uint16Array(81), recap: 'normal' } },
+        copy: async () => false,
+      });
+      $('dev-coach-copy').click();
+      await settle();
+      expect($('dev-coach-status').textContent).to.equal('Couldn\'t copy — select the text and copy it manually.');
+      expect($('dev-coach-status').classList.contains('dev-error')).to.be.true;
+      expect(sr.textContent).to.equal('Couldn\'t copy — select the text and copy it manually.');
+    });
+
+    it('DP41: a session change clears a stale copy status', async () => {
+      mountPanel({
+        state: { coachSession: { step, coachedCells: new Set(), coachRevealedBits: new Uint16Array(81), recap: 'normal' } },
+        copy: async () => false,
+      });
+      $('dev-coach-copy').click();
+      await settle();
+      emit('coachSession');
+      expect($('dev-coach-status').textContent).to.equal('');
+      expect($('dev-coach-status').classList.contains('dev-error')).to.be.false;
+    });
+
+    it('DP42: the default copy dependency is the clipboard helper', async () => {
+      gs = makeFakeGameState({
+        puzzle: makeGenerated(), pen: toGivens(KIDDIE), pencil: new Uint16Array(81),
+        coachSession: { step, coachedCells: new Set(), coachRevealedBits: new Uint16Array(81), recap: 'normal' },
+      });
+      mountGrid(gridRoot, gs);
+      mount({ gameState: gs, loadPuzzle: async () => ({}) });
+      $('dev-coach-copy').click();
+      await new Promise(r => setTimeout(r, 100));
+      expect($('dev-coach-status').textContent).to.be.oneOf(
+        ['Copied.', 'Couldn\'t copy — select the text and copy it manually.']);
+    });
+  });
+
+  // ── Generation diagnostics ───────────────────────────────────────────────
+
+  describe('generation diagnostics', () => {
+    const rows = () => Object.fromEntries(
+      [...$('dev-gen-body').querySelectorAll('tr')].map(tr => [tr.querySelector('th').textContent, tr.querySelector('td').textContent]));
+
+    it('DP43: a generated puzzle shows the diagnostics table with row headers', () => {
+      mountPanel();
+      expect(rows()).to.deep.equal({
+        'Requested tier': 'Kiddie',
+        'Achieved tier': 'Kiddie',
+        'Fallback used': 'No',
+        'Attempts': '2 of 20',
+        'Rejected — unsolvable by solver': '0',
+        'Rejected — wrong tier': '1 (Easy 1)',
+        'Technique profile': 'Naked Single × 2',
+      });
+      expect($('dev-gen-body').querySelector('th').scope).to.equal('row');
+    });
+
+    it('DP44: a loaded puzzle says it was not generated', () => {
+      mountPanel({ state: { puzzle: { ...makeGenerated(), source: 'link', gen: undefined } } });
+      expect($('dev-gen-body').textContent).to.equal('This puzzle was loaded, not generated.');
+      expect($('dev-gen-body').querySelector('table')).to.be.null;
+    });
+
+    it('DP45: the view updates when the puzzle changes', () => {
+      mountPanel();
+      gs.getState().puzzle = { ...makeGenerated(), source: 'string', gen: undefined };
+      emit('puzzle');
+      expect($('dev-gen-body').textContent).to.equal('This puzzle was loaded, not generated.');
+      gs.getState().puzzle = makeGenerated();
+      emit('puzzle');
+      expect(rows()['Attempts']).to.equal('2 of 20');
+    });
+
+    it('DP46: a restored puzzle with no stored trace gets its profile recomputed', () => {
+      mountPanel({ state: { puzzle: { ...makeGenerated(), solveTrace: [] } } });
+      expect(rows()['Technique profile']).to.equal('Naked Single × 51');
+    });
+
+    it('DP47: with no puzzle it says so', () => {
+      mountPanel({ state: { puzzle: null } });
+      expect($('dev-gen-body').textContent).to.equal('No puzzle loaded.');
+    });
+  });
+});

@@ -14,6 +14,7 @@ import { announce } from './srLive.js';
 import { analyze } from '../coach/analyzer.js';
 import { deriveCoachedCells } from '../game/state.js';
 import { rowOf, colOf } from '../util/grid.js';
+import { UNRATED } from '../config.js';
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -85,6 +86,13 @@ function _onCoachPressed() {
   const state = _gameState.getState();
   if (!state.puzzle || state.won) return;
 
+  // The solver can't work an Unrated puzzle; the button is disabled, and the
+  // keyboard shortcut lands here.
+  if (state.puzzle.difficulty === UNRATED) {
+    announce('Coach is unavailable for unrated puzzles.');
+    return;
+  }
+
   // If a session is active, end it first (clean event ordering).
   if (state.coachSession !== null) {
     _gameState.dispatch({ type: 'COACH_END', reason: 'session-reset' });
@@ -130,9 +138,13 @@ function _render(state) {
 function _renderButton(state) {
   if (!_btn) return;
   const active = state.coachSession !== null && state.coachSession.recap === null;
-  _btn.disabled = !state.puzzle || state.won;
+  const unrated = state.puzzle?.difficulty === UNRATED;
+  _btn.disabled = !state.puzzle || state.won || unrated;
 
-  if (active) {
+  if (unrated) {
+    _btn.classList.remove('coaching');
+    _btn.setAttribute('aria-label', 'Coach — unavailable for unrated puzzles');
+  } else if (active) {
     _btn.classList.add('coaching');
     _btn.setAttribute('aria-label', 'Coach (active)');
   } else {

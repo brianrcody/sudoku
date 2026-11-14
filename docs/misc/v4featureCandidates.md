@@ -13,7 +13,12 @@
 Move the control panel (number pad, mode toggles, action buttons) to the left of the
 board. Persistent preference. The board stays centered within the panel arrangement.
 
-### Puzzle Sharing via URL
+### Puzzle Sharing via URL — 🟡 Implemented, pending Product Director review (2026-11-13)
+
+> Uncommitted in the working tree. Specs: `rspec-006-puzzle-sharing`,
+> `fspec-006-puzzle-sharing`, `vspec-006-puzzle-sharing`, `aspec-puzzle-sharing`,
+> `tspec-puzzle-sharing`. Report: `docs/misc/v4-devmode-sharing-report.md`. The Share
+> button sits in the action row provisionally, until the hamburger menu absorbs it.
 
 Encode the puzzle's given cells into a URL parameter. A "Share" action generates and
 copies the link to clipboard. Recipients start from the same givens with no progress.
@@ -35,7 +40,12 @@ A deterministic daily puzzle seeded from the date — same puzzle for all player
 given day. Difficulty ramps across the week: Kiddie on Monday, scaling up to Nightmare on
 Sunday. No server needed; the seed is computed client-side from the date.
 
-### Developer Features
+### Developer Features — 🟡 Implemented, pending Product Director review (2026-11-13)
+
+> Uncommitted in the working tree. Specs: `rspec-005-dev-mode`, `fspec-005-dev-mode`,
+> `vspec-005-dev-mode`, `aspec-dev-mode`, `tspec-dev-mode`. Report:
+> `docs/misc/v4-devmode-sharing-report.md`. All tools below are built except **Force
+> technique**, which was deferred (it changes solver ordering and needs a soundness sweep).
 
 A suite of in-app diagnostic tools, gated behind a dev mode toggle (not visible to regular
 users).

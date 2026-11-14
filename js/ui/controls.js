@@ -6,9 +6,9 @@
  */
 
 import { open as openDialog } from './dialog.js';
-import { DIFFICULTY_ORDER, TIER_LABELS } from '../config.js';
+import { DIFFICULTY_ORDER, TIER_LABELS, UNRATED } from '../config.js';
 
-const RELEVANT_KEYS = new Set(['puzzle']);
+const RELEVANT_KEYS = new Set(['puzzle', 'generating']);
 
 let _root = null;
 let _gameState = null;
@@ -78,8 +78,24 @@ function _isInProgress(state) {
 }
 
 function _update(state) {
+  // While a puzzle is being generated the selector shows the player's choice,
+  // not the outgoing puzzle; it resyncs when generation ends or is cancelled.
+  if (state.generating) return;
+
   const diffSelect = _root.querySelector('#difficulty-select');
-  if (diffSelect && state.puzzle?.difficulty) {
-    diffSelect.value = state.puzzle.difficulty;
+  const difficulty = state.puzzle?.difficulty;
+
+  // "Unrated" can't be chosen, so its option exists only while the current
+  // puzzle is Unrated.
+  const unratedOption = diffSelect.querySelector(`option[value="${UNRATED}"]`);
+  if (difficulty === UNRATED && !unratedOption) {
+    const option = document.createElement('option');
+    option.value = UNRATED;
+    option.textContent = TIER_LABELS[UNRATED];
+    diffSelect.appendChild(option);
+  } else if (difficulty !== UNRATED && unratedOption) {
+    unratedOption.remove();
   }
+
+  if (difficulty) diffSelect.value = difficulty;
 }

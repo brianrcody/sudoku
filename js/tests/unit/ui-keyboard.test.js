@@ -195,4 +195,50 @@ describe('ui/keyboard.js', () => {
     expect(call).to.not.exist;
     input.remove();
   });
+
+  // ── Text fields keep their keys (V4 — share link field, dev load field) ──
+
+  for (const tagName of ['input', 'textarea']) {
+    describe(`with a focused <${tagName}>`, () => {
+      let field;
+
+      beforeEach(() => {
+        field = document.createElement(tagName);
+        document.body.appendChild(field);
+        field.focus();
+        fakeGs.getState().selected = 4;
+      });
+
+      afterEach(() => field.remove());
+
+      it(`UK13: digits typed in a <${tagName}> are not entered on the board`, () => {
+        const e = keydown({ key: '5' });
+        expect(fakeGs.dispatch.calls).to.have.length(0);
+        expect(e.defaultPrevented).to.be.false;
+      });
+
+      it(`UK14: Backspace and Delete in a <${tagName}> do not erase the selected cell`, () => {
+        const a = keydown({ key: 'Backspace' });
+        const b = keydown({ key: 'Delete' });
+        expect(fakeGs.dispatch.calls).to.have.length(0);
+        expect(a.defaultPrevented || b.defaultPrevented).to.be.false;
+      });
+
+      it(`UK15: arrow keys in a <${tagName}> move the caret, not the selection`, () => {
+        const e = keydown({ key: 'ArrowLeft' });
+        expect(fakeGs.dispatch.calls).to.have.length(0);
+        expect(e.defaultPrevented).to.be.false;
+      });
+    });
+  }
+
+  it('UK16: a focused <select> keeps the existing digit behavior', () => {
+    const select = document.createElement('select');
+    document.body.appendChild(select);
+    select.focus();
+    fakeGs.getState().selected = 4;
+    keydown({ key: '5' });
+    select.remove();
+    expect(fakeGs.dispatch.calls.some(a => a.type === 'PEN_ENTER' && a.digit === 5)).to.be.true;
+  });
 });

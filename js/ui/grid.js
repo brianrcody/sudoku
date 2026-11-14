@@ -16,6 +16,7 @@ const RELEVANT_KEYS = new Set([
 let _root = null;
 let _gameState = null;
 let _gridEl = null;
+let _decorator = null;
 
 /**
  * @param {HTMLElement} root - The `#grid-root` element.
@@ -34,6 +35,24 @@ export function mount(root, gameState) {
   });
 
   _render(gameState.getState());
+}
+
+/**
+ * Install a hook that runs at the end of every cell update, after the cell's
+ * classes, accessible name, and content have been rebuilt. Whatever the hook
+ * adds is therefore discarded by the next render and re-applied by the hook.
+ * Used by developer mode; pass null to remove it. Re-renders immediately.
+ *
+ * @param {(function(HTMLElement, number, object): void)|null} fn - `(el, index, state)`
+ */
+export function setCellDecorator(fn) {
+  _decorator = fn;
+  refresh();
+}
+
+/** Re-render every cell from the current state. Requires `mount` to have run. */
+export function refresh() {
+  _render(_gameState.getState());
 }
 
 function _render(state) {
@@ -152,6 +171,8 @@ function _updateCell(el, i, state) {
   } else {
     el.textContent = '';
   }
+
+  if (_decorator !== null) _decorator(el, i, state);
 }
 
 function _renderPencilMarks(el, cellIndex, state) {

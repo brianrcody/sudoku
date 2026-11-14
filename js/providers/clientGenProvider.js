@@ -187,6 +187,8 @@ function _saveToStorage(difficulty, puzzle) {
         givens: Array.from(puzzle.givens),
         solution: Array.from(puzzle.solution),
         solveTrace: puzzle.solveTrace,
+        source: puzzle.source,
+        gen: puzzle.gen,
       },
       generatedAt: new Date().toISOString(),
     };

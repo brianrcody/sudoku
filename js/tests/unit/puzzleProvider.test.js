@@ -149,6 +149,11 @@ describe('puzzleProvider / clientGenProvider', function () {
     const blob = JSON.parse(raw);
     expect(blob.version).to.equal(1);
     expect(blob.puzzle).to.be.an('object');
+    // V4: generation diagnostics travel with the cached puzzle (aspec-dev-mode §8).
+    expect(blob.puzzle.source).to.equal('generated');
+    expect(blob.puzzle.gen.requestedTier).to.equal('kiddie');
+    expect(blob.puzzle.gen.attempts).to.be.at.least(1);
+    expect(provider.peekReady('kiddie').gen).to.deep.equal(blob.puzzle.gen);
   });
 
   // PP7: localStorage restore on boot — pre-written entry is read back

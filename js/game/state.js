@@ -6,7 +6,7 @@
 import { createEmitter } from '../util/events.js';
 import { computeConflicts } from './conflicts.js';
 import { checkRealtime, checkAll, checkOnComplete } from './correctness.js';
-import { HINT_LIMITS, CHECK_VISIBLE, CORRECTNESS_MODE, CHECK_HIGHLIGHT_MS } from '../config.js';
+import { HINT_LIMITS, CHECK_VISIBLE, CORRECTNESS_MODE, CHECK_HIGHLIGHT_MS, UNRATED } from '../config.js';
 import { rowOf, colOf } from '../util/grid.js';
 
 /**
@@ -73,10 +73,15 @@ export function deriveCoachedCells(step) {
 }
 
 /**
- * @param {{ stats: object, hintProvider: object }} deps
+ * @param {{
+ *   stats: object,
+ *   hintProvider: object,
+ *   statsSuppressed?: function(): boolean,
+ * }} deps `statsSuppressed` returns true while no puzzle may record statistics
+ *   (developer mode).
  * @returns {{ dispatch: function, getState: function, on: function }}
  */
-export function createGameState({ stats, hintProvider }) {
+export function createGameState({ stats, hintProvider, statsSuppressed = () => false }) {
   const emitter = createEmitter();
 
   /** @type {GameState} */
@@ -115,6 +120,15 @@ export function createGameState({ stats, hintProvider }) {
       clearIncorrectTimer = null;
       dispatch({ type: 'CLEAR_INCORRECT' });
     }, CHECK_HIGHLIGHT_MS);
+  }
+
+  /**
+   * Whether the current puzzle may record an attempt or a win. Unrated puzzles
+   * never do. While this is false `attemptRecorded` is left unset, so the
+   * attempt is recorded on the first eligible move rather than lost.
+   */
+  function _statsEligible() {
+    return state.puzzle.difficulty !== UNRATED && !statsSuppressed();
   }
 
   /** Captures the current board into undoSnapshot (before a mutating move). */
@@ -191,7 +205,7 @@ export function createGameState({ stats, hintProvider }) {
     state.pencil[cellIndex] = 0; // clear pencil marks
 
     // Stats: record first pen entry (not from hint).
-    if (!fromHint && prevValue === 0 && !state.attemptRecorded) {
+    if (!fromHint && prevValue === 0 && !state.attemptRecorded && _statsEligible()) {
       state.attemptRecorded = true;
       stats.recordAttemptOnce(state.puzzle.difficulty);
     }
@@ -495,7 +509,7 @@ export function createGameState({ stats, hintProvider }) {
         state.pen[hint.cellIndex] = hint.digit;
         state.pencil[hint.cellIndex] = 0;
 
-        if (!state.attemptRecorded) {
+        if (!state.attemptRecorded && _statsEligible()) {
           state.attemptRecorded = true;
           stats.recordAttemptOnce(state.puzzle.difficulty);
         }
@@ -546,7 +560,7 @@ export function createGameState({ stats, hintProvider }) {
           if (correct && !state.winHandled) {
             state.won = true;
             state.winHandled = true;
-            stats.recordWin(state.puzzle.difficulty);
+            if (_statsEligible()) stats.recordWin(state.puzzle.difficulty);
             _emit(action, 'won', 'winHandled');
           }
         } else if (mode === 'on-complete') {
@@ -554,7 +568,7 @@ export function createGameState({ stats, hintProvider }) {
           if (correct && !state.winHandled) {
             state.won = true;
             state.winHandled = true;
-            stats.recordWin(state.puzzle.difficulty);
+            if (_statsEligible()) stats.recordWin(state.puzzle.difficulty);
             _emit(action, 'won', 'winHandled');
           } else if (!correct) {
             state.incorrect = wrong;
@@ -568,7 +582,7 @@ export function createGameState({ stats, hintProvider }) {
           if (correct && !state.winHandled) {
             state.won = true;
             state.winHandled = true;
-            stats.recordWin(state.puzzle.difficulty);
+            if (_statsEligible()) stats.recordWin(state.puzzle.difficulty);
             _emit(action, 'won', 'winHandled');
           } else if (!correct) {
             // Expert and above: no cell highlighting, but show a message briefly.
@@ -654,6 +668,12 @@ export function createGameState({ stats, hintProvider }) {
 
       case 'CHANGE_DIFFICULTY': {
         const { difficulty } = action;
+        if (state.puzzle?.difficulty === UNRATED) {
+          // Relabelling would turn an Unrated puzzle into a rated one. Leave it
+          // alone and just publish the action; main.js starts a new puzzle.
+          _emit(action);
+          break;
+        }
         if (state.coachSession !== null) {
           dispatch({ type: 'COACH_END', reason: 'puzzle-replaced' });
         }
@@ -700,6 +720,7 @@ export function createGameState({ stats, hintProvider }) {
       case 'COACH_START': {
         if (state.puzzle === null) break;
         if (state.won === true) break;
+        if (state.puzzle.difficulty === UNRATED) break;
 
         const result = action.result;
 

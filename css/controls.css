@@ -324,6 +324,83 @@ body.theme-terminal .coach-recap {
   gap: 8px;
 }
 
+/* Share takes its own full-width row beneath New Puzzle / Reset (vspec-006 §2). */
+#btn-share {
+  grid-column: 1 / -1;
+}
+
+/* ── Notice card (vspec-006 §3) ───────────────────────────────────────── */
+/* The width lives on the root: in the stacked layout the board column centres
+   its children, and a percentage max-width on the card itself would resolve
+   against a shrink-to-fit parent. */
+#notice-root {
+  width: 414px;
+  max-width: 100%;
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  animation: fadein 0.15s ease;
+}
+
+.notice-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notice-progress .notice-message {
+  color: var(--text-muted);
+}
+
+.notice-error {
+  border-left-color: var(--conflict);
+}
+
+.notice-error .notice-message {
+  font-weight: 600;
+}
+
+.notice-field {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 8px;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 12px;
+  color: var(--text);
+  /* Not --bg: in Coffee that is the dark page backdrop, and --text is dark. */
+  background: var(--given-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 4px;
+}
+
+.notice-field:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.notice-dismiss {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+body.theme-terminal .notice,
+body.theme-terminal .notice-field {
+  border-radius: 0;
+}
+
 /* ── Primary button (dialog confirm) ─────────────────────────────────── */
 .btn-primary {
   background: var(--accent);

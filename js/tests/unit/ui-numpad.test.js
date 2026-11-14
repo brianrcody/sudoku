@@ -179,4 +179,25 @@ describe('ui/numpad.js', () => {
     expect(toggles[1].digit).to.equal(3);
     expect(toggles[2].digit).to.equal(7);
   });
+
+  // ── Unrated puzzles (V4 — puzzle loading) ───────────────────────────────
+
+  it('UN13: on an Unrated puzzle Hint is disabled, shows a dash, and is labelled unavailable', () => {
+    mountNumpad({ puzzle: makePuzzle({ difficulty: 'unrated' }), hintsRemaining: 0 });
+    const hint = root.querySelector('#btn-hint');
+    expect(hint.disabled).to.be.true;
+    expect(root.querySelector('#hint-count').textContent).to.equal('–');
+    expect(hint.getAttribute('aria-label')).to.equal('Hint — unavailable for unrated puzzles');
+  });
+
+  it('UN14: on an Unrated puzzle the Check button is shown', () => {
+    mountNumpad({ puzzle: makePuzzle({ difficulty: 'unrated' }), hintsRemaining: 0 });
+    expect(root.querySelector('#btn-check').style.display).to.equal('');
+  });
+
+  it('UN15: a rated puzzle with no hints keeps the "no hints remaining" label', () => {
+    mountNumpad({ puzzle: makePuzzle({ difficulty: 'hard' }), hintsRemaining: 0 });
+    expect(root.querySelector('#hint-count').textContent).to.equal('0');
+    expect(root.querySelector('#btn-hint').getAttribute('aria-label')).to.equal('Hint — no hints remaining');
+  });
 });

@@ -6,7 +6,7 @@
  */
 
 import { announce } from './srLive.js';
-import { HINT_LIMITS, CHECK_VISIBLE } from '../config.js';
+import { CHECK_VISIBLE, UNRATED } from '../config.js';
 import { rowOf, colOf } from '../util/grid.js';
 
 const RELEVANT_KEYS = new Set([
@@ -225,7 +225,10 @@ function _update(state) {
 
     hintBtn.disabled = exhausted || selectedHasPen || state.won || selectedIsGiven;
 
-    if (exhausted) {
+    if (difficulty === UNRATED) {
+      hintBadge.textContent = '–';
+      hintBtn.setAttribute('aria-label', 'Hint — unavailable for unrated puzzles');
+    } else if (exhausted) {
       hintBadge.textContent = '0';
       hintBtn.setAttribute('aria-label', 'Hint — no hints remaining');
     } else if (remaining === Infinity) {

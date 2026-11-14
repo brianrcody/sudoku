@@ -8,6 +8,26 @@ export const DIFFICULTY_ORDER = [
 ];
 
 /**
+ * `Puzzle.difficulty` of a loaded puzzle the solver cannot finish. Deliberately
+ * absent from DIFFICULTY_ORDER — it can't be generated, selected, or counted in
+ * statistics — but present in the per-tier behavior tables below so lookups by
+ * a puzzle's difficulty stay total.
+ * @type {string}
+ */
+export const UNRATED = 'unrated';
+
+/** @type {string} Query parameter carrying the givens in a share link. */
+export const SHARE_PARAM = 'p';
+
+/**
+ * @param {string|undefined} difficulty
+ * @returns {boolean} True for the seven generatable tiers; false for Unrated.
+ */
+export function isRatedTier(difficulty) {
+  return DIFFICULTY_ORDER.includes(difficulty);
+}
+
+/**
  * User-visible display name per tier ID.
  * @type {Object<string, string>}
  */
@@ -19,6 +39,7 @@ export const TIER_LABELS = {
   expert: 'Expert',
   diabolical: 'Diabolical',
   nightmare: 'Nightmare',
+  unrated: 'Unrated',
 };
 
 /**
@@ -33,6 +54,7 @@ export const HINT_LIMITS = {
   expert: 0,
   diabolical: 0,
   nightmare: 0,
+  unrated: 0,
 };
 
 /**
@@ -47,6 +69,7 @@ export const CHECK_VISIBLE = {
   expert: false,
   diabolical: false,
   nightmare: false,
+  unrated: true,
 };
 
 /**
@@ -61,6 +84,7 @@ export const CORRECTNESS_MODE = {
   expert: 'on-complete-silent',
   diabolical: 'on-complete-silent',
   nightmare: 'on-complete-silent',
+  unrated: 'on-demand',
 };
 
 /**

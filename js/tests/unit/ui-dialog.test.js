@@ -105,4 +105,62 @@ describe('ui/dialog.js', () => {
     openTestDialog();
     expect(document.activeElement).to.equal(root.querySelector('#modal-cancel'));
   });
+
+  // ── onCancel (V4 — replace confirmation) ────────────────────────────────
+
+  function openWithCallbacks(log, name = 'a') {
+    triggerBtn.focus();
+    open({
+      title: 'T', body: 'B', confirmLabel: 'OK',
+      onConfirm: () => log.push(`${name}:confirm`),
+      onCancel: () => log.push(`${name}:cancel`),
+    });
+  }
+
+  it('UD7: the Cancel button calls onCancel and not onConfirm', () => {
+    const log = [];
+    openWithCallbacks(log);
+    root.querySelector('#modal-cancel').click();
+    expect(log).to.deep.equal(['a:cancel']);
+  });
+
+  it('UD8: Escape calls onCancel', () => {
+    const log = [];
+    openWithCallbacks(log);
+    root.querySelector('#modal-backdrop')
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    expect(log).to.deep.equal(['a:cancel']);
+  });
+
+  it('UD9: confirming calls onConfirm and not onCancel', () => {
+    const log = [];
+    openWithCallbacks(log);
+    root.querySelector('#modal-confirm').click();
+    expect(log).to.deep.equal(['a:confirm']);
+  });
+
+  it('UD10: onCancel fires once; closing again is silent', () => {
+    const log = [];
+    openWithCallbacks(log);
+    close();
+    close();
+    expect(log).to.deep.equal(['a:cancel']);
+  });
+
+  it('UD11: opening a second dialog cancels the first and leaves the second pending', () => {
+    const log = [];
+    openWithCallbacks(log, 'a');
+    openWithCallbacks(log, 'b');
+    expect(log).to.deep.equal(['a:cancel']);
+    expect(root.querySelector('#modal-backdrop').classList.contains('open')).to.be.true;
+    root.querySelector('#modal-confirm').click();
+    expect(log).to.deep.equal(['a:cancel', 'b:confirm']);
+  });
+
+  it('UD12: a dialog opened without onCancel closes silently', () => {
+    let confirmed = 0;
+    openTestDialog({ onConfirm: () => { confirmed++; } });
+    expect(() => root.querySelector('#modal-cancel').click()).to.not.throw();
+    expect(confirmed).to.equal(0);
+  });
 });

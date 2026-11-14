@@ -5,11 +5,14 @@
  *
  * Only one request is processed at a time. A GEN_ABORT message sets an
  * internal abort flag that is checked between generation attempts.
+ *
+ * Also answers LOAD_REQUEST (validate + rate supplied givens) with LOAD_RESULT.
  */
 
 import { generateForTier } from '../generator/pipeline.js';
 import { mulberry32 } from '../prng.js';
-import { MSG, makeGenProgress, makeGenResult, makeGenError } from './protocol.js';
+import { loadFromGivens } from '../generator/loadPuzzle.js';
+import { MSG, makeGenProgress, makeGenResult, makeGenError, makeLoadResult } from './protocol.js';
 
 /**
  * Queue of pending requests. The first entry is the active one; subsequent
@@ -27,6 +30,13 @@ let processing = false;
 
 self.onmessage = function (event) {
   const msg = event.data;
+
+  if (msg.type === MSG.LOAD_REQUEST) {
+    // Answered inline, outside the generation queue. Loads go to a dedicated
+    // worker instance (providers/loadProvider.js), so the queue is idle here.
+    self.postMessage(makeLoadResult({ id: msg.id, result: loadFromGivens(msg.givens) }));
+    return;
+  }
 
   if (msg.type === MSG.GEN_ABORT) {
     // Mark the active request (if any) as aborted.

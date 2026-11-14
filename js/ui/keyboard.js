@@ -3,6 +3,7 @@
  *
  * Handles: digits 1–9, Backspace/Delete, arrow keys, P (pen/pencil toggle),
  * Home (focus first cell), Escape (close dialogs). All dispatched via GameState.
+ * Digit, erase, and arrow shortcuts are ignored while a text field has focus.
  */
 
 import { close as closeDialog } from './dialog.js';
@@ -21,6 +22,9 @@ export function mount(root, gameState) {
       closeDialog();
       return;
     }
+
+    // Text fields keep their own digits, erase keys, and caret movement.
+    const inTextField = tag === 'INPUT' || tag === 'TEXTAREA';
 
     // Home focuses the first non-given cell.
     if (e.key === 'Home') {
@@ -56,6 +60,8 @@ export function mount(root, gameState) {
       gameState.dispatch({ type: 'UNDO' });
       return;
     }
+
+    if (inTextField) return;
 
     // Digit keys 1–9.
     if (e.key >= '1' && e.key <= '9') {

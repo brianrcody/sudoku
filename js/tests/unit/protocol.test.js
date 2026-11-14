@@ -9,6 +9,8 @@ import {
   makeGenProgress,
   makeGenResult,
   makeGenError,
+  makeLoadRequest,
+  makeLoadResult,
 } from '/js/worker/protocol.js';
 
 describe('protocol.js', function () {
@@ -87,5 +89,23 @@ describe('protocol.js', function () {
     expect(env.type).to.equal(MSG.GEN_ERROR);
     expect(env.id).to.equal('r8');
     expect(env.message).to.equal('something went wrong');
+  });
+
+  // WP3: load messages (V4 — puzzle loading)
+  it('WP3: MSG exports the load message types', function () {
+    expect(MSG.LOAD_REQUEST).to.equal('LOAD_REQUEST');
+    expect(MSG.LOAD_RESULT).to.equal('LOAD_RESULT');
+  });
+
+  it('WP3: makeLoadRequest produces a LOAD_REQUEST envelope carrying the givens', function () {
+    const givens = new Uint8Array(81);
+    expect(makeLoadRequest({ id: 'load-1', givens }))
+      .to.deep.equal({ type: 'LOAD_REQUEST', id: 'load-1', givens });
+  });
+
+  it('WP3: makeLoadResult produces a LOAD_RESULT envelope carrying the result', function () {
+    const result = { ok: false, reason: 'multiple' };
+    expect(makeLoadResult({ id: 'load-1', result }))
+      .to.deep.equal({ type: 'LOAD_RESULT', id: 'load-1', result });
   });
 });

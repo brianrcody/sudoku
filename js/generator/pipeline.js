@@ -58,9 +58,24 @@ export function toPuzzle(givens, solution, tier, trace, seed) {
 }
 
 /**
+ * @typedef {Object} GenDiagnostics
+ * @property {string} requestedTier
+ * @property {number} budget
+ * @property {number} attempts - Attempts made, including the degenerate extra one.
+ * @property {{unsolved: number, wrongTier: number, byTier: Object<string, number>}} rejected
+ *   `unsolved`: the rater could not solve the candidate. `wrongTier`: solved,
+ *   but at another tier (`byTier` breaks that count down).
+ * @property {boolean} fallback - True when the budget ran out.
+ */
+
+/**
  * Generate a puzzle of the given tier, retrying up to `budget` times.
  * On budget exhaustion, returns the hardest candidate found so far (silent
  * fallback — the returned puzzle's `difficulty` may differ from `tier`).
+ *
+ * The returned puzzle carries `source: 'generated'` and a `gen` diagnostics
+ * record. The counters only observe the loop: they never touch `opts.rng`, so
+ * a seed yields the same puzzle with or without them.
  *
  * @param {string} tier - Target difficulty tier.
  * @param {{
@@ -70,7 +85,7 @@ export function toPuzzle(givens, solution, tier, trace, seed) {
  *   onProgress?: function({attempts: number, budget: number}): void,
  *   abortSignal?: AbortSignal,
  * }} opts
- * @returns {import('../worker/protocol.js').Puzzle}
+ * @returns {import('../worker/protocol.js').Puzzle & {source: 'generated', gen: GenDiagnostics}}
  */
 export function generateForTier(tier, opts) {
   const budget = opts.budget ?? ATTEMPT_BUDGET[tier];
@@ -78,6 +93,13 @@ export function generateForTier(tier, opts) {
 
   let best = null;
   let attempts = 0;
+  const rejected = { unsolved: 0, wrongTier: 0, byTier: {} };
+
+  const finish = (puzzle, fallback) => ({
+    ...puzzle,
+    source: 'generated',
+    gen: { requestedTier: tier, budget, attempts, rejected, fallback },
+  });
 
   // Track last progress-post time for throttling (§10.3).
   let lastProgressMs = 0;
@@ -97,13 +119,19 @@ export function generateForTier(tier, opts) {
     const givens   = buildMinimalPuzzle(solution, opts.rng, target);
     const result   = rate(givens);
 
-    if (!result.solved) continue;
+    if (!result.solved) {
+      rejected.unsolved++;
+      continue;
+    }
 
     const achievedTier = tierForRank(result.hardestRank);
 
     if (achievedTier === tier) {
-      return toPuzzle(givens, solution, tier, result.trace, opts.seed);
+      return finish(toPuzzle(givens, solution, tier, result.trace, opts.seed), false);
     }
+
+    rejected.wrongTier++;
+    rejected.byTier[achievedTier] = (rejected.byTier[achievedTier] ?? 0) + 1;
 
     if (!best || result.hardestRank > best.result.hardestRank) {
       best = { givens, solution, result };
@@ -120,18 +148,19 @@ export function generateForTier(tier, opts) {
   if (!best) {
     // Degenerate: no valid puzzle was produced at all — generate one last time
     // without a tier constraint.
+    attempts++;
     const solution = fillGrid(opts.rng);
     const givens   = buildMinimalPuzzle(solution, opts.rng, target);
     const result   = rate(givens);
     const fallbackTier = tierForRank(result.hardestRank) ?? tier;
-    return toPuzzle(givens, solution, fallbackTier, result.trace, opts.seed);
+    return finish(toPuzzle(givens, solution, fallbackTier, result.trace, opts.seed), true);
   }
 
-  return toPuzzle(
+  return finish(toPuzzle(
     best.givens,
     best.solution,
     tierForRank(best.result.hardestRank) ?? tier,
     best.result.trace,
     opts.seed,
-  );
+  ), true);
 }

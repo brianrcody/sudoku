@@ -18,6 +18,10 @@ export const MSG = Object.freeze({
   GEN_ERROR:    'GEN_ERROR',
   /** Main → Worker: cancel an in-flight request. */
   GEN_ABORT:    'GEN_ABORT',
+  /** Main → Worker: validate and rate givens supplied from outside the generator. */
+  LOAD_REQUEST: 'LOAD_REQUEST',
+  /** Worker → Main: outcome of a LOAD_REQUEST. */
+  LOAD_RESULT:  'LOAD_RESULT',
 });
 
 /**
@@ -27,6 +31,8 @@ export const MSG = Object.freeze({
  *   givens: Uint8Array,
  *   solution: Uint8Array,
  *   solveTrace: Array,
+ *   source?: 'generated'|'loaded'|'link'|'string',
+ *   gen?: import('../generator/pipeline.js').GenDiagnostics,
  * }} Puzzle
  */
 
@@ -78,4 +84,24 @@ export function makeGenResult({ id, puzzle, fallback = false }) {
  */
 export function makeGenError({ id, message }) {
   return { type: MSG.GEN_ERROR, id, message };
+}
+
+/**
+ * Build a LOAD_REQUEST envelope.
+ *
+ * @param {{ id: string, givens: Uint8Array }} opts
+ * @returns {object}
+ */
+export function makeLoadRequest({ id, givens }) {
+  return { type: MSG.LOAD_REQUEST, id, givens };
+}
+
+/**
+ * Build a LOAD_RESULT envelope.
+ *
+ * @param {{ id: string, result: import('../generator/loadPuzzle.js').LoadResult }} opts
+ * @returns {object}
+ */
+export function makeLoadResult({ id, result }) {
+  return { type: MSG.LOAD_RESULT, id, result };
 }
