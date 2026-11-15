@@ -1,5 +1,5 @@
 /**
- * @fileoverview Integration tests for developer mode (DVI1–DVI29): the real
+ * @fileoverview Integration tests for developer mode (DVI1–DVI30): the real
  * app in an iframe with `?dev=1`, `?dev=0`, and no parameter.
  * tspec-dev-mode §2.4.
  */
@@ -332,6 +332,46 @@ describe('integration: developer mode', function () {
       expect($$(iframe, '#dev-inspect-list button')).to.have.length(0);
       expect($(iframe, '#dev-inspect-summary').textContent).to.equal('Board changed — run the solver again.');
       expect($(iframe, '#dev-inspect-restore').disabled).to.be.true;
+    });
+
+    it('DVI30: stepping trims the player\'s pencil marks by what the solver has ruled out, restores them going back, and Restore returns them exactly', async () => {
+      await openDev();
+      await loadString(HARD);
+      await waitFor(() => penString(iframe) === HARD);
+      const gs = gsOf(iframe);
+      const win = iframe.contentWindow;
+      $(iframe, '#dev-inspector').open = true;
+      $(iframe, '#dev-inspect-run').click();
+      const list = $$(iframe, '#dev-inspect-list button');
+      const e = list.findIndex(b => b.textContent.includes('eliminate'));
+      const [, d, r, c] = list[e].textContent.match(/eliminate (\d) from r(\d)c(\d)/);
+      const target = (r - 1) * 9 + (c - 1);
+      const bit = 1 << (d - 1);
+
+      // Pencil every digit into the cell the elimination acts on.
+      gs.dispatch({ type: 'SELECT_CELL', index: target });
+      for (let digit = 1; digit <= 9; digit++) gs.dispatch({ type: 'PENCIL_TOGGLE', digit });
+      const marks = () => gs.getState().pencil[target];
+      const dbl = i => list[i].dispatchEvent(new win.MouseEvent('dblclick', { bubbles: true }));
+
+      dbl(e);
+      expect(marks() & bit).to.equal(0);
+      // The overlay agrees: the eliminated digit is no longer drawn as a candidate.
+      $(iframe, '#dev-overlay-toggle').click();
+      const drawn = () => $(iframe, `.cell[data-index="${target}"]`).querySelectorAll('.pencil-mark')[d - 1].className;
+      expect(drawn()).to.include('empty');
+      $(iframe, '#dev-overlay-toggle').click();
+      expect($$(iframe, '#dev-inspect-list button')).to.have.length(list.length);
+      const trimmed = marks();
+      expect(trimmed).to.not.equal(0);
+
+      dbl(0);
+      expect(marks() & bit).to.equal(bit);
+      expect(marks() | trimmed).to.equal(marks());
+
+      $(iframe, '#dev-inspect-restore').click();
+      expect(marks()).to.equal(0b111111111);
+      expect(iframe.contentDocument.activeElement).to.equal(list[0]);
     });
 
     it('DVI18: the inspector says so explicitly when the solver stalls', async () => {

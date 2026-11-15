@@ -127,8 +127,16 @@ You want to know whether a technique fires, when, and on which cells.
 6. Double-click a step, or press Enter or Space on it, to **set the board to that step**:
    the board you ran the solver on plus every digit placed up to there. Go to an earlier
    step and the later digits come off again. *Restore board* returns to where you
-   started. This is not a move: no undo, no win, no statistics. Elimination steps place
-   nothing, so the board shows only the digits, not the solver's reduced candidates.
+   started. This is not a move: no undo, no win, no statistics.
+   Your pencil marks follow along: each step shows the marks you had when you first set
+   the board to a step, minus whatever the solver has ruled out by then (eliminations, and
+   placed digits from their row, column, and box). Going back brings marks back, and
+   *Restore board* returns them exactly. Marks are only removed, never added, so pencil
+   in full candidates first if you want to watch eliminations happen. Marks you change by
+   hand while stepping are dropped at the next step.
+   The **candidate overlay** follows too: while the board is set to a step it shows the
+   solver's candidates after that step, so with the overlay on you can watch eliminations
+   without pencilling anything in.
 
 The summary line gives you the rating directly: `Solved in N steps. Hardest rank R (Tier).`
 Rank-to-tier, for reference:
@@ -220,7 +228,8 @@ inspector uses `rXcY`; the coach JSON uses raw indices.
 
 1. Open *Candidate overlay*, switch on **Show computed candidates**.
 2. Every empty cell now shows the candidates from plain row/column/box elimination, in
-   place of your marks:
+   place of your marks (while the inspector has the board set to a step, the solver's
+   candidates after that step instead — see §3.3):
 
 | Appearance | Meaning |
 |---|---|
@@ -328,7 +337,7 @@ to use for manual UX testing and for demos.
 | Tool | Input | Output | Changes the game? |
 |---|---|---|---|
 | Load puzzle from string | 81 cells, `0`/`.` empty, whitespace ignored | Outcome line; new puzzle on success | Yes — replaces the puzzle (asks if you have progress) |
-| Solver step inspector | Current givens + pen digits | Ordered steps; summary; grid highlight on selection | Selecting moves the board cursor; set-to-step replaces your digits (Restore board undoes it) |
+| Solver step inspector | Current givens + pen digits | Ordered steps; summary; grid highlight on selection | Selecting moves the board cursor; set-to-step replaces your digits and trims your pencil marks (Restore board undoes both) |
 | Candidate overlay | Current board + your pencil marks | Computed candidates with divergence marked | No |
 | Coach step data | The active coach session | `CoachStep` as JSON; clipboard copy | No |
 | Generation diagnostics | The current puzzle | Generation-run table | No |

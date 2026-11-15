@@ -42,7 +42,8 @@ The tools read game state through the public `getState`/`on` API. Two write path
 load-from-string calls the shared loader (aspec-puzzle-sharing §4.4) through a function
 injected by `main.js`, and the step inspector dispatches `SELECT_CELL` (cursor follows the
 selected step) and `DEV_SET_BOARD` (set board to a step). `DEV_SET_BOARD` is a reducer
-action in `game/state.js` — `{ type, pen }` — that replaces the non-given cells, recomputes
+action in `game/state.js` — `{ type, pen, pencil? }` — that replaces the non-given cells
+(and, when `pencil` is given, copies it over the pencil marks), recomputes
 conflicts, clears incorrect marks and the undo snapshot, ends any coach session, and
 deliberately skips completion evaluation and statistics; it is ignored with no puzzle or
 on a won board. Session restore was considered instead and rejected: it replays
@@ -124,8 +125,10 @@ export function formatStep(step)                       // fspec-005 §5.1 text
 export function stepCells(step)                        // { place:number[], elim:number[], pattern:number[] }
 export function runInspector(board)                    // { steps, solved, remaining, hardest, alreadyFull }
 export function boardAtStep(base, steps, upTo)         // base + digits placed by steps 0…upTo (copy)
+export function pencilAtStep(base, steps, upTo)        // base pencil − what steps 0…upTo rule out (copy)
 export function summarize(result)                      // summary line
-export function candidateDiff(pen, pencil)             // Array(81): null | { agree, missing, extra } bitmasks
+export function candidatesAtStep(base, steps, upTo)    // solver candidates after steps 0…upTo
+export function candidateDiff(pen, pencil, computed?)  // Array(81): null | { agree, missing, extra } bitmasks
 export function overlayLabel(index, diff)              // accessible-name body for an overlay cell
 export function techniqueProfile(trace)                // [{ technique, count }] most-used first
 export function describeGeneration(puzzle, getTrace)   // { message } | { rows: [label, value][] }
@@ -141,7 +144,7 @@ export function describeGeneration(puzzle, getTrace)   // { message } | { rows: 
   `cells`, `baseCells`, `fins`, `urCells`, `alsA`, `alsB`, `groupA`, `groupB`, `cell`
   anywhere in the step's pattern fields (recursive walk), minus cells already in `place`
   or `elim`.
-- `candidateDiff`: `computed = initialCandidates(pen)`; for each empty cell, with
+- `candidateDiff`: `computed` defaults to `initialCandidates(pen)`; while a step is applied the panel passes `candidatesAtStep(_base, steps, n)` (held in `_appliedCandidates`); for each empty cell, with
   `marks = pencil[i]`: when `marks === 0` → `{ agree: computed, missing: 0, extra: 0 }`;
   else `{ agree: computed & marks, missing: computed & ~marks, extra: marks & ~computed }`.
 - `describeGeneration`: no puzzle / `source` link or string / no `gen` → `{ message }`;
@@ -164,7 +167,7 @@ side-by-side media query in `dev.css` keys on.
 | Tool | Wiring |
 |---|---|
 | Load | Click → status "Checking puzzle…" → `await loadPuzzle(text)` → status + `announce(message)` |
-| Inspector | Run → `runInspector(state.pen)` → render list + summary. Step click, or Up/Down/Home/End on a step (focus moves, event stopped so `keyboard.js` does not also act) → `_selectStep`: set `_selectedStep`, `grid.refresh()`, dispatch `SELECT_CELL` for the step's cell, announce. Escape → deselect. Double-click or Enter/Space → `_applyStep`: dispatch `DEV_SET_BOARD` with `boardAtStep(_base, steps, n)`. Restore → `DEV_SET_BOARD` with `_base`. The list carries `data-keep-selection`, a generic opt-out honoured by the grid's outside-click deselect. On `changed` with `pen` or `puzzle` → clear with the stale message, unless the action is the tool's own `DEV_SET_BOARD` |
+| Inspector | Run → `runInspector(state.pen)` → render list + summary. Step click, or Up/Down/Home/End on a step (focus moves, event stopped so `keyboard.js` does not also act) → `_selectStep`: set `_selectedStep`, `grid.refresh()`, dispatch `SELECT_CELL` for the step's cell, announce. Escape → deselect. Double-click or Enter/Space → `_applyStep`: on the first apply, end any coach session (`COACH_END`) and snapshot `state.pencil` into `_basePencil`; then dispatch `DEV_SET_BOARD` with `boardAtStep(_base, steps, n)` and `pencilAtStep(_basePencil, steps, n)`. Every step is derived from the snapshot, never from the current marks, which is what makes backward stepping restore them. Restore → `DEV_SET_BOARD` with `_base` and `_basePencil`, drop the snapshot, and focus the selected (else first) step before the button disables itself; the button carries `data-keep-selection`. Stale, Clear, and re-run also drop the snapshot. The list carries `data-keep-selection`, a generic opt-out honoured by the grid's outside-click deselect. On `changed` with `pen` or `puzzle` → clear with the stale message, unless the action is the tool's own `DEV_SET_BOARD` |
 | Overlay | Switch click → flip `_overlayOn`, `aria-checked`, announce, `grid.refresh()` |
 | Coach data | On `changed` with `coachSession` (and at mount) → `<pre>` text = `JSON.stringify(session.step, null, 2)` or the empty message |
 | Diagnostics | On `changed` with `puzzle` (and at mount) → `describeGeneration` → table or message |

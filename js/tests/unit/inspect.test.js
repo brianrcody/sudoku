@@ -1,9 +1,10 @@
 /**
- * @fileoverview Unit tests for js/dev/inspect.js (IN1–IN34).
+ * @fileoverview Unit tests for js/dev/inspect.js (IN1–IN35).
  */
 
 import {
-  cellRef, formatStep, stepCells, runInspector, summarize, boardAtStep,
+  cellRef, formatStep, stepCells, runInspector, summarize, boardAtStep, pencilAtStep,
+  candidatesAtStep,
   candidateDiff, overlayLabel, techniqueProfile, describeGeneration,
 } from '../../dev/inspect.js';
 import { generateForTier } from '../../generator/pipeline.js';
@@ -134,6 +135,52 @@ describe('dev/inspect.js', () => {
       expect(Array.from(base).join('')).to.equal(HARD);
     });
 
+    it('IN14d: steps carry the candidates they eliminate; placement steps carry none', () => {
+      const { steps } = runInspector(toGivens(HARD));
+      const elim = steps.find(s => s.placement === null);
+      expect(elim.eliminations.length).to.be.greaterThan(0);
+      expect(elim.eliminations.map(e => e.cellIndex)).to.include.members(elim.cells.elim);
+      expect(steps.find(s => s.placement !== null).eliminations).to.deep.equal([]);
+    });
+
+    it('IN14e: pencilAtStep clears a placed cell and removes its digit from peers only', () => {
+      const base = new Uint16Array(81).fill(0b111111111);
+      const steps = [{ placement: { cellIndex: 0, digit: 5 }, eliminations: [] }];
+      const pencil = pencilAtStep(base, steps, 0);
+      const five = 1 << 4;
+      expect(pencil[0]).to.equal(0);
+      for (const peer of [1, 8, 9, 72, 10, 20]) expect(pencil[peer] & five, `peer ${peer}`).to.equal(0);
+      expect(pencil[1]).to.equal(0b111101111);
+      expect(pencil[30]).to.equal(0b111111111);
+      expect(base[0]).to.equal(0b111111111);
+    });
+
+    it('IN14f: pencilAtStep removes eliminated candidates, stops at the step asked for, and never adds marks', () => {
+      const base = new Uint16Array(81);
+      base[3] = 0b000001111;
+      base[4] = 0b000000110;
+      const steps = [
+        { placement: null, eliminations: [{ cellIndex: 3, digit: 1 }, { cellIndex: 4, digit: 2 }, { cellIndex: 5, digit: 9 }] },
+        { placement: null, eliminations: [{ cellIndex: 3, digit: 4 }] },
+      ];
+      const first = pencilAtStep(base, steps, 0);
+      expect([first[3], first[4], first[5]]).to.deep.equal([0b000001110, 0b000000100, 0]);
+      expect(pencilAtStep(base, steps, 1)[3]).to.equal(0b000000110);
+    });
+
+    it('IN14g: candidatesAtStep replays placements and eliminations onto fresh candidates', () => {
+      const base = toGivens(HARD);
+      const { steps } = runInspector(base);
+      const e = steps.findIndex(s => s.placement === null);
+      const { cellIndex, digit } = steps[e].eliminations[0];
+      const bit = 1 << (digit - 1);
+      expect(candidatesAtStep(base, steps, e - 1)[cellIndex] & bit).to.equal(bit);
+      expect(candidatesAtStep(base, steps, e)[cellIndex] & bit).to.equal(0);
+      const { placement } = steps[0];
+      expect(candidatesAtStep(base, steps, 0)[placement.cellIndex]).to.equal(1 << (placement.digit - 1));
+      expect(Array.from(base).join('')).to.equal(HARD);
+    });
+
     it('IN15: runInspector never modifies the board it is given', () => {
       const board = toGivens(HARD);
       runInspector(board);
@@ -202,6 +249,17 @@ describe('dev/inspect.js', () => {
       pencil[EMPTY] = 0b1011 | 0b100000000;   // plus 9
       expect(candidateDiff(pen, pencil)[EMPTY])
         .to.deep.equal({ agree: 0b1011, missing: 0, extra: 0b100000000 });
+    });
+
+    it('IN25b: candidates passed in are used instead of the computed ones', () => {
+      const pen = toGivens(KIDDIE);
+      const empty = pen.indexOf(0);
+      const computed = new Uint16Array(81);
+      computed[empty] = 0b100;
+      const pencil = new Uint16Array(81);
+      expect(candidateDiff(pen, pencil, computed)[empty]).to.deep.equal({ agree: 0b100, missing: 0, extra: 0 });
+      pencil[empty] = 0b110;
+      expect(candidateDiff(pen, pencil, computed)[empty]).to.deep.equal({ agree: 0b100, missing: 0, extra: 0b010 });
     });
 
     it('IN25: candidateDiff does not modify the pencil marks', () => {

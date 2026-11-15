@@ -5,8 +5,8 @@
  */
 
 import { solveLogically, tierForRank } from '../solver/logical.js';
-import { initialCandidates } from '../solver/candidates.js';
-import { rowOf, colOf } from '../util/grid.js';
+import { initialCandidates, applyPlacement, applyElimination } from '../solver/candidates.js';
+import { rowOf, colOf, PEERS } from '../util/grid.js';
 import { iterate } from '../util/bitset.js';
 import { TIER_LABELS } from '../config.js';
 
@@ -95,6 +95,8 @@ export function stepCells(step) {
  * @property {{place: number[], elim: number[], pattern: number[]}} cells
  * @property {{cellIndex: number, digit: number}|null} placement - The digit
  *   this step places, or null for an elimination step.
+ * @property {Array<{cellIndex: number, digit: number}>} eliminations - The
+ *   candidates this step removes; empty for a placement step.
  */
 
 /**
@@ -116,6 +118,7 @@ export function runInspector(board) {
     text: formatStep(step),
     cells: stepCells(step),
     placement: step.digit !== null ? { cellIndex: step.cellIndex, digit: step.digit } : null,
+    eliminations: step.eliminations,
   }));
   const remaining = result.board.reduce((n, v) => n + (v === 0 ? 1 : 0), 0);
   return { steps, solved: result.solved, remaining, hardest: result.hardestRank, alreadyFull };
@@ -123,7 +126,8 @@ export function runInspector(board) {
 
 /**
  * The board as the solver leaves it after a given step: `base` plus every
- * digit placed by steps 0…`upTo`. Elimination steps place nothing.
+ * digit placed by steps 0…`upTo`. Elimination steps place nothing; their
+ * effect is on pencil marks (see `pencilAtStep`).
  *
  * @param {Uint8Array} base - The board the inspector was run on.
  * @param {InspectorStep[]} steps
@@ -136,6 +140,51 @@ export function boardAtStep(base, steps, upTo) {
     if (placement) board[placement.cellIndex] = placement.digit;
   }
   return board;
+}
+
+/**
+ * The player's pencil marks as the solver's progress leaves them after a
+ * given step: `base` minus everything steps 0…`upTo` rule out. A placement
+ * clears the filled cell and removes its digit from the cell's peers, as a
+ * real move does; an elimination removes its candidates. Marks are only ever
+ * removed, so a cell the player never marked stays empty.
+ *
+ * @param {Uint16Array} base - Pencil bitsets before any step was applied.
+ * @param {InspectorStep[]} steps
+ * @param {number} upTo - Index of the last step to include.
+ * @returns {Uint16Array} A new array; `base` is not modified.
+ */
+export function pencilAtStep(base, steps, upTo) {
+  const pencil = base.slice();
+  for (const { placement, eliminations } of steps.slice(0, upTo + 1)) {
+    if (placement) {
+      const mask = ~(1 << (placement.digit - 1));
+      pencil[placement.cellIndex] = 0;
+      for (const peer of PEERS[placement.cellIndex]) pencil[peer] &= mask;
+    }
+    for (const { cellIndex, digit } of eliminations) {
+      pencil[cellIndex] &= ~(1 << (digit - 1));
+    }
+  }
+  return pencil;
+}
+
+/**
+ * The solver's candidates after a given step: fresh candidates for `base`
+ * with the placements and eliminations of steps 0…`upTo` replayed.
+ *
+ * @param {Uint8Array} base - The board the inspector was run on.
+ * @param {InspectorStep[]} steps
+ * @param {number} upTo - Index of the last step to include.
+ * @returns {Uint16Array} Candidate bitsets per cell.
+ */
+export function candidatesAtStep(base, steps, upTo) {
+  const candidates = initialCandidates(base);
+  for (const { placement, eliminations } of steps.slice(0, upTo + 1)) {
+    if (placement) applyPlacement(candidates, placement.cellIndex, placement.digit);
+    for (const { cellIndex, digit } of eliminations) applyElimination(candidates, cellIndex, digit);
+  }
+  return candidates;
 }
 
 /**
@@ -154,18 +203,18 @@ export function summarize(result) {
 }
 
 /**
- * Compare computed candidates (row/column/box elimination from the board)
- * with the player's pencil marks.
+ * Compare computed candidates with the player's pencil marks.
  *
  * @param {Uint8Array} pen - Givens plus pen digits.
  * @param {Uint16Array} pencil - Player pencil bitsets.
+ * @param {Uint16Array} [computed] - Candidates to compare against. Defaults
+ *   to row/column/box elimination from `pen`.
  * @returns {Array<null|{agree: number, missing: number, extra: number}>}
  *   Per cell: null when filled, else three bitsets. `missing` = computed but
  *   not marked; `extra` = marked but not computed. A cell with no marks at all
  *   is not a divergence: every computed candidate is reported as `agree`.
  */
-export function candidateDiff(pen, pencil) {
-  const computed = initialCandidates(pen);
+export function candidateDiff(pen, pencil, computed = initialCandidates(pen)) {
   const diff = new Array(81).fill(null);
   for (let i = 0; i < 81; i++) {
     if (pen[i] !== 0) continue;

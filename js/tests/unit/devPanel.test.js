@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for js/dev/devPanel.js (DP1–DP63).
+ * @fileoverview Unit tests for js/dev/devPanel.js (DP1–DP69).
  *
  * The panel is mounted in the Mocha page against a fake game state and a real
  * ui/grid.js mount, so the grid-decorator tools are tested through the actual
@@ -556,6 +556,99 @@ describe('dev/devPanel.js', () => {
         expect($('dev-inspect-board').textContent).to.equal('');
         expect($('dev-inspect-restore').disabled).to.be.true;
         expect(steps().some(b => b.hasAttribute('data-applied'))).to.be.false;
+      });
+
+      const lastSet = () => gs.dispatch.calls.filter(a => a.type === 'DEV_SET_BOARD').at(-1);
+      /** HARD with every candidate pencilled into every cell. */
+      const hardFullyMarked = () => ({
+        puzzle: makeGenerated(HARD),
+        pencil: new Uint16Array(81).fill(0b111111111),
+      });
+      const firstElim = list => list.findIndex(b => b.textContent.includes('eliminate'));
+      /** [cell index, digit bit] of the first candidate an elimination step's button names. */
+      const elimTarget = (button) => {
+        const [, d, r, c] = button.textContent.match(/eliminate (\d) from r(\d)c(\d)/);
+        return [(r - 1) * 9 + (c - 1), 1 << (d - 1)];
+      };
+
+      it('DP64: setting the board to an elimination step removes its candidates from the player\'s marks', () => {
+        const list = run(hardFullyMarked());
+        const e = firstElim(list);
+        const [target, bit] = elimTarget(list[e]);
+        key(list[e - 1], 'Enter');
+        expect(lastSet().pencil[target] & bit).to.equal(bit);
+        key(list[e], 'Enter');
+        expect(lastSet().pencil[target] & bit).to.equal(0);
+      });
+
+      it('DP65: going back to an earlier step brings the later steps\' marks back', () => {
+        const list = run(hardFullyMarked());
+        const e = firstElim(list);
+        const [target, bit] = elimTarget(list[e]);
+        key(list[e], 'Enter');
+        // The fake state does not apply dispatches, so the marks on the board are
+        // still the originals; the panel must nevertheless work from its snapshot.
+        gs.getState().pencil = new Uint16Array(81);
+        key(list[e - 1], 'Enter');
+        expect(lastSet().pencil[target] & bit).to.equal(bit);
+      });
+
+      it('DP66: Restore board puts the player\'s marks back and takes a fresh snapshot next time', () => {
+        const state = hardFullyMarked();
+        const list = run(state);
+        key(list[firstElim(list)], 'Enter');
+        $('dev-inspect-restore').click();
+        expect(Array.from(lastSet().pencil)).to.deep.equal(Array.from(state.pencil));
+
+        gs.getState().pencil = new Uint16Array(81);
+        key(list[0], 'Enter');
+        expect(lastSet().pencil.some(m => m !== 0)).to.be.false;
+      });
+
+      it('DP67: an active coach session is ended before the marks are snapshotted, once', () => {
+        const list = run();
+        gs.getState().coachSession = {
+          step: {}, coachedCells: new Set(), coachRevealedBits: new Uint16Array(81), recap: 'normal',
+        };
+        gs.dispatch.calls.length = 0;
+        key(list[0], 'Enter');
+        key(list[1], 'Enter');
+        expect(boardActions().map(a => a.type)).to.deep.equal(
+          ['SELECT_CELL', 'COACH_END', 'DEV_SET_BOARD', 'SELECT_CELL', 'DEV_SET_BOARD']);
+      });
+
+      it('DP68: Restore board hands focus to the selected step, or the first, and keeps the board cursor', () => {
+        const list = run();
+        $('dev-inspector').open = true;   // nothing inside a closed <details> can take focus
+        key(list[4], 'Enter');
+        $('dev-inspect-restore').focus();
+        gs.dispatch.calls.length = 0;
+        $('dev-inspect-restore').click();
+        expect(document.activeElement).to.equal(list[4]);
+        expect(gs.dispatch.calls.map(a => a.type)).to.deep.equal(['DEV_SET_BOARD']);
+
+        key(list[4], 'Enter');
+        key(list[4], 'Escape');
+        $('dev-inspect-restore').click();
+        expect(document.activeElement).to.equal(list[0]);
+      });
+
+      it('DP69: while the board is set to a step the overlay shows the solver\'s candidates, and plain ones again after Restore', () => {
+        const list = run({ puzzle: makeGenerated(HARD) });
+        const e = firstElim(list);
+        const [target, bit] = elimTarget(list[e]);
+        const digit = Math.log2(bit);
+        const shown = () => cell(target).querySelectorAll('.pencil-mark')[digit].className;
+        $('dev-overlay-toggle').click();
+        expect(shown()).to.include('dev-cand-agree');
+
+        key(list[e], 'Enter');
+        emit('pencil');   // the fake state does not re-render on dispatch
+        expect(shown()).to.include('empty');
+
+        $('dev-inspect-restore').click();
+        emit('pencil');
+        expect(shown()).to.include('dev-cand-agree');
       });
 
       it('DP63: clicking a step does not deselect the board cell the tool just selected', () => {

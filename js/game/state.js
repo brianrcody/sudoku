@@ -693,8 +693,9 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
 
       case 'DEV_SET_BOARD': {
         // Developer tools only (fspec-005 §5.4): replace the non-given cells
-        // wholesale. Not a move — no undo snapshot, no statistics, and no
-        // completion check, so a board set to its solution is not a win.
+        // wholesale, and the pencil marks too when `action.pencil` is given.
+        // Not a move — no undo snapshot, no statistics, and no completion
+        // check, so a board set to its solution is not a win.
         if (!state.puzzle || state.won) break;
         for (let i = 0; i < 81; i++) {
           state.pen[i] = state.puzzle.givens[i] || action.pen[i];
@@ -708,6 +709,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
           _revertPencil(state.coachSession);
           state.coachSession = null;
         }
+        if (action.pencil) state.pencil.set(action.pencil);
         state.undoSnapshot = null;
         _emit(action, 'pen', 'pencil', 'conflicts', 'incorrect', 'incorrectShownUntil',
               'completionMessage', 'coachSession', 'undoSnapshot');

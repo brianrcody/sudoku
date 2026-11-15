@@ -1,6 +1,6 @@
 /**
  * @fileoverview Unit tests for the developer-only DEV_SET_BOARD action in
- * js/game/state.js (SD1–SD9).
+ * js/game/state.js (SD1–SD11).
  */
 
 import { createGameState } from '../../game/state.js';
@@ -113,6 +113,28 @@ describe('game/state.js — DEV_SET_BOARD', () => {
     gs.dispatch({ type: 'DEV_SET_BOARD', pen: board({ 1: 2 }) });
     expect(gs.getState().coachSession).to.be.null;
     expect(events[0].changed.has('coachSession')).to.be.true;
+  });
+
+  it('SD10: without a pencil payload the pencil marks are left alone', () => {
+    const { gs } = makeGs();
+    gs.dispatch({ type: 'SELECT_CELL', index: 5 });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+    gs.dispatch({ type: 'DEV_SET_BOARD', pen: board({ 1: 2 }) });
+    expect(gs.getState().pencil[5]).to.equal(0b100);
+  });
+
+  it('SD11: a pencil payload replaces the pencil marks, on a copy', () => {
+    const { gs, events } = makeGs();
+    gs.dispatch({ type: 'SELECT_CELL', index: 5 });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+    const pencil = new Uint16Array(81);
+    pencil[7] = 0b11;
+    events.length = 0;
+    gs.dispatch({ type: 'DEV_SET_BOARD', pen: board(), pencil });
+    expect(gs.getState().pencil[5]).to.equal(0);
+    expect(gs.getState().pencil[7]).to.equal(0b11);
+    expect(gs.getState().pencil).to.not.equal(pencil);
+    expect(events[0].changed.has('pencil')).to.be.true;
   });
 
   it('SD8: ignored when no puzzle is loaded', () => {

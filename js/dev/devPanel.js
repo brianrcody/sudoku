@@ -6,8 +6,8 @@
  * Builds all of its own DOM: the DEV badge, the panel, and its stylesheet
  * link. Load-from-string goes through the shared loader injected by main.js.
  * The step inspector is the only tool that dispatches: it moves the board
- * cursor to a selected step's cell, and sets the board to a chosen step with
- * DEV_SET_BOARD. Grid drawing (step highlights and the candidate overlay) goes
+ * cursor to a selected step's cell, and sets the board and pencil marks to a
+ * chosen step with DEV_SET_BOARD. Grid drawing (step highlights and the candidate overlay) goes
  * through the grid's cell-decorator hook.
  */
 
@@ -16,7 +16,9 @@ import { setCellDecorator, refresh as refreshGrid } from '../ui/grid.js';
 import { copyText } from '../util/clipboard.js';
 import { rate } from '../generator/rater.js';
 import {
-  runInspector, summarize, boardAtStep, candidateDiff, overlayLabel, describeGeneration,
+  runInspector, summarize, boardAtStep, pencilAtStep, candidatesAtStep, candidateDiff,
+  overlayLabel,
+  describeGeneration,
 } from './inspect.js';
 
 const STYLESHEET_URL = new URL('../../css/dev.css', import.meta.url);
@@ -43,6 +45,19 @@ let _selectedStep = null;
 let _base = null;
 /** @type {number|null} The step the board is currently set to, if any. */
 let _appliedStep = null;
+/**
+ * @type {Uint16Array|null} The player's pencil marks as they stood when the
+ * board was first set to a step; null while no step is applied. Every step's
+ * marks are derived from this, which is what lets stepping backwards bring
+ * marks back.
+ */
+let _basePencil = null;
+/**
+ * @type {Uint16Array|null} The solver's candidates at the applied step, which
+ * the overlay shows in place of plain row/column/box candidates; null while
+ * no step is applied.
+ */
+let _appliedCandidates = null;
 
 /**
  * Mount the developer tools.
@@ -60,6 +75,8 @@ export function mount({ gameState, loadPuzzle, copy = copyText }) {
   _selectedStep = null;
   _base = null;
   _appliedStep = null;
+  _basePencil = null;
+  _appliedCandidates = null;
 
   const link = document.createElement('link');
   link.rel = 'stylesheet';
@@ -103,7 +120,7 @@ export function mount({ gameState, loadPuzzle, copy = copyText }) {
         <div class="dev-buttons">
           <button type="button" class="btn" id="dev-inspect-run">Run solver</button>
           <button type="button" class="btn" id="dev-inspect-clear">Clear</button>
-          <button type="button" class="btn" id="dev-inspect-restore" disabled>Restore board</button>
+          <button type="button" class="btn" id="dev-inspect-restore" data-keep-selection disabled>Restore board</button>
         </div>
         <p class="dev-note">Click a step, or use the arrow keys, to show it on the board.
           Double-click it, or press Enter or Space, to set the board to that step.</p>
@@ -201,6 +218,8 @@ function _wireInspector() {
     _inspection = runInspector(_base);
     _selectedStep = null;
     _appliedStep = null;
+    _basePencil = null;
+    _appliedCandidates = null;
     _renderSteps();
     _setBoardStatus('');
     const summary = summarize(_inspection);
@@ -213,8 +232,12 @@ function _wireInspector() {
 
   _el('dev-inspect-restore').addEventListener('click', () => {
     _appliedStep = null;
-    _gameState.dispatch({ type: 'DEV_SET_BOARD', pen: _base.slice() });
+    _appliedCandidates = null;
+    _gameState.dispatch({ type: 'DEV_SET_BOARD', pen: _base.slice(), pencil: _basePencil });
+    _basePencil = null;
     _markSteps();
+    // Restore is about to disable itself; hand focus back to the list first.
+    (list.querySelector('button[aria-pressed="true"]') ?? list.querySelector('button')).focus();
     _setBoardStatus('Board restored to where the solver started.');
   });
 
@@ -285,14 +308,22 @@ function _selectStep(index) {
 
 /**
  * Set the board to the solver's position after step `index`: the board the
- * solver started from plus every digit placed up to and including that step.
+ * solver started from plus every digit placed up to and including that step,
+ * with the player's pencil marks trimmed by everything those steps rule out.
  * Works in both directions, so an earlier step undoes later ones.
  */
 function _applyStep(index) {
+  if (_basePencil === null) {
+    // Coach-revealed marks are not the player's; drop them before the snapshot.
+    if (_gameState.getState().coachSession !== null) _gameState.dispatch({ type: 'COACH_END' });
+    _basePencil = _gameState.getState().pencil.slice();
+  }
   _appliedStep = index;
+  _appliedCandidates = candidatesAtStep(_base, _inspection.steps, index);
   _gameState.dispatch({
     type: 'DEV_SET_BOARD',
     pen: boardAtStep(_base, _inspection.steps, index),
+    pencil: pencilAtStep(_basePencil, _inspection.steps, index),
   });
   _markSteps();
   _setBoardStatus(`Board set to step ${index + 1} of ${_inspection.steps.length}.`);
@@ -335,6 +366,8 @@ function _clearInspection(message) {
   _selectedStep = null;
   _base = null;
   _appliedStep = null;
+  _basePencil = null;
+  _appliedCandidates = null;
   _el('dev-inspect-list').innerHTML = '';
   _el('dev-inspect-summary').textContent = message;
   _setBoardStatus('');
@@ -373,7 +406,9 @@ let _diff = null;
  * @param {object} state - GameState
  */
 function _decorate(el, i, state) {
-  if (_overlayOn && i === 0) _diff = candidateDiff(state.pen, state.pencil);
+  if (_overlayOn && i === 0) {
+    _diff = candidateDiff(state.pen, state.pencil, _appliedCandidates ?? undefined);
+  }
 
   if (_overlayOn && state.pen[i] === 0) {
     _renderOverlayCell(el, i, _diff[i], state.selected === i);

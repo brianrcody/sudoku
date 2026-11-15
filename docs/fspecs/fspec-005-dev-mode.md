@@ -115,9 +115,9 @@ line, and an ordered list of steps.
    - "The board is already full."
 5. The summary is announced.
 
-Running the solver changes nothing in the game. The inspector never changes pencil marks,
-hints, or statistics; it moves the board cursor when a step is selected (§5.2) and changes
-the board only when the developer sets it to a step (§5.4).
+Running the solver changes nothing in the game. The inspector never changes hints or
+statistics; it moves the board cursor when a step is selected (§5.2) and changes the board
+and pencil marks only when the developer sets the board to a step (§5.4).
 
 ### 5.2 Selecting a step
 
@@ -151,17 +151,29 @@ leaves the board as it is.
   the solver's position after that step: the board the solver was run on, plus every
   digit placed by steps 1 to *n*. Elimination steps place nothing. The step is also
   selected.
+- The player's pencil marks follow the solver. The marks as they stood when the board was
+  first set to a step are the baseline; at step *n* the board shows that baseline minus
+  everything steps 1 to *n* rule out: an elimination step removes its candidates, and a
+  placement clears the filled cell and removes its digit from the cell's row, column, and
+  box, as a real move does. Marks are only ever removed — a cell the player never marked
+  stays empty. Coach-revealed marks are not part of the baseline.
 - This works in both directions: choosing an earlier step removes the digits of the later
-  ones.
+  ones and brings back the marks they removed.
+- Pencil marks changed by hand while the board is set to a step are not kept: the next
+  step, or Restore board, is derived from the baseline again.
 - The board status reads "Board set to step *n* of *N*." and is announced. Steps 1 to *n*
   are marked in the list, and step *n* is marked as the board's current position.
-- **Restore board** puts back the board the solver was run on and reads "Board restored
-  to where the solver started." It is disabled until the board has been set to a step.
+- **Restore board** puts back the board the solver was run on and the baseline pencil
+  marks, and reads "Board restored to where the solver started." It is disabled until the
+  board has been set to a step. Activating it moves focus to the selected step, or the
+  first step if none is selected, and leaves the board cursor where it is.
 - Setting the board is not a move: it cannot be undone with Undo, clears any existing
-  undo step, never counts as a win (even at the last step of a full solve), ends an active
-  coach session, and leaves pencil marks alone.
+  undo step, never counts as a win (even at the last step of a full solve), and ends an
+  active coach session.
 - The list stays usable afterwards. A change made by the player makes it stale as in §5.3;
-  the board then stays as the player left it.
+  the board and pencil marks then stay as they are.
+- (Pencil marks originally were left alone; they were made to follow the solver at the
+  Product Director's request on 2026-11-14.)
 
 ---
 
@@ -169,9 +181,9 @@ leaves the board as it is.
 
 A switch labelled "Show computed candidates", off initially, plus a legend.
 
-**On:** every empty cell of the current board shows the candidates computed by basic
-row/column/box elimination from the current board, in the 3×3 pencil layout, instead of
-the player's pencil marks. Each digit position is one of:
+**On:** every empty cell of the current board shows the computed candidates — basic
+row/column/box elimination from the current board, except while the board is set to a
+solver step (see below) — in the 3×3 pencil layout, instead of the player's pencil marks. Each digit position is one of:
 
 | State | Meaning | Presentation |
 |---|---|---|
@@ -185,6 +197,10 @@ the player's pencil marks. Each digit position is one of:
 - The overlay follows the board live: every pen or pencil change updates it.
 - Filled cells are unaffected.
 - Coach-revealed marks count as player marks while they are present.
+- While the board is set to a solver step (§5.4), the computed candidates are the solver's
+  candidates after that step — basic elimination minus everything the steps so far have
+  ruled out — so an elimination step is visible in the overlay. After Restore board, or
+  once the inspector's results are cleared or stale, they are the basic ones again.
 
 **Off:** the normal pencil-mark display returns. The player's marks are never modified by
 the overlay in either direction, and the overlay is never persisted.
@@ -266,4 +282,7 @@ All dev controls show the standard focus ring.
 
 Per rspec-005 §3: force technique; server-side logging or remote diagnostics; editing the
 board from the inspector. (Stepping the board from the inspector was out of scope in
-rspec-005 and was added at the Product Director's request on 2026-11-14; see §5.4.)
+rspec-005 and was added at the Product Director's request on 2026-11-14; see §5.4. The
+same request extended it to pencil marks and the candidate overlay, which rspec-005
+describes as untouched by the inspector and as basic elimination only; §5.4 and §6 here
+supersede it on both points.)
