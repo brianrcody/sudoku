@@ -153,18 +153,26 @@ describe('game/state.js — Unrated puzzles', () => {
     expect(gs.getState().undoSnapshot).to.not.be.null;
   });
 
-  it('SU14: CHANGE_DIFFICULTY still relabels a rated puzzle', () => {
+  it('SU14: CHANGE_DIFFICULTY does not relabel a rated puzzle or change its hints either', () => {
     const { gs } = makeGs({ difficulty: 'easy' });
+    const before = gs.getState().puzzle;
+    const hints = gs.getState().hintsRemaining;
     gs.dispatch({ type: 'CHANGE_DIFFICULTY', difficulty: 'kiddie' });
-    expect(gs.getState().puzzle.difficulty).to.equal('kiddie');
-    expect(gs.getState().hintsRemaining).to.equal(Infinity);
+    expect(gs.getState().puzzle).to.equal(before);
+    expect(gs.getState().puzzle.difficulty).to.equal('easy');
+    expect(gs.getState().hintsRemaining).to.equal(hints);
   });
 
-  it('SU15: CHANGE_DIFFICULTY with no puzzle loaded still sets the hint limit', () => {
+  it('SU15: CHANGE_DIFFICULTY with no puzzle loaded publishes the action and changes nothing', () => {
     const gs = createGameState({ stats: new FakeStats(), hintProvider: { nextHint: () => null } });
+    const hints = gs.getState().hintsRemaining;
+    const events = [];
+    gs.on('changed', e => events.push(e));
     gs.dispatch({ type: 'CHANGE_DIFFICULTY', difficulty: 'easy' });
     expect(gs.getState().puzzle).to.be.null;
-    expect(gs.getState().hintsRemaining).to.equal(3);
+    expect(gs.getState().hintsRemaining).to.equal(hints);
+    expect(events).to.have.length(1);
+    expect(events[0].changed.size).to.equal(0);
   });
 });
 

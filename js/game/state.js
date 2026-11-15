@@ -667,22 +667,14 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
       }
 
       case 'CHANGE_DIFFICULTY': {
-        const { difficulty } = action;
-        if (state.puzzle?.difficulty === UNRATED) {
-          // Relabelling would turn an Unrated puzzle into a rated one. Leave it
-          // alone and just publish the action; main.js starts a new puzzle.
-          _emit(action);
-          break;
-        }
+        // The player chose a tier (fspec-001 §9.3). The current puzzle keeps
+        // its own difficulty — a tier is a property of the puzzle, never a
+        // label to reassign. main.js reacts to the published action by
+        // generating a puzzle at the chosen tier, which replaces this one.
         if (state.coachSession !== null) {
           dispatch({ type: 'COACH_END', reason: 'puzzle-replaced' });
         }
-        if (state.puzzle) {
-          state.puzzle = { ...state.puzzle, difficulty };
-        }
-        state.hintsRemaining = HINT_LIMITS[difficulty];
-        state.undoSnapshot = null;
-        _emit(action, 'puzzle', 'hintsRemaining', 'undoSnapshot');
+        _emit(action);
         break;
       }
 

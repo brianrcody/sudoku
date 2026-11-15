@@ -102,7 +102,7 @@ Every site that assumed `difficulty ∈ DIFFICULTY_ORDER`, and its resolution:
 |---|---|
 | `state.js` stats calls (`cache[difficulty]` would throw) | §6 gate |
 | `state.js` `COACH_START` | Break when Unrated |
-| `state.js` `CHANGE_DIFFICULTY` (relabels the puzzle) | When Unrated: no relabel, bare emit; `main.js` starts a new puzzle (§8.4) |
+| `state.js` `CHANGE_DIFFICULTY` (relabels the puzzle) | When Unrated: no relabel, bare emit; `main.js` starts a new puzzle (§8.4). *Since 2026-11-14 this is the behaviour for every puzzle, rated or not — see aspec-game-state `CHANGE_DIFFICULTY`* |
 | `main.js` New Puzzle / `primeNext` / restore (`generateForTier('unrated')` would misbehave) | `_generationTier()` (§8.3) |
 | `controls.js` select value | Dynamic option (§10.2) |
 | `numpad.js` hint label | §10.3 |
@@ -315,9 +315,10 @@ difficulty from the blob verbatim (`unrated` included) and reads `HINT_LIMITS` f
 
 ### 8.4 Persistence listener
 
-On `CHANGE_DIFFICULTY`: persist and update `preferredTier`; if a foreground request is
-in flight, cancel it (existing); otherwise, if the current puzzle is Unrated, call
-`_startNewPuzzle(action.difficulty)`.
+On `CHANGE_DIFFICULTY`: persist and update `preferredTier`, then call
+`_startNewPuzzle(action.difficulty, 'difficulty-select')` — for every puzzle, superseding
+any foreground request in flight (revised 2026-11-14; originally this cancelled a pending
+request and started a puzzle only when the current one was Unrated).
 
 ### 8.5 Loader and link (after step 8 mounts)
 

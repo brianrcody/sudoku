@@ -1,8 +1,9 @@
 /**
  * @fileoverview Controls UI — Difficulty selector.
  *
- * Owns the `#controls-root` subtree. Manages the difficulty selector, including
- * the abandonment-confirmation dialog when changing difficulty mid-game.
+ * Owns the `#controls-root` subtree. Manages the difficulty selector. Choosing
+ * a tier dispatches CHANGE_DIFFICULTY, which starts a new puzzle at that tier
+ * (main.js); with progress on the board the player is asked first.
  */
 
 import { open as openDialog } from './dialog.js';
@@ -50,14 +51,16 @@ function _onDifficultyChange(diffSelect) {
   const state = _gameState.getState();
   const prevDiff = state.puzzle?.difficulty ?? 'medium';
 
-  if (_isInProgress(state)) {
+  // Choosing a tier starts a new puzzle there. While one is already being
+  // generated the current board has been given up, so there is nothing to ask.
+  if (!state.generating && _isInProgress(state)) {
     // Revert the select immediately; only commit on confirm.
     diffSelect.value = prevDiff;
 
     openDialog({
-      title: 'Change difficulty?',
+      title: `Start a new ${TIER_LABELS[newDiff]} puzzle?`,
       body: 'Your current progress will be lost.',
-      confirmLabel: 'Change Difficulty',
+      confirmLabel: 'New Puzzle',
       onConfirm: () => {
         _gameState.dispatch({ type: 'CHANGE_DIFFICULTY', difficulty: newDiff });
         diffSelect.value = newDiff;

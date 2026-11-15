@@ -301,12 +301,19 @@ Behavioral obligations (from fspec §9.2):
 
 ### `CHANGE_DIFFICULTY` — `{ difficulty: Tier }`
 
-Behavioral obligations (from fspec §3.2):
-- The reducer receives this action only after any necessary confirmation dialog has been resolved by `main.js`.
-- Updates `state.puzzle.difficulty` (if a puzzle is loaded) to the new tier.
-- Sets `hintsRemaining` to `HINT_LIMITS[difficulty]`.
-- Does **not** null out the puzzle, clear `pen`, `pencil`, or any other flags. Difficulty is applied in-place to the current puzzle state.
-- Emits changed keys: `puzzle`, `hintsRemaining`.
+Behavioral obligations (from fspec-001 §3.2, revised 2026-11-14):
+- Dispatched by `ui/controls.js` after any confirmation dialog has been resolved.
+- A signal only. The reducer ends an active coach session (`COACH_END`,
+  `puzzle-replaced`) and emits the action with **no changed keys**. It does not touch
+  `puzzle.difficulty`, `hintsRemaining`, `undoSnapshot`, or the board: a tier is a
+  property of the puzzle and is never reassigned.
+- `main.js` reacts to the emitted action: persists the preference, sets `preferredTier`,
+  and calls `_startNewPuzzle(difficulty, 'difficulty-select')`, which supersedes any
+  pending foreground request. The current puzzle stays playable until `NEW_PUZZLE`
+  arrives; cancelling leaves it in place. This handling runs before the listener's
+  won-board early exit so a finished game can change tier.
+- `_generationTier` returns `state.generatingDifficulty` while a request is pending, so
+  New Puzzle pressed mid-generation asks for the tier being generated, not the board's.
 
 ### `SET_GENERATING` — `{ flag: bool, message?: string }`
 Sets `generating` and optionally `generatingMessage`. Used while waiting for the Worker to deliver a puzzle.

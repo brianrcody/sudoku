@@ -32,7 +32,7 @@ import { createPuzzleLoader } from './game/puzzleLoader.js';
 import { createLoadProvider } from './providers/loadProvider.js';
 import { getItem, setItem, removeItem } from './persist/storage.js';
 import { initDevMode, isDevMode } from './dev/devMode.js';
-import { HINT_LIMITS, TIER_LABELS, UNRATED, SHARE_PARAM, isRatedTier } from './config.js';
+import { HINT_LIMITS, TIER_LABELS, SHARE_PARAM, isRatedTier } from './config.js';
 
 // ── Step 1.5: developer-mode flag (?dev=1 / ?dev=0, persisted) ─────────────
 const devMode = initDevMode(location.search);
@@ -80,13 +80,15 @@ const savedDiffPref = getItem(DIFF_KEY);
 let preferredTier = isRatedTier(savedDiffPref) ? savedDiffPref : 'easy';
 
 /**
- * The tier New Puzzle and pre-generation use: the current puzzle's tier when
- * it has one, otherwise the player's last choice.
+ * The tier New Puzzle and pre-generation use: the tier being generated if a
+ * generation is pending, else the current puzzle's tier when it has one, else
+ * the player's last choice.
  *
  * @param {object} state - GameState
  * @returns {string}
  */
 function _generationTier(state) {
+  if (state.generatingDifficulty) return state.generatingDifficulty;
   const difficulty = state.puzzle?.difficulty;
   return isRatedTier(difficulty) ? difficulty : preferredTier;
 }
@@ -229,12 +231,17 @@ document.getElementById('btn-reset')?.addEventListener('click', () => {
   });
 });
 
-function _startNewPuzzle(difficulty) {
+/**
+ * @param {string} difficulty
+ * @param {string} [focusId] - Control that takes focus once the puzzle loads:
+ *   the one the player started it from.
+ */
+function _startNewPuzzle(difficulty, focusId = 'btn-new') {
   _requestForeground(difficulty, puzzle => {
     gameState.dispatch({ type: 'NEW_PUZZLE', difficulty: puzzle.difficulty, puzzle });
     removeItem(STATE_KEY);
     announce('New puzzle started.');
-    document.getElementById('btn-new')?.focus();
+    document.getElementById(focusId)?.focus();
   });
 }
 
@@ -321,6 +328,17 @@ const PERSIST_KEYS = new Set(['puzzle', 'pen', 'pencil', 'hintsRemaining', 'atte
 let _persistTimer = null;
 
 gameState.on('changed', ({ action, changed }) => {
+  // Choosing a tier starts a new puzzle there (fspec-001 §9.3), superseding
+  // any generation already pending. The preference is persisted only on this
+  // explicit choice, so a stale async load can never overwrite it. Handled
+  // before the won-board exit below: a finished game can change tier too.
+  if (action.type === 'CHANGE_DIFFICULTY') {
+    setItem(DIFF_KEY, action.difficulty);
+    preferredTier = action.difficulty;
+    _startNewPuzzle(action.difficulty, 'difficulty-select');
+    return;
+  }
+
   // Clear persisted state on explicit new puzzle or completed game.
   if (action.type === 'NEW_PUZZLE') {
     if (_persistTimer !== null) clearTimeout(_persistTimer);
@@ -335,22 +353,6 @@ gameState.on('changed', ({ action, changed }) => {
     _persistTimer = null;
     removeItem(STATE_KEY);
     return;
-  }
-
-  // Persist difficulty only on explicit user change. Async PUZZLE_LOADED for a
-  // stale request must not overwrite the user's most recent CHANGE_DIFFICULTY.
-  if (action.type === 'CHANGE_DIFFICULTY') {
-    setItem(DIFF_KEY, action.difficulty);
-    preferredTier = action.difficulty;
-    if (_genAbort !== null) {
-      // A difficulty change while a foreground generation is pending acts as
-      // Cancel (fspec-003 §10.1); the user starts the next puzzle explicitly.
-      _cancelForeground();
-    } else if (s.puzzle?.difficulty === UNRATED) {
-      // An Unrated puzzle can't be relabelled to a tier (the reducer leaves it
-      // alone), so choosing a tier starts a new puzzle there (fspec-006 §6).
-      _startNewPuzzle(action.difficulty);
-    }
   }
 
   // Debounced state write for in-progress saves.

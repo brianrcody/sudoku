@@ -200,7 +200,7 @@ An Unrated puzzle is fully playable but receives no solver assistance.
 | Statistics panel | No row is marked active |
 | Share | Available |
 | New Puzzle | Generates at the generation tier (§1) |
-| Changing difficulty | After the standard abandonment confirmation when there is progress, generates a new puzzle at the chosen tier. If generation is cancelled, the Unrated puzzle remains and the selector returns to "Unrated" |
+| Changing difficulty | As for any puzzle (fspec-001 §3.2): after the confirmation when there is progress, generates a new puzzle at the chosen tier. If generation is cancelled, the Unrated puzzle remains and the selector returns to "Unrated" |
 
 Rated loaded puzzles behave exactly like generated puzzles of that tier in every respect,
 including difficulty changes.

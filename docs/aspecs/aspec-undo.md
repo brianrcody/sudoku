@@ -150,7 +150,7 @@ function _captureUndoSnapshot() {
 | `PUZZLE_LOADED` | New puzzle identity; prior board is gone. Add `state.undoSnapshot = null;` to the existing reset block. |
 | `NEW_PUZZLE` | Same. Add to reset block. |
 | `RESET_PUZZLE` | Board wiped to givens; undoing into a pre-reset board would be unexpected. Add to reset block. |
-| `CHANGE_DIFFICULTY` | Puzzle is being replaced; a cross-puzzle undo is invalid. Add `state.undoSnapshot = null;` and add `'undoSnapshot'` to its emit. |
+| `CHANGE_DIFFICULTY` | *Revised 2026-11-14:* no longer touches `undoSnapshot`. The action only requests a new puzzle; the board stays playable until `NEW_PUZZLE` (which clears the snapshot) arrives. |
 | `RESTORE_SESSION` | Restore completes a prior-session board. The PEN_ENTER loop that precedes it (dispatched with `fromHint: true`) sets `undoSnapshot` as a side-effect. `RESTORE_SESSION` must clear it and emit `'undoSnapshot'` to ensure the session starts with no undoable history. Without this, users could Undo a move that belongs to a previous session. |
 
 **Actions that explicitly do NOT touch the snapshot:** `HINT` (not an undoable move — see §4.7), `CHECK`, `SELECT_CELL`, `DESELECT`, `ARROW_NAV`, `SET_MODE`, `TOGGLE_MODE`, `CLEAR_INCORRECT`, `ON_COMPLETION_EVALUATE`, `SET_GENERATING`, and all `COACH_*` actions. Rationale: none of these is a "move" per requirement 2, and preserving the snapshot across them (e.g., the user selects a different cell, then undoes) is the desired behavior.

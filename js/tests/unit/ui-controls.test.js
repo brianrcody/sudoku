@@ -97,6 +97,24 @@ describe('ui/controls.js', () => {
 
     const backdrop = dialogRoot.querySelector('#modal-backdrop');
     expect(backdrop.classList.contains('open')).to.be.true;
+    expect(dialogRoot.querySelector('#modal-title').textContent).to.equal('Start a new Hard puzzle?');
+    expect(dialogRoot.querySelector('#modal-confirm').textContent).to.equal('New Puzzle');
+  });
+
+  it('UC8b: while a puzzle is already being generated, a further change is not confirmed again', () => {
+    const pen = new Uint8Array(81);
+    pen[1] = 3;
+    const puzzle = makePuzzle({ difficulty: 'medium' });
+    puzzle.givens = new Uint8Array(81);
+
+    const fakeGs = mountControls({ puzzle, pen, generating: true });
+    const select = root.querySelector('#difficulty-select');
+    select.value = 'hard';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(dialogRoot.querySelector('#modal-backdrop').classList.contains('open')).to.be.false;
+    expect(fakeGs.dispatch.calls).to.deep.equal([{ type: 'CHANGE_DIFFICULTY', difficulty: 'hard' }]);
+    expect(select.value).to.equal('hard');
   });
 
   // UC9: Difficulty dialog cancel reverts selector

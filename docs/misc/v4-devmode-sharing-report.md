@@ -155,6 +155,11 @@ actions).
 
 ## 6. Suggested Commit Breakdown
 
+> **Outcome (2026-11-14):** the Product Director reviewed the work and chose a single
+> commit over this breakdown. It shipped to `origin/main` as `6c4803e`. A follow-up,
+> `415ff16`, added inspector stepping and the side-by-side developer panel. The breakdown
+> and the checklist below are kept as a record; nothing here is pending.
+
 In dependency order; each leaves the suite green. Paths are relative to the repo root.
 
 | # | Commit | Files |

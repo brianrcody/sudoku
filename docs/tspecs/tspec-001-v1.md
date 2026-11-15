@@ -394,7 +394,7 @@ XYC1 length-4 chain; XYC2 length-6 chain; XYC3 non-fire; AIC1 short AIC; AIC2 lo
 | S44 | RESET_PUZZLE restores hints to HINT_LIMITS | U | Hint-restore | — | hints=limit |
 | S45 | RESET_PUZZLE restores givens, clears pen/pencil | U | Reset | — | pen=givens copy, pencil=0 |
 | S46 | RESET_PUZZLE clears incorrect/conflicts | U | Flag-clear | — | sets empty |
-| S47 | CHANGE_DIFFICULTY updates puzzle.difficulty | U | Change | — | field updated |
+| S47 | CHANGE_DIFFICULTY publishes the action without relabelling (revised 2026-11-14) | U | Change | — | tier unchanged; no changed keys |
 | S48 | SET_GENERATING sets flag+message | U | Flag branch | — | generating=true, message set |
 | S49 | SET_GENERATING false clears | U | Clear branch | flag=false | generating=false |
 | S50 | 'changed' event emits Set of changed keys | U | Event | any action | payload.changed is Set |
@@ -529,7 +529,8 @@ XYC1 length-4 chain; XYC2 length-6 chain; XYC3 non-fire; AIC1 short AIC; AIC2 lo
 | UC5 | Reset always opens dialog | U | Dialog | any state | dialog opened |
 | UC6 | Reset dialog confirm → RESET_PUZZLE | U | Confirm | confirm | dispatched |
 | UC7 | Difficulty change with no progress applies directly | U | No-progress branch | pristine | CHANGE_DIFFICULTY dispatched |
-| UC8 | Difficulty change with progress opens dialog | U | Progress branch | in progress | dialog opened |
+| UC8 | Difficulty change with progress opens dialog | U | Progress branch | in progress | dialog opened, titled "Start a new *Tier* puzzle?" |
+| UC8b | Difficulty change while generating skips the dialog | U | Generating branch | in progress + generating | CHANGE_DIFFICULTY dispatched, no dialog |
 | UC9 | Difficulty dialog cancel reverts selector | U | Revert | cancel | selector value restored |
 | UC10 | Theme select triggers applyTheme | U | Theme | change | applyTheme called |
 

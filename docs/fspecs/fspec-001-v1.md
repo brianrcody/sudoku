@@ -82,16 +82,30 @@ Five difficulty levels are available, in ascending order of difficulty:
 
 ### 3.2 Selecting a Difficulty
 
-The difficulty selector reflects the currently active level at all times.
+*Revised 2026-11-14. Previously a difficulty change kept the current board and changed
+only its level, which let a puzzle be played and counted under a level it was not rated
+at.*
 
-**While no puzzle is in progress:** Changing the difficulty level takes effect immediately
-with no confirmation. A new puzzle is not automatically generated; the player must tap
-New Puzzle to start one.
+A puzzle's difficulty level is a property of the puzzle and never changes. The selector
+shows the level of the puzzle on the board; choosing a different level asks for a new
+puzzle at that level.
 
-**While a puzzle is in progress:** Selecting a different difficulty level triggers an
-abandonment warning (§9.1). If the player confirms, the difficulty changes and the
-in-progress puzzle is abandoned. If the player cancels, the difficulty selector reverts
-to the previous level and the puzzle is unchanged.
+**While no puzzle is in progress, or the current puzzle is complete:** Selecting a level
+immediately generates and displays a new puzzle at that level, exactly as New Puzzle
+(§9.1) would. No confirmation.
+
+**While a puzzle is in progress:** Selecting a level shows the confirmation of §9.3. If
+the player confirms, a new puzzle is generated at that level and the in-progress puzzle
+is abandoned. If the player cancels, the puzzle is unchanged and the selector returns to
+its level.
+
+**While a new puzzle is being generated:** the selector shows the level being generated.
+Selecting another level replaces the pending request with one at the new level, with no
+further confirmation. If the generation is cancelled, or the player declines an offered
+substitute puzzle (fspec-003 §5.3–5.4), the puzzle on the board stays and the selector
+returns to its level.
+
+The level selected is remembered as the player's preference at the moment it is chosen.
 
 ---
 
@@ -470,17 +484,18 @@ confirm). Focus moves to the dialog on open and returns to the grid on dismiss.
 
 ### 9.3 Difficulty Selector
 
-See §3.2 for behavior. The selector always reflects the current active difficulty.
+See §3.2 for behavior.
 
-When changing difficulty triggers abandonment (§3.2), the confirmation dialog is:
+When selecting a level would abandon a puzzle in progress (§3.2), the confirmation dialog
+names the level chosen:
 
-> "Change difficulty? Your current progress will be lost."
-> [Cancel] [Change Difficulty]
+> "Start a new *Level* puzzle? Your current progress will be lost."
+> [Cancel] [New Puzzle]
 
-- **Cancel:** Dismisses dialog. Difficulty reverts to prior level. Puzzle unchanged.
-- **Change Difficulty:** Changes active difficulty level. Puzzle state is cleared. No
-  new puzzle is generated automatically; the player sees an empty grid / start state for
-  the new difficulty until they tap New Puzzle.
+- **Cancel:** Dismisses the dialog. The puzzle and its progress are unchanged and the
+  selector returns to the puzzle's level.
+- **New Puzzle:** Generates and displays a new puzzle at the chosen level, as §9.1.
+  Keyboard focus returns to the selector once it has loaded.
 
 ### 9.4 Check Button
 
@@ -647,7 +662,7 @@ additional data and could confuse the player (flags appearing without any action
 Saved puzzle state is cleared in the following cases:
 
 - Player taps New Puzzle and confirms (or no confirmation needed)
-- Player changes difficulty and confirms
+- Player selects a difficulty level and the new puzzle loads (§3.2)
 - Puzzle completion (win state)
 
 After invalidation, page load shows no saved puzzle (the player sees a blank start

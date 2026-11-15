@@ -468,7 +468,7 @@ Same treatment as `NEW_PUZZLE`. Add `state.coachSession = null` to the existing 
 
 ### 4.8 `CHANGE_DIFFICULTY`
 
-Per `fspec-002-coach.md` §11.2, difficulty change ends any active coach session immediately. The existing `CHANGE_DIFFICULTY` handler does not clear puzzle state; the coach session must be cleared explicitly:
+Per `fspec-002-coach.md` §11.2, difficulty change ends any active coach session immediately. The `CHANGE_DIFFICULTY` handler does not clear puzzle state (since 2026-11-14 it changes nothing at all and a new puzzle follows from `main.js`); the coach session must be cleared explicitly:
 
 ```js
 if (state.coachSession !== null) {

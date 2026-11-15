@@ -705,11 +705,16 @@ describe('game/state.js', () => {
     expect(s.conflicts.size).to.equal(0);
   });
 
-  // S47: CHANGE_DIFFICULTY updates puzzle.difficulty
-  it('S47: CHANGE_DIFFICULTY updates puzzle difficulty', () => {
+  // S47: CHANGE_DIFFICULTY is a signal; the puzzle keeps its own tier
+  it('S47: CHANGE_DIFFICULTY publishes the action without relabelling the puzzle', () => {
     loadPuzzle(gs, makeEasyPuzzle());
+    let seen = null;
+    const unsub = gs.on('changed', e => { seen = e; });
     gs.dispatch({ type: 'CHANGE_DIFFICULTY', difficulty: 'hard' });
-    expect(gs.getState().puzzle.difficulty).to.equal('hard');
+    unsub();
+    expect(gs.getState().puzzle.difficulty).to.equal('easy');
+    expect(seen.action).to.deep.equal({ type: 'CHANGE_DIFFICULTY', difficulty: 'hard' });
+    expect(seen.changed.size).to.equal(0);
   });
 
   // S48: SET_GENERATING sets flag+message
@@ -1348,20 +1353,16 @@ describe('game/state.js', () => {
       expect(gs.getState().undoSnapshot).to.be.null;
     });
 
-    it('S74: CHANGE_DIFFICULTY clears undoSnapshot and includes undoSnapshot in emit', () => {
+    it('S74: CHANGE_DIFFICULTY leaves the current puzzle\'s undo step alone', () => {
       loadPuzzle(gs, makeEasyPuzzle());
       select(gs, 1);
       gs.dispatch({ type: 'PEN_ENTER', digit: 3 });
-      expect(gs.getState().undoSnapshot).to.not.be.null;
-
-      let lastChanged = null;
-      const unsub = gs.on('changed', ({ changed }) => { lastChanged = changed; });
       gs.dispatch({ type: 'CHANGE_DIFFICULTY', difficulty: 'hard' });
-      unsub();
-      expect(gs.getState().undoSnapshot).to.be.null;
-      expect(lastChanged.has('undoSnapshot')).to.be.true;
-      gs.dispatch({ type: 'UNDO' }); // must be no-op
-      expect(gs.getState().undoSnapshot).to.be.null;
+      // The board stays playable until the new puzzle arrives (or its
+      // generation is cancelled), so its undo step must survive.
+      expect(gs.getState().undoSnapshot).to.not.be.null;
+      gs.dispatch({ type: 'UNDO' });
+      expect(gs.getState().pen[1]).to.equal(0);
     });
 
     // S75: UNDO clears incorrect + cancels clearIncorrectTimer

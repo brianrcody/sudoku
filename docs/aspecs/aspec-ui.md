@@ -126,7 +126,7 @@ Each `js/ui/*` module owns exactly one DOM subtree. Mount returns nothing; rende
 
 Owns the difficulty selector only. New Puzzle and Reset buttons are static HTML in `index.html` (inside `.action-row`); they are not managed by `controls.js`. The theme selector is also static HTML in `index.html` (inside `.theme-control` in the header).
 
-- **Difficulty selector:** Rendered into `#controls-root` by `mount`. On change, if a puzzle is in progress (`state.pen` has any non-zero player entries and `!state.won`), opens a confirmation dialog via `ui/dialog.js` with text "Change difficulty?" / "Your current progress will be lost." [Cancel] [Change Difficulty]. On confirm, dispatches `CHANGE_DIFFICULTY { difficulty }`. On cancel, reverts the `<select>` to the previous value.
+- **Difficulty selector:** Rendered into `#controls-root` by `mount`. On change, if a puzzle is in progress (`state.pen` has any non-zero player entries and `!state.won`), opens a confirmation dialog via `ui/dialog.js` with text "Start a new *Tier* puzzle?" / "Your current progress will be lost." [Cancel] [New Puzzle] (skipped while `state.generating`, when the board has already been given up). On confirm, dispatches `CHANGE_DIFFICULTY { difficulty }`. On cancel, reverts the `<select>` to the previous value.
 - The difficulty selector always reflects `state.puzzle?.difficulty` or the last-set difficulty.
 
 ---

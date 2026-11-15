@@ -104,8 +104,14 @@ describe('integration/perf', () => {
         : tier === 'medium' ? MEDIUM_GEN_BUDGET_MS
         : NON_GEN_BUDGET_MS;
 
-      // Set the difficulty so _startNewPuzzle uses the requested tier.
+      // Choosing the tier generates a puzzle there (untimed); New Puzzle then
+      // generates another at the current puzzle's tier, which is what is timed.
       gs.dispatch({ type: 'CHANGE_DIFFICULTY', difficulty: tier });
+      await waitFor(() => {
+        const s = gs.getState();
+        return !s.generating && s.puzzle.id !== initialId && s.puzzle.difficulty === tier;
+      }, 25000);
+      const priorId = gs.getState().puzzle.id;
 
       const btnNew = doc.getElementById('btn-new');
       if (!btnNew) return this.skip();
@@ -115,7 +121,7 @@ describe('integration/perf', () => {
       // No progress on fresh load → goes straight to _startNewPuzzle (no dialog).
       await waitFor(() => {
         const s = gs.getState();
-        return s.puzzle && s.puzzle.id !== initialId && s.puzzle.difficulty === tier;
+        return s.puzzle && s.puzzle.id !== priorId && s.puzzle.difficulty === tier;
       }, budget + 500);
       const elapsed = win.performance.now() - t0;
 
@@ -235,7 +241,9 @@ describe('integration/perf', () => {
     const select = doc.getElementById('difficulty-select');
     if (!select) return this.skip();
     const initial = gs.getState();
-    const target = initial.puzzle.difficulty === 'easy' ? 'medium' : 'easy';
+    // A difficulty change generates a puzzle; the two fastest tiers keep this
+    // inside the non-generation budget.
+    const target = initial.puzzle.difficulty === 'kiddie' ? 'easy' : 'kiddie';
 
     const t0 = win.performance.now();
     select.value = target;

@@ -25,7 +25,7 @@ by default, select every control by id, and wait on precise conditions rather th
 
 Two races are made deterministic rather than probable. "Generation still in flight" uses
 a Diabolical cold start (seconds of worker time against a ~150 ms load). "Cancel during
-generation" starts and cancels the search within one task (SHR40/41).
+generation" starts and replaces or cancels the search within one task (SHR40/41).
 
 Worker-side code is covered by importing `loadFromGivens` directly, per the existing
 worker-coverage policy; LV7 and the integration tests exercise the real worker.
@@ -67,7 +67,8 @@ worker-coverage policy; LV7 and the integration tests exercise the real worker.
 | SHR14 ×5–SHR16 | Invalid links | Five rejection classes: message, announcement, game untouched (R5); notice sticky; boot puzzle still arrives |
 | SHR17–SHR23 | Unrated | Visible + announced restrictions; `C` shortcut; all other features and no stats on win (R7, R9); persist/restore (R10); New Puzzle and difficulty change return to generation (R11); abandonment prompt |
 | SHR24–SHR28 | Rated loaded puzzles | Attempt + win under the rated tier (R9); hints/coach; persist/restore (R10); preference untouched; New Puzzle tier |
-| SHR38–SHR41 | Generation tier | Legacy blob defaults; invalid preference; cancel during generation; Unrated + cancel |
+| SHR38–SHR41 | Generation tier | Legacy blob defaults; invalid preference; difficulty change replaces a pending generation; cancel keeps the puzzle and restores its label, New Puzzle mid-generation uses the pending tier |
+| SHR42–SHR44 | Difficulty change (fspec-001 §3.2, 2026-11-14) | Rated puzzle never relabelled, new puzzle generated; confirm/cancel with progress, focus to selector; won board changes tier without asking |
 | SHR29–SHR37 | Share action | Link holds only givens, confirmation (R1, R2); round trip without progress; clipboard denied/missing fallback (R1); field keeps its keys; Unrated/won (R3); a11y (R13); visible at six widths incl. where header controls hide (R3); no overflow at 320px; contrast ≥ 4.5 in five themes; left-hand placement |
 
 Performance (R12): SHR5 logs link-load time under a busy generation worker; DVI16

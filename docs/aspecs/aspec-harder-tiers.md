@@ -174,7 +174,9 @@ throttled to one per 10 s (fspec §9.2). Buttons/spinner CSS in `css/controls.cs
 - Progress wiring: `onProgress` dispatches `GEN_PROGRESS`.
 - Mid-generation difficulty change (fspec §10.1): `controls.js` is unchanged; `main.js`
   listens for `CHANGE_DIFFICULTY` while a foreground request is pending → abort it and
-  clear `generating` (the user then presses New Puzzle as usual).
+  clear `generating` (the user then presses New Puzzle as usual). *Superseded
+  2026-11-14: a difficulty change now starts a generation at the chosen tier, replacing
+  the pending one — see aspec-game-state `CHANGE_DIFFICULTY`.*
 
 ## 6. Statistics
 No structural change: `statsProvider`/`statistics.js` are keyed by

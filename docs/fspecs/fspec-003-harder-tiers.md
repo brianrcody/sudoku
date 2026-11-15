@@ -277,7 +277,8 @@ same SR flow used by the existing long-chain acknowledgment.
 ## 10. Edge Cases and Error States
 
 **10.1 Mid-generation tier switch.** Selecting a different difficulty while §5.2 is showing
-behaves as Cancel (§5.3) followed by the normal difficulty-change flow.
+replaces the pending search with one at the newly selected tier, with no further
+confirmation (fspec-001 §3.2, revised 2026-11-14; previously it behaved as Cancel).
 
 **10.2 Page close during generation.** Nothing is persisted mid-generation; on reload the
 app restores the prior state (existing behavior).

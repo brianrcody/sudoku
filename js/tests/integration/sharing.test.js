@@ -349,7 +349,7 @@ describe('integration: puzzle sharing', function () {
       const select = $(iframe, '#difficulty-select');
       select.value = 'kiddie';
       select.dispatchEvent(new iframe.contentWindow.Event('change'));
-      expect($(iframe, '#modal-title').textContent).to.equal('Change difficulty?');
+      expect($(iframe, '#modal-title').textContent).to.equal('Start a new Kiddie puzzle?');
       expect(select.value).to.equal('unrated');
       $(iframe, '#modal-cancel').click();
       await sleep(200);
@@ -438,30 +438,25 @@ describe('integration: puzzle sharing', function () {
       expect(gsOf(iframe).getState().puzzle.difficulty).to.equal('easy');
     });
 
-    // SHR40/41 start a Diabolical search and cancel it in the same task, so the
-    // outcome cannot depend on how quickly the search would have finished.
-    it('SHR40: changing difficulty while a generation is pending cancels it rather than starting another', async () => {
+    it('SHR40: changing difficulty while a generation is pending replaces it with one at the new tier', async () => {
       seedSavedGame({ givens: KIDDIE, solution: KIDDIE_SOLUTION, difficulty: 'diabolical' });
       await open('/index.html');
       await waitForPuzzle(iframe);
       const gs = gsOf(iframe);
 
       $(iframe, '#btn-new').click();
-      expect(gs.getState().generating).to.be.true;
+      expect(gs.getState().generatingDifficulty).to.equal('diabolical');
       gs.dispatch({ type: 'CHANGE_DIFFICULTY', difficulty: 'kiddie' });
-      expect(gs.getState().generating).to.be.false;
-      await appFrame(iframe);
-      expect($(iframe, '#sr-live').textContent).to.equal('Puzzle search cancelled.');
+      expect(gs.getState().generating).to.be.true;
+      expect(gs.getState().generatingDifficulty).to.equal('kiddie');
       expect(JSON.parse(localStorage.getItem(DIFF_KEY))).to.equal('kiddie');
-      expect(gs.getState().puzzle.id).to.equal('seeded');
 
-      // The next New Puzzle uses the tier just chosen.
-      $(iframe, '#btn-new').click();
       await waitFor(() => gs.getState().puzzle.source === 'generated', 20000, 'generated puzzle');
       expect(gs.getState().puzzle.difficulty).to.equal('kiddie');
+      expect($(iframe, '#difficulty-select').value).to.equal('kiddie');
     });
 
-    it('SHR41: on an Unrated puzzle, a difficulty change during a pending generation only cancels', async () => {
+    it('SHR41: cancelling the generation a difficulty change started keeps the puzzle and restores its label', async () => {
       await open(`/index.html?p=${UNRATED}`);
       await waitForLinkHandled(iframe);
       const gs = gsOf(iframe);
@@ -472,13 +467,75 @@ describe('integration: puzzle sharing', function () {
       expect(gs.getState().generating).to.be.true;
       expect(select.value).to.equal('diabolical');
 
-      choose('kiddie');
+      // New Puzzle while that search is pending asks for the same tier, not the board's.
+      $(iframe, '#btn-new').click();
+      expect(gs.getState().generatingDifficulty).to.equal('diabolical');
+
+      $(iframe, '#busy-root button').click();
       expect(gs.getState().generating).to.be.false;
-      // The Unrated puzzle is still the current one, and the selector says so.
       expect(boardString(iframe)).to.equal(UNRATED);
       expect(select.value).to.equal('unrated');
       await sleep(300);
       expect(boardString(iframe)).to.equal(UNRATED);
+    });
+
+    it('SHR42: a rated puzzle is never relabelled — choosing a tier generates a new puzzle there', async () => {
+      seedSavedGame({ givens: KIDDIE, solution: KIDDIE_SOLUTION, difficulty: 'kiddie' });
+      await open('/index.html');
+      await waitForPuzzle(iframe);
+      const gs = gsOf(iframe);
+      const select = $(iframe, '#difficulty-select');
+
+      select.value = 'easy';
+      select.dispatchEvent(new iframe.contentWindow.Event('change'));
+      // Until the new puzzle arrives the old one is still Kiddie.
+      expect(gs.getState().puzzle.difficulty).to.equal('kiddie');
+      await waitFor(() => gs.getState().puzzle.id !== 'seeded', 20000, 'generated puzzle');
+      expect(gs.getState().puzzle.difficulty).to.equal('easy');
+      expect(boardString(iframe)).to.not.equal(KIDDIE);
+      expect(select.value).to.equal('easy');
+    });
+
+    it('SHR43: with progress, confirming starts the new puzzle and cancelling keeps the board and its label', async () => {
+      seedSavedGame({ givens: KIDDIE, solution: KIDDIE_SOLUTION, difficulty: 'kiddie' });
+      await open('/index.html');
+      await waitForPuzzle(iframe);
+      const gs = gsOf(iframe);
+      const select = $(iframe, '#difficulty-select');
+      const empty = KIDDIE.indexOf('0');
+      enter(iframe, empty, Number(KIDDIE_SOLUTION[empty]));
+      const choose = tier => { select.value = tier; select.dispatchEvent(new iframe.contentWindow.Event('change')); };
+
+      choose('easy');
+      expect($(iframe, '#modal-title').textContent).to.equal('Start a new Easy puzzle?');
+      $(iframe, '#modal-cancel').click();
+      expect(select.value).to.equal('kiddie');
+      expect(gs.getState().generating).to.be.false;
+      expect(gs.getState().puzzle.id).to.equal('seeded');
+      expect(gs.getState().pen[empty]).to.equal(Number(KIDDIE_SOLUTION[empty]));
+
+      choose('easy');
+      $(iframe, '#modal-confirm').click();
+      await waitFor(() => gs.getState().puzzle.id !== 'seeded', 20000, 'generated puzzle');
+      expect(gs.getState().puzzle.difficulty).to.equal('easy');
+      expect(iframe.contentDocument.activeElement).to.equal(select);
+    });
+
+    it('SHR44: on a won board a difficulty change starts a new puzzle without asking', async () => {
+      seedSavedGame({ givens: KIDDIE, solution: KIDDIE_SOLUTION, difficulty: 'kiddie' });
+      await open('/index.html');
+      await waitForPuzzle(iframe);
+      const gs = gsOf(iframe);
+      solveAll(iframe);
+      expect(gs.getState().won).to.be.true;
+
+      const select = $(iframe, '#difficulty-select');
+      select.value = 'easy';
+      select.dispatchEvent(new iframe.contentWindow.Event('change'));
+      expect($(iframe, '#modal-backdrop').classList.contains('open')).to.be.false;
+      await waitFor(() => gs.getState().puzzle.id !== 'seeded', 20000, 'generated puzzle');
+      expect(gs.getState().puzzle.difficulty).to.equal('easy');
+      expect(gs.getState().won).to.be.false;
     });
   });
 
