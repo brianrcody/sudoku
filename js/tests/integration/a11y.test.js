@@ -1,9 +1,17 @@
 /**
- * @fileoverview Accessibility integration tests (A1–A20).
+ * @fileoverview Accessibility integration tests (A1–A22), and the debug
+ * instrumentation's accessibility in the app (tspec-debug-instrumentation §8).
  *
  * All tests load the app in a hidden iframe. Live region assertions wait two
  * rAF frames (per srLive's clear-then-set pattern).
  */
+
+import {
+  createApp, waitFor, waitForPuzzle as waitForAppPuzzle, waitForDevPanel, appFrame, gsOf, seedSavedGame,
+} from './_app.js';
+import { KIDDIE, KIDDIE_SOLUTION } from '../fixtures/puzzles/loadable.js';
+import { loadSessionFixture } from '../helpers/replayFixture.js';
+import { twoActionDoc } from '../helpers/devSessionRig.js';
 
 async function waitForPuzzle(iframe, timeoutMs = 10000) {
   const deadline = Date.now() + timeoutMs;
@@ -389,5 +397,221 @@ describe('integration/a11y', () => {
     await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
     await new Promise(r => iframe.contentWindow.requestAnimationFrame(r));
     expect(eraseAllBtn.disabled).to.be.true;
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Debug instrumentation in the app (tspec-debug-instrumentation §8, Phase 8):
+// keyboard reach, focus rings, the confirmation dialogs, and the
+// single-announcement rule end to end.
+// ---------------------------------------------------------------------------
+
+describe('integration/a11y: debug instrumentation', function () {
+  this.timeout(40000);
+
+  let frame;
+
+  afterEach(() => {
+    frame?.remove();
+    frame = null;
+  });
+
+  const $ = selector => frame.contentDocument.querySelector(selector);
+  const $$ = selector => [...frame.contentDocument.querySelectorAll(selector)];
+  const api = () => frame.contentWindow.sudokuDev;
+  const active = () => frame.contentDocument.activeElement;
+  const dialogOpen = () => $('#modal-backdrop').classList.contains('open');
+
+  /** Developer mode over a saved Kiddie game; both new tool bodies open. */
+  async function openDev({ entries } = {}) {
+    seedSavedGame({ givens: KIDDIE, solution: KIDDIE_SOLUTION, difficulty: 'kiddie', ...(entries ? { entries } : {}) });
+    frame = createApp('/index.html?dev=1');
+    await waitForAppPuzzle(frame);
+    await waitForDevPanel(frame);
+    await waitFor(() => api(), 20000, 'window.sudokuDev');
+    frame.contentWindow.console.warn = () => {};
+    $('#dev-rec').open = true;
+    $('#dev-gen').open = true;
+    await waitFor(() => frame.contentWindow.getComputedStyle($('#dev-badge')).position === 'fixed', 5000, 'dev.css');
+  }
+
+  /** Every non-empty text written to the live region while `fn` and its effects run, until `settled()` plus 1 s. */
+  async function announcementsDuring(fn, settled) {
+    const region = $('#sr-live');
+    const texts = [];
+    const observer = new frame.contentWindow.MutationObserver(() => {
+      if (region.textContent !== '') texts.push(region.textContent);
+    });
+    observer.observe(region, { childList: true, characterData: true, subtree: true });
+    try {
+      await fn();
+      await waitFor(settled, 20000, 'the outcome');
+      await new Promise(r => setTimeout(r, 1000));
+    } finally {
+      observer.disconnect();
+    }
+    return texts;
+  }
+
+  /** The new controls of fspec-007 §11, in document order. */
+  const NEW_CONTROLS = [
+    '#dev-gen-copy', '#dev-gen-tier', '#dev-gen-seed', '#dev-gen-run',
+    '#dev-rec > summary', '#dev-rec-copy', '#dev-rec-clear',
+    '#dev-log-generation', '#dev-log-swallowed', '#dev-log-actions',
+    '#dev-rec-doc', '#dev-rec-stop', '#dev-rec-replay',
+  ];
+
+  it('Tab reaches every new control in document order: all are focusable and none has a positive tabindex', async () => {
+    await openDev();
+    await api().generate('kiddie', 1, { replace: true });   // a recorded seed enables Copy seed
+    const controls = NEW_CONTROLS.map(selector => $(selector));
+    const inTabOrder = $$('#dev-root *').filter(el => el.tabIndex >= 0 && controls.includes(el));
+
+    expect(inTabOrder).to.deep.equal(controls);
+    expect($$('#dev-root [tabindex]').filter(el => el.tabIndex > 0)).to.deep.equal([]);
+    for (const el of controls) {
+      el.focus();
+      expect(active(), el.id || el.tagName).to.equal(el);
+    }
+  });
+
+  it('every new button, switch and disclosure is a native element, and Enter and Space on it reach neither the board nor a handler that blocks activation', async () => {
+    await openDev();
+    await api().generate('kiddie', 1, { replace: true });   // a seed row, so Copy seed exists
+    gsOf(frame).dispatch({ type: 'SELECT_CELL', index: gsOf(frame).getState().puzzle.givens.indexOf(0) });
+    const actions = [];
+    gsOf(frame).on('changed', ({ action }) => actions.push(action.type));
+    const activatable = NEW_CONTROLS.map(s => $(s)).filter(el => el.matches('button, summary'));
+
+    const blocked = [];
+    for (const el of activatable) {
+      for (const key of ['Enter', ' ']) {
+        el.focus();
+        const event = new frame.contentWindow.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+        el.dispatchEvent(event);
+        if (event.defaultPrevented) blocked.push(`${el.id || 'summary'} ${key === ' ' ? 'Space' : key}`);
+      }
+    }
+
+    expect(activatable.map(el => el.tagName)).to.deep.equal(
+      ['BUTTON', 'BUTTON', 'SUMMARY', 'BUTTON', 'BUTTON', 'BUTTON', 'BUTTON', 'BUTTON', 'BUTTON']);
+    expect(activatable.filter(el => el.tagName === 'BUTTON').every(el => el.type === 'button')).to.equal(true);
+    expect(blocked).to.deep.equal([]);
+    expect(actions).to.deep.equal([]);
+  });
+
+  describe('A39: :focus-visible rings on the new controls (vspec §7)', () => {
+    /** A report with one divergence, so its summary and value blocks exist. */
+    async function withDivergenceReport() {
+      const doc = JSON.parse(await loadSessionFixture('coach-in-progress.json'));
+      doc.actions.find(item => item.action.type === 'COACH_START').action.result.technique = 'Edited Technique';
+      await api().replay(doc, { replace: true, discardHistory: true });
+      $('.dev-diverge details').open = true;
+    }
+
+    const rings = [
+      ['Copy session', '#dev-rec-copy', '2px'], ['Clear history', '#dev-rec-clear', '2px'],
+      ['Replay', '#dev-rec-replay', '2px'], ['Generate', '#dev-gen-run', '2px'],
+      ['Copy seed', '#dev-gen-copy', '2px'], ['the Session recorder summary', '#dev-rec > summary', '2px'],
+      ['a logging switch', '#dev-log-actions', '2px'], ['the report region', '#dev-rec-report', '1px'],
+      ['a divergence summary', '.dev-diverge summary', '1px'], ['a JSON value block', '.dev-diverge .dev-json', '1px'],
+    ];
+    for (const [label, selector, offset] of rings) {
+      it(`${label} shows a 2px solid ring offset ${offset} when focused from the keyboard`, async () => {
+        await openDev();
+        await api().generate('kiddie', 1, { replace: true });
+        // The replay puts a loaded puzzle on the board, which has no seed row; only report rings need it.
+        if (/report|diverge/.test(selector)) await withDivergenceReport();
+        const el = $(selector);
+
+        el.focus();
+
+        const style = frame.contentWindow.getComputedStyle(el);
+        expect(el.matches(':focus-visible'), 'matches :focus-visible').to.equal(true);
+        expect([style.outlineStyle, style.outlineWidth, style.outlineOffset]).to.deep.equal(['solid', '2px', offset]);
+      });
+    }
+  });
+
+  describe('A33 / A35 / A38: the new confirmation dialogs', () => {
+    const dialogs = [
+      ['Replay', '#dev-rec-replay', 'Replay this session?', () => { $('#dev-rec-doc').value = JSON.stringify(twoActionDoc()); }],
+      ['Clear history', '#dev-rec-clear', 'Clear recorded history?', () => {}],
+      ['Generate', '#dev-gen-run', 'Generate from this seed?', () => { $('#dev-gen-seed').value = '1'; }],
+    ];
+    for (const [label, trigger, title, prepare] of dialogs) {
+      it(`${label}: a labelled, described modal dialog with Cancel focused; Escape cancels and focus returns to ${label}`, async () => {
+        await openDev({ entries: { 2: 4 } });
+        gsOf(frame).dispatch({ type: 'SELECT_CELL', index: 3 });   // a recorded history
+        prepare();
+        $(trigger).focus();
+        $(trigger).click();
+        await waitFor(dialogOpen, 5000, 'the dialog');
+        const dialog = $('[role="dialog"]');
+
+        expect(dialog.getAttribute('aria-modal')).to.equal('true');
+        expect($(`#${dialog.getAttribute('aria-labelledby')}`).textContent).to.equal(title);
+        expect(dialog.getAttribute('aria-describedby')).to.equal('modal-body');
+        expect(active()).to.equal($('#modal-cancel'));
+
+        active().dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        await waitFor(() => !dialogOpen(), 5000, 'the dialog to close');
+        await waitFor(() => active() === $(trigger), 5000, `focus back on ${label}`);
+      });
+    }
+  });
+
+  describe('A42: one announcement per replay, end to end', () => {
+    const outcome = () => $('#dev-rec-replay-status').textContent;
+    const EXPECTED = 'Session replayed: 480 of 480 actions. No divergences in 41 computed results. 1 not compared.';
+
+    it('a panel replay of a won game full of announcing actions announces only its outcome', async () => {
+      await openDev();
+      $('#dev-rec-doc').value = await loadSessionFixture('format-v1-baseline.json');
+
+      const texts = await announcementsDuring(() => $('#dev-rec-replay').click(), () => outcome().startsWith('Session replayed'));
+
+      expect(texts).to.deep.equal([EXPECTED]);
+    });
+
+    it('A42b: the same replay through the API announces only its outcome', async () => {
+      await openDev();
+      const doc = JSON.parse(await loadSessionFixture('format-v1-baseline.json'));
+
+      const texts = await announcementsDuring(
+        () => { api().replay(doc, { replace: true, discardHistory: true }); }, () => outcome().startsWith('Session replayed'));
+
+      expect(texts).to.deep.equal([EXPECTED]);
+    });
+  });
+
+  it('A31: focus stays on Replay after a rejection', async () => {
+    await openDev();
+    $('#dev-rec-doc').value = '{';
+    $('#dev-rec-replay').focus();
+
+    $('#dev-rec-replay').click();
+    await waitFor(() => $('#dev-rec-replay-status').textContent.startsWith('This session'), 5000, 'the rejection');
+    await appFrame(frame);
+
+    expect(active()).to.equal($('#dev-rec-replay'));
+  });
+
+  it('A41: API calls that change something announce it, reads announce nothing, and focus never moves', async () => {
+    await openDev();
+    const cell = $('.cell[data-index="2"]');
+    cell.focus();
+
+    const reads = await announcementsDuring(() => { api().state(); api().logging(); api().exportSession(); }, () => true);
+    const changes = await announcementsDuring(async () => {
+      api().setLogging('actions', true);
+      await appFrame(frame);
+      api().clearHistory({ discardHistory: true });
+    }, () => true);
+
+    expect(reads).to.deep.equal([]);
+    expect(changes).to.include.members(['Action trace logging on.', 'History cleared.']);
+    expect($('#dev-log-actions').getAttribute('aria-checked')).to.equal('true');
+    expect(active()).to.equal(cell);
   });
 });

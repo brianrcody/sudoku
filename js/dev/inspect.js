@@ -259,14 +259,51 @@ export function techniqueProfile(trace) {
 }
 
 /**
+ * @typedef {Object} GenerationDiagnostics
+ * @property {number|null} seed - Null when the puzzle predates seed recording.
+ * @property {'random'|'developer'|null} seedBy
+ * @property {string} requestedTier
+ * @property {string} tier - The achieved tier, `'unrated'` included.
+ * @property {boolean} fallback
+ * @property {number} attempts
+ * @property {number} budget
+ * @property {{unsolved: number, wrongTier: number, byTier: Object<string, number>}} rejected
+ * @property {Array<{technique: string, count: number}>} techniqueProfile
+ */
+
+/**
+ * Generation diagnostics of a generated puzzle as data: the source of both the
+ * panel table and the developer API's `diagnostics`.
+ *
+ * @param {object} puzzle - A puzzle carrying `gen`.
+ * @param {function(Uint8Array): Array} getTrace - Recomputes the solve trace
+ *   from givens; used when the puzzle's own trace is empty (restored games do
+ *   not persist it).
+ * @returns {GenerationDiagnostics}
+ */
+export function generationDiagnostics(puzzle, getTrace) {
+  const { seed, seedBy, requestedTier, fallback, attempts, budget, rejected } = puzzle.gen;
+  const trace = puzzle.solveTrace.length > 0 ? puzzle.solveTrace : getTrace(puzzle.givens);
+  return {
+    seed: seed ?? null,
+    seedBy: seedBy ?? null,
+    requestedTier,
+    tier: puzzle.difficulty,
+    fallback,
+    attempts,
+    budget,
+    rejected,
+    techniqueProfile: techniqueProfile(trace),
+  };
+}
+
+/**
  * Generation diagnostics for a puzzle, as display rows or a single message
  * when there is nothing to show.
  *
  * @param {object|null} puzzle
- * @param {function(Uint8Array): Array} getTrace - Recomputes the solve trace
- *   from givens; used when the puzzle's own trace is empty (restored games do
- *   not persist it).
- * @returns {{message: string} | {rows: Array<[string, string]>}}
+ * @param {function(Uint8Array): Array} getTrace - As for `generationDiagnostics`.
+ * @returns {{message: string} | {seed: number|null, rows: Array<[string, string]>}}
  */
 export function describeGeneration(puzzle, getTrace) {
   if (!puzzle) return { message: 'No puzzle loaded.' };
@@ -275,23 +312,28 @@ export function describeGeneration(puzzle, getTrace) {
   }
   if (!puzzle.gen) return { message: 'No generation data was recorded for this puzzle.' };
 
-  const { requestedTier, budget, attempts, rejected, fallback } = puzzle.gen;
-  const byTier = Object.entries(rejected.byTier)
+  const d = generationDiagnostics(puzzle, getTrace);
+  const byTier = Object.entries(d.rejected.byTier)
     .map(([tier, n]) => `${TIER_LABELS[tier]} ${n}`)
     .join(', ');
-  const trace = puzzle.solveTrace.length > 0 ? puzzle.solveTrace : getTrace(puzzle.givens);
-  const profile = techniqueProfile(trace)
+  const profile = d.techniqueProfile
     .map(({ technique, count }) => `${technique} × ${count}`)
     .join('\n');
+  const seedBy = d.seedBy === 'developer' ? 'Developer (seeded run)'
+    : d.seedBy === 'random' ? 'Generator (random)'
+    : '—';
 
   return {
+    seed: d.seed,
     rows: [
-      ['Requested tier', TIER_LABELS[requestedTier]],
-      ['Achieved tier', TIER_LABELS[puzzle.difficulty]],
-      ['Fallback used', fallback ? 'Yes' : 'No'],
-      ['Attempts', `${attempts} of ${budget}`],
-      ['Rejected — unsolvable by solver', String(rejected.unsolved)],
-      ['Rejected — wrong tier', byTier ? `${rejected.wrongTier} (${byTier})` : String(rejected.wrongTier)],
+      ['Seed', d.seed === null ? 'Not recorded' : String(d.seed)],
+      ['Seed chosen by', seedBy],
+      ['Requested tier', TIER_LABELS[d.requestedTier]],
+      ['Achieved tier', TIER_LABELS[d.tier]],
+      ['Fallback used', d.fallback ? 'Yes' : 'No'],
+      ['Attempts', `${d.attempts} of ${d.budget}`],
+      ['Rejected — unsolvable by solver', String(d.rejected.unsolved)],
+      ['Rejected — wrong tier', byTier ? `${d.rejected.wrongTier} (${byTier})` : String(d.rejected.wrongTier)],
       ['Technique profile', profile],
     ],
   };

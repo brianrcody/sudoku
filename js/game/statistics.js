@@ -3,7 +3,7 @@
  * counts and delegates persistence to a StatsProvider.
  */
 
-import { createEmitter } from '../util/events.js';
+import { createEmitter, diagnostics } from '../util/events.js';
 
 /**
  * @typedef {{ attempted: number, won: number }} DiffStat
@@ -41,13 +41,17 @@ export function createStatistics(provider) {
   async function recordAttemptOnce(difficulty) {
     cache[difficulty].attempted += 1;
     emitter.emit('stats-changed', cache);
-    await provider.save(cache).catch(() => {});
+    await provider.save(cache).catch(error => {
+      diagnostics.emit('swallowed', { where: 'statistics.save', error });
+    });
   }
 
   async function recordWin(difficulty) {
     cache[difficulty].won += 1;
     emitter.emit('stats-changed', cache);
-    await provider.save(cache).catch(() => {});
+    await provider.save(cache).catch(error => {
+      diagnostics.emit('swallowed', { where: 'statistics.save', error });
+    });
   }
 
   return {

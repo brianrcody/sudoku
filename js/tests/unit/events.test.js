@@ -2,7 +2,7 @@
  * Tests for js/util/events.js — §2.4 (EV1–EV10)
  */
 
-import { createEmitter } from '/js/util/events.js';
+import { createEmitter, diagnostics } from '/js/util/events.js';
 
 describe('events.js', function () {
 
@@ -128,5 +128,78 @@ describe('events.js', function () {
     emitter.emit('b');
     expect(aCount).to.equal(0);
     expect(bCount).to.equal(1);
+  });
+
+  describe('listener errors on the diagnostics channel', function () {
+    /**
+     * Runs `act` with console.error and the diagnostics `listener-error` event
+     * both recorded, in order, into one log.
+     */
+    function withErrorLog(act) {
+      const log = [];
+      const originalError = console.error;
+      console.error = (...args) => { log.push({ via: 'console', args }); };
+      const off = diagnostics.on('listener-error', payload => { log.push({ via: 'diagnostics', payload }); });
+      try {
+        act();
+      } finally {
+        console.error = originalError;
+        off();
+      }
+      return log;
+    }
+
+    function emitterReport(emitter) {
+      const boom = new Error('boom');
+      let laterCalled = false;
+      emitter.on('x', () => { throw boom; });
+      emitter.on('x', () => { laterCalled = true; });
+      const log = withErrorLog(() => emitter.emit('x', 42));
+      return { boom, laterCalled, log };
+    }
+
+    it('EV11: by default a throwing listener is logged and reported as listener-error', function () {
+      const { boom, laterCalled, log } = emitterReport(createEmitter());
+
+      expect(log.filter(e => e.via === 'console')).to.have.length(1);
+      expect(log.filter(e => e.via === 'diagnostics').map(e => e.payload))
+        .to.deep.equal([{ error: boom, type: 'x', payload: 42 }]);
+      expect(laterCalled).to.be.true;
+    });
+
+    it('EV12: createEmitter({}) reports listener errors like the default', function () {
+      const { boom, laterCalled, log } = emitterReport(createEmitter({}));
+
+      expect(log.filter(e => e.via === 'console')).to.have.length(1);
+      expect(log.filter(e => e.via === 'diagnostics').map(e => e.payload))
+        .to.deep.equal([{ error: boom, type: 'x', payload: 42 }]);
+      expect(laterCalled).to.be.true;
+    });
+
+    it('EV13: with reportErrors false a throwing listener is only logged', function () {
+      const { laterCalled, log } = emitterReport(createEmitter({ reportErrors: false }));
+
+      expect(log.map(e => e.via)).to.deep.equal(['console']);
+      expect(laterCalled).to.be.true;
+    });
+
+    it('EV14: the console log precedes the diagnostics report', function () {
+      const { log } = emitterReport(createEmitter());
+
+      expect(log.map(e => e.via)).to.deep.equal(['console', 'diagnostics']);
+    });
+
+    it('EV15: a throwing diagnostics listener is logged and not reported again', function () {
+      const offThrowing = diagnostics.on('swallowed', () => { throw new Error('listener failed'); });
+
+      let log;
+      try {
+        log = withErrorLog(() => diagnostics.emit('swallowed', { where: 'test', error: new Error('x') }));
+      } finally {
+        offThrowing();
+      }
+
+      expect(log.map(e => e.via)).to.deep.equal(['console']);
+    });
   });
 });

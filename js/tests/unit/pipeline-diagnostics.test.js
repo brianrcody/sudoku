@@ -1,12 +1,16 @@
 /**
  * @fileoverview Unit tests for the generation diagnostics added to
  * js/generator/pipeline.js (PD1–PD8), including the regression pins that prove
- * the diagnostics did not change which puzzle a seed produces.
+ * the diagnostics did not change which puzzle a seed produces. Phase 2 of debug
+ * instrumentation adds the seed fields, the Unrated fallback (PD9–PD12), and
+ * seeded-generation determinism (PR4).
  */
 
 import { generateForTier } from '../../generator/pipeline.js';
 import { mulberry32 } from '../../prng.js';
-import { ATTEMPT_BUDGET } from '../../config.js';
+import { rate } from '../../generator/rater.js';
+import { tierForRank } from '../../solver/logical.js';
+import { ATTEMPT_BUDGET, UNRATED } from '../../config.js';
 
 const gen = (tier, seed, budget) => generateForTier(tier, { rng: mulberry32(seed), seed, budget });
 
@@ -44,6 +48,8 @@ describe('pipeline.js — generation diagnostics', function () {
     const puzzle = gen('easy', 42);
     expect(puzzle.source).to.equal('generated');
     expect(puzzle.gen.requestedTier).to.equal('easy');
+    expect(puzzle.gen.seed).to.equal(42);
+    expect(puzzle.gen.seedBy).to.equal('random');
     expect(puzzle.gen.budget).to.equal(ATTEMPT_BUDGET.easy);
     expect(puzzle.gen.fallback).to.be.false;
   });
@@ -82,6 +88,7 @@ describe('pipeline.js — generation diagnostics', function () {
     expect(puzzle.gen.attempts).to.equal(1);
     expect(puzzle.gen.budget).to.equal(0);
     expect(puzzle.gen.rejected).to.deep.equal({ unsolved: 0, wrongTier: 0, byTier: {} });
+    expect(puzzle.difficulty).to.not.equal(UNRATED);
   });
 
   it('PD8: candidates the rater cannot solve are counted as unsolved', () => {
@@ -89,5 +96,118 @@ describe('pipeline.js — generation diagnostics', function () {
     // is beyond the solver; 40 attempts at seed 12345 include several.
     const { gen: g } = gen('diabolical', 12345, 40);
     expect(g.rejected.unsolved).to.be.above(0);
+  });
+});
+
+/** Everything a seeded run promises to reproduce (fspec-007 §7.4). */
+const reproducible = puzzle => ({
+  id: puzzle.id,
+  difficulty: puzzle.difficulty,
+  givens: Array.from(puzzle.givens),
+  solution: Array.from(puzzle.solution),
+  solveTrace: puzzle.solveTrace,
+  gen: puzzle.gen,
+});
+
+const seeded = (tier, seed, budget) =>
+  generateForTier(tier, { rng: mulberry32(seed), seed, seeded: true, budget });
+
+describe('pipeline.js — seed plumbing and the Unrated fallback (Phase 2)', function () {
+  this.timeout(30000);
+
+  let warn;
+  beforeEach(() => { warn = console.warn; console.warn = () => {}; });
+  afterEach(() => { console.warn = warn; });
+
+  it('PD9: an unseeded run records its seed as chosen by the generator', () => {
+    const { gen: g } = generateForTier('easy', { rng: mulberry32(42), seed: 42 });
+    expect(g.seed).to.equal(42);
+    expect(g.seedBy).to.equal('random');
+  });
+
+  it('PD9: a seeded run records its seed as chosen by the developer', () => {
+    const { gen: g } = seeded('easy', 42);
+    expect(g.seed).to.equal(42);
+    expect(g.seedBy).to.equal('developer');
+  });
+
+  it('PD10: the seeded flag changes nothing but seedBy', () => {
+    const random = reproducible(gen('easy', 42));
+    const developer = reproducible(seeded('easy', 42));
+
+    expect(developer.gen.seedBy).to.equal('developer');
+    expect({ ...developer, gen: { ...developer.gen, seedBy: 'random' } }).to.deep.equal(random);
+  });
+
+  for (const tier of ['expert', 'nightmare']) {
+    it(`PD11: ${tier} seed 223 with budget 1, never solvable, is delivered as Unrated`, () => {
+      const puzzle = gen(tier, 223, 1);
+
+      expect(puzzle.difficulty).to.equal(UNRATED);
+      expect(puzzle.gen.fallback).to.be.true;
+      expect(puzzle.gen.attempts).to.equal(2);
+      expect(puzzle.gen.rejected.unsolved).to.equal(1);
+      const rating = rate(puzzle.givens);
+      expect(rating.solved).to.be.false;
+      expect(puzzle.solveTrace).to.deep.equal(rating.trace);
+    });
+  }
+
+  it('PD12: a degenerate run whose candidate solves keeps its true tier', () => {
+    const puzzle = gen('easy', 42, 0);
+
+    expect(puzzle.difficulty).to.equal(tierForRank(rate(puzzle.givens).hardestRank));
+    expect(puzzle.difficulty).to.not.equal(UNRATED);
+  });
+});
+
+describe('pipeline.js — seeded-generation determinism (PR4)', function () {
+  this.timeout(30000);
+
+  let warn;
+  beforeEach(() => { warn = console.warn; console.warn = () => {}; });
+  afterEach(() => { console.warn = warn; });
+
+  for (const [tier, seed, budget] of [
+    ['kiddie', 1], ['easy', 42], ['medium', 7], ['hard', 2024],
+    ['expert', 99, 40], ['diabolical', 1, 3], ['nightmare', 5, 3],
+  ]) {
+    it(`PR4: ${tier} seed ${seed}${budget ? ` budget ${budget}` : ''} reproduces the same puzzle and diagnostics`, () => {
+      expect(reproducible(seeded(tier, seed, budget))).to.deep.equal(reproducible(seeded(tier, seed, budget)));
+    });
+  }
+
+  it('PR4: easy seed 26 exhausts the real budget and falls back to Hard, identically twice', () => {
+    const first = seeded('easy', 26);
+    const second = seeded('easy', 26);
+
+    expect(first.difficulty).to.equal('hard');
+    expect(first.gen.fallback).to.be.true;
+    expect(reproducible(second)).to.deep.equal(reproducible(first));
+  });
+
+  for (const tier of ['nightmare', 'diabolical']) {
+    it(`PR4: ${tier} seed 1 with budget 3 falls back to Easy, identically twice`, () => {
+      const first = seeded(tier, 1, 3);
+      const second = seeded(tier, 1, 3);
+
+      expect(first.difficulty).to.equal('easy');
+      expect(reproducible(second)).to.deep.equal(reproducible(first));
+    });
+  }
+
+  it('PR4: expert seed 223 with budget 1 is Unrated, identically twice', () => {
+    const first = seeded('expert', 223, 1);
+    const second = seeded('expert', 223, 1);
+
+    expect(first.difficulty).to.equal(UNRATED);
+    expect(reproducible(second)).to.deep.equal(reproducible(first));
+  });
+
+  it('PR4: a random run and its seeded reproduction differ only in seedBy', () => {
+    const random = reproducible(gen('medium', 7));
+    const developer = reproducible(seeded('medium', 7));
+
+    expect({ ...developer, gen: { ...developer.gen, seedBy: 'random' } }).to.deep.equal(random);
   });
 });

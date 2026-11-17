@@ -1,11 +1,11 @@
 /**
- * @fileoverview Unit tests for js/dev/inspect.js (IN1–IN35).
+ * @fileoverview Unit tests for js/dev/inspect.js (IN1–IN39, GD1).
  */
 
 import {
   cellRef, formatStep, stepCells, runInspector, summarize, boardAtStep, pencilAtStep,
   candidatesAtStep,
-  candidateDiff, overlayLabel, techniqueProfile, describeGeneration,
+  candidateDiff, overlayLabel, techniqueProfile, describeGeneration, generationDiagnostics,
 } from '../../dev/inspect.js';
 import { generateForTier } from '../../generator/pipeline.js';
 import { rate } from '../../generator/rater.js';
@@ -334,6 +334,8 @@ describe('dev/inspect.js', () => {
         },
       };
       expect(describeGeneration(puzzle, noTrace).rows).to.deep.equal([
+        ['Seed', 'Not recorded'],
+        ['Seed chosen by', '—'],
         ['Requested tier', 'Nightmare'],
         ['Achieved tier', 'Easy'],
         ['Fallback used', 'Yes'],
@@ -370,9 +372,103 @@ describe('dev/inspect.js', () => {
     it('IN35: works on a real generateForTier result', () => {
       const puzzle = generateForTier('easy', { rng: mulberry32(42), seed: 42 });
       const rows = Object.fromEntries(describeGeneration(puzzle, noTrace).rows);
+      expect(rows['Seed']).to.equal('42');
+      expect(rows['Seed chosen by']).to.equal('Generator (random)');
       expect(rows['Requested tier']).to.equal('Easy');
       expect(rows['Achieved tier']).to.equal('Easy');
       expect(rows['Technique profile']).to.include('Naked Single × ');
+    });
+
+    /** A generated puzzle whose `gen` takes `genFields` over a recorded seed. */
+    const withGen = (genFields, difficulty = 'easy') => ({
+      difficulty,
+      source: 'generated',
+      solveTrace: [{ technique: 'Naked Single' }],
+      gen: {
+        requestedTier: 'easy', seed: 7, seedBy: 'random', budget: 30, attempts: 1, fallback: false,
+        rejected: { unsolved: 0, wrongTier: 0, byTier: {} },
+        ...genFields,
+      },
+    });
+
+    const withoutSeed = () => {
+      const puzzle = withGen({});
+      delete puzzle.gen.seed;
+      delete puzzle.gen.seedBy;
+      return puzzle;
+    };
+
+    it('IN36: a recorded seed is shown in decimal and returned as a number', () => {
+      const result = describeGeneration(withGen({ seed: 3141592653 }), noTrace);
+      expect(result.rows[0]).to.deep.equal(['Seed', '3141592653']);
+      expect(result.seed).to.equal(3141592653);
+    });
+
+    it('IN36: a null seed reads "Not recorded" and is returned as null', () => {
+      const result = describeGeneration(withGen({ seed: null }), noTrace);
+      expect(result.rows[0]).to.deep.equal(['Seed', 'Not recorded']);
+      expect(result.seed).to.be.null;
+    });
+
+    it('IN36: a seed missing from older data reads "Not recorded" and is returned as null', () => {
+      const result = describeGeneration(withoutSeed(), noTrace);
+      expect(result.rows[0]).to.deep.equal(['Seed', 'Not recorded']);
+      expect(result.seed).to.be.null;
+    });
+
+    for (const [name, puzzle, expected] of [
+      ['developer', () => withGen({ seedBy: 'developer' }), 'Developer (seeded run)'],
+      ['random', () => withGen({ seedBy: 'random' }), 'Generator (random)'],
+      ['null', () => withGen({ seedBy: null }), '—'],
+      ['missing', withoutSeed, '—'],
+    ]) {
+      it(`IN37: seedBy ${name} reads "${expected}"`, () => {
+        expect(describeGeneration(puzzle(), noTrace).rows[1]).to.deep.equal(['Seed chosen by', expected]);
+      });
+    }
+
+    it('IN38: the seed rows come first, then the seven existing rows', () => {
+      const puzzle = generateForTier('easy', { rng: mulberry32(42), seed: 42 });
+      expect(describeGeneration(puzzle, noTrace).rows.map(([label]) => label)).to.deep.equal([
+        'Seed', 'Seed chosen by',
+        'Requested tier', 'Achieved tier', 'Fallback used', 'Attempts',
+        'Rejected — unsolvable by solver', 'Rejected — wrong tier', 'Technique profile',
+      ]);
+    });
+
+    it('IN39: an Unrated puzzle reads "Unrated" as its achieved tier', () => {
+      const rows = Object.fromEntries(describeGeneration(withGen({ requestedTier: 'expert' }, 'unrated'), noTrace).rows);
+      expect(rows['Achieved tier']).to.equal('Unrated');
+    });
+  });
+
+  describe('generationDiagnostics', () => {
+    it('GD1: returns the diagnostics fields with the achieved tier and technique profile, not raw gen', () => {
+      const rejected = { unsolved: 1, wrongTier: 0, byTier: {} };
+      const puzzle = {
+        difficulty: 'unrated',
+        source: 'generated',
+        solveTrace: [{ technique: 'Naked Single' }, { technique: 'Hidden Single' }],
+        gen: {
+          requestedTier: 'expert', seed: 223, seedBy: 'developer', budget: 1, attempts: 2,
+          fallback: true, rejected,
+        },
+      };
+
+      expect(generationDiagnostics(puzzle, () => [])).to.deep.equal({
+        seed: 223,
+        seedBy: 'developer',
+        requestedTier: 'expert',
+        tier: 'unrated',
+        fallback: true,
+        attempts: 2,
+        budget: 1,
+        rejected,
+        techniqueProfile: [
+          { technique: 'Hidden Single', count: 1 },
+          { technique: 'Naked Single', count: 1 },
+        ],
+      });
     });
   });
 });

@@ -6,19 +6,23 @@
  * Only one request is processed at a time. A GEN_ABORT message sets an
  * internal abort flag that is checked between generation attempts.
  *
- * Also answers LOAD_REQUEST (validate + rate supplied givens) with LOAD_RESULT.
+ * Also answers LOAD_REQUEST (validate + rate supplied givens) with LOAD_RESULT,
+ * and CHECK_REQUEST (validate against a recorded solution, no rating) with
+ * CHECK_RESULT.
  */
 
 import { generateForTier } from '../generator/pipeline.js';
 import { mulberry32 } from '../prng.js';
-import { loadFromGivens } from '../generator/loadPuzzle.js';
-import { MSG, makeGenProgress, makeGenResult, makeGenError, makeLoadResult } from './protocol.js';
+import { loadFromGivens, checkGivens } from '../generator/loadPuzzle.js';
+import {
+  MSG, makeGenProgress, makeGenResult, makeGenError, makeLoadResult, makeCheckResult,
+} from './protocol.js';
 
 /**
  * Queue of pending requests. The first entry is the active one; subsequent
  * entries are background requests that wait for the foreground to complete.
  *
- * @type {Array<{type:string, id:string, tier:string, seed:number, background:boolean, budget?:number}>}
+ * @type {Array<{type:string, id:string, tier:string, seed:number, background:boolean, budget?:number, seeded:boolean}>}
  */
 let queue = [];
 
@@ -35,6 +39,12 @@ self.onmessage = function (event) {
     // Answered inline, outside the generation queue. Loads go to a dedicated
     // worker instance (providers/loadProvider.js), so the queue is idle here.
     self.postMessage(makeLoadResult({ id: msg.id, result: loadFromGivens(msg.givens) }));
+    return;
+  }
+
+  if (msg.type === MSG.CHECK_REQUEST) {
+    const results = msg.puzzles.map(({ givens, solution }) => checkGivens(givens, solution));
+    self.postMessage(makeCheckResult({ id: msg.id, results }));
     return;
   }
 
@@ -108,17 +118,21 @@ async function processNext() {
 
   let puzzle;
   let fallback = false;
+  let elapsedMs;
 
   try {
+    const started = performance.now();
     puzzle = generateForTier(req.tier, {
       rng,
       seed: req.seed,
+      seeded: req.seeded,
       budget: req.budget,
       abortSignal: signal,
       onProgress({ attempts, budget }) {
         self.postMessage(makeGenProgress({ id: req.id, attempts, budget }));
       },
     });
+    elapsedMs = performance.now() - started;
 
     // Detect fallback: the returned puzzle's difficulty differs from requested.
     if (puzzle.difficulty !== req.tier) {
@@ -139,7 +153,7 @@ async function processNext() {
     return;
   }
 
-  self.postMessage(makeGenResult({ id: req.id, puzzle, fallback }));
+  self.postMessage(makeGenResult({ id: req.id, puzzle, fallback, elapsedMs }));
   queue.shift();
   processing = false;
   processNext();

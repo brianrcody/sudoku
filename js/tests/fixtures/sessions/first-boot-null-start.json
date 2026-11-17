@@ -1,0 +1,2118 @@
+{
+  "format": "sudoku-session",
+  "version": 1,
+  "exportedAt": "2026-11-16T23:51:02.371Z",
+  "start": {
+    "puzzle": null,
+    "board": "000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "pencil": [
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      []
+    ],
+    "selected": null,
+    "mode": "pen",
+    "hintsRemaining": 0,
+    "attemptRecorded": false,
+    "won": false,
+    "incorrect": [],
+    "highlightPending": false,
+    "completionMessage": "",
+    "undo": null,
+    "generating": null,
+    "coach": null
+  },
+  "actions": [
+    {
+      "at": "2026-11-16T23:50:52.323Z",
+      "action": {
+        "type": "SET_GENERATING",
+        "flag": true,
+        "message": "Generating puzzle…",
+        "difficulty": "easy"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.379Z",
+      "action": {
+        "type": "GEN_PROGRESS",
+        "attempts": 1,
+        "budget": 30
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.447Z",
+      "action": {
+        "type": "PUZZLE_LOADED",
+        "puzzle": {
+          "givens": "000020000905306028807004006289063001600009030074000260090130605510002040006005010",
+          "solution": "163928574945376128827514396289763451651249837374851269492137685518692743736485912",
+          "tier": "easy",
+          "origin": "generated",
+          "id": "e273b712",
+          "gen": {
+            "requestedTier": "easy",
+            "seed": 4281449981,
+            "seedBy": "random",
+            "budget": 30,
+            "attempts": 3,
+            "rejected": {
+              "unsolved": 0,
+              "wrongTier": 2,
+              "byTier": {
+                "kiddie": 2
+              }
+            },
+            "fallback": false
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.759Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 39
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.771Z",
+      "action": {
+        "type": "PENCIL_TOGGLE",
+        "digit": 8
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.778Z",
+      "action": {
+        "type": "PENCIL_TOGGLE",
+        "digit": 8
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.790Z",
+      "action": {
+        "type": "PENCIL_TOGGLE",
+        "digit": 4
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.797Z",
+      "action": {
+        "type": "ERASE"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.805Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 54
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.811Z",
+      "action": {
+        "type": "ERASE"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:52.817Z",
+      "action": {
+        "type": "ERASE_ALL_PENCIL"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:52.827Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 4
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.837Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 4
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:52.845Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 14
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.854Z",
+      "action": {
+        "type": "UNDO"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.861Z",
+      "action": {
+        "type": "ERASE"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:52.870Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 6
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:52.877Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 2
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:52.886Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 6
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:52.894Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 6
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:52.903Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 6
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:52.912Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 1
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:52.924Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 9
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:52.932Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 7
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:52.946Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 15
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.956Z",
+      "action": {
+        "type": "ERASE_ALL_PENCIL"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:52.964Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 30
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.975Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 35
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:52.993Z",
+      "action": {
+        "type": "PENCIL_TOGGLE",
+        "digit": 6
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:53.004Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 69
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.012Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 1
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.023Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 56
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.030Z",
+      "action": {
+        "type": "UNDO"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.039Z",
+      "action": {
+        "type": "ARROW_NAV",
+        "direction": "right"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.046Z",
+      "action": {
+        "type": "UNDO"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:53.054Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 56
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.060Z",
+      "action": {
+        "type": "UNDO"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:53.066Z",
+      "action": {
+        "type": "PENCIL_TOGGLE",
+        "digit": 6
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.076Z",
+      "action": {
+        "type": "PENCIL_TOGGLE",
+        "digit": 3
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.084Z",
+      "action": {
+        "type": "TOGGLE_MODE"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.096Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 2
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.105Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 2
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:53.112Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 2
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:53.118Z",
+      "action": {
+        "type": "COACH_START",
+        "result": {
+          "roles": {
+            "target": 10,
+            "cause": [
+              9,
+              11,
+              12,
+              14,
+              16,
+              17,
+              20,
+              64
+            ],
+            "elimTarget": [],
+            "unitMember": [],
+            "scA": [],
+            "scB": [],
+            "fin": []
+          },
+          "digits": [
+            4
+          ],
+          "unit": null,
+          "arrows": [
+            {
+              "from": 9,
+              "to": 10,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 11,
+              "to": 10,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 12,
+              "to": 10,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 14,
+              "to": 10,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 16,
+              "to": 10,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 17,
+              "to": 10,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 20,
+              "to": 10,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 64,
+              "to": 10,
+              "style": "straight-arrow"
+            }
+          ],
+          "supportingText": "Only *4* can go here — all other digits appear in this cell's row, column, or box.",
+          "complexity": {
+            "acknowledged": false,
+            "note": null,
+            "endpoints": null
+          },
+          "technique": "Naked Single",
+          "rank": 1,
+          "type": "placement",
+          "eliminations": [],
+          "autoReveal": {
+            "required": false,
+            "cells": [
+              {
+                "cellIndex": 9,
+                "candidates": 256
+              },
+              {
+                "cellIndex": 10,
+                "candidates": 8
+              },
+              {
+                "cellIndex": 11,
+                "candidates": 16
+              },
+              {
+                "cellIndex": 12,
+                "candidates": 4
+              },
+              {
+                "cellIndex": 14,
+                "candidates": 32
+              },
+              {
+                "cellIndex": 16,
+                "candidates": 2
+              },
+              {
+                "cellIndex": 17,
+                "candidates": 128
+              },
+              {
+                "cellIndex": 20,
+                "candidates": 64
+              },
+              {
+                "cellIndex": 64,
+                "candidates": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.129Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 10
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 10
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T23:50:53.134Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 9
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 9
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T23:50:53.142Z",
+      "action": {
+        "type": "SET_MODE",
+        "mode": "pen"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.145Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 10
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 10
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T23:50:53.148Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 4
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.161Z",
+      "action": {
+        "type": "COACH_END",
+        "reason": "session-reset"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.163Z",
+      "action": {
+        "type": "COACH_START",
+        "result": {
+          "roles": {
+            "target": 37,
+            "cause": [
+              10,
+              27,
+              28,
+              29,
+              36,
+              43,
+              46,
+              64
+            ],
+            "elimTarget": [],
+            "unitMember": [],
+            "scA": [],
+            "scB": [],
+            "fin": []
+          },
+          "digits": [
+            5
+          ],
+          "unit": null,
+          "arrows": [
+            {
+              "from": 10,
+              "to": 37,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 27,
+              "to": 37,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 28,
+              "to": 37,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 29,
+              "to": 37,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 36,
+              "to": 37,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 43,
+              "to": 37,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 46,
+              "to": 37,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 64,
+              "to": 37,
+              "style": "straight-arrow"
+            }
+          ],
+          "supportingText": "Only *5* can go here — all other digits appear in this cell's row, column, or box.",
+          "complexity": {
+            "acknowledged": false,
+            "note": null,
+            "endpoints": null
+          },
+          "technique": "Naked Single",
+          "rank": 1,
+          "type": "placement",
+          "eliminations": [],
+          "autoReveal": {
+            "required": false,
+            "cells": [
+              {
+                "cellIndex": 10,
+                "candidates": 8
+              },
+              {
+                "cellIndex": 27,
+                "candidates": 2
+              },
+              {
+                "cellIndex": 28,
+                "candidates": 128
+              },
+              {
+                "cellIndex": 29,
+                "candidates": 256
+              },
+              {
+                "cellIndex": 36,
+                "candidates": 32
+              },
+              {
+                "cellIndex": 37,
+                "candidates": 16
+              },
+              {
+                "cellIndex": 43,
+                "candidates": 4
+              },
+              {
+                "cellIndex": 46,
+                "candidates": 64
+              },
+              {
+                "cellIndex": 64,
+                "candidates": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.174Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 37
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 37
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T23:50:53.177Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 10
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 10
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T23:50:53.181Z",
+      "action": {
+        "type": "SET_MODE",
+        "mode": "pen"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:53.183Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 37
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 37
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T23:50:53.189Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 5
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.194Z",
+      "action": {
+        "type": "COACH_END",
+        "reason": "session-reset"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.195Z",
+      "action": {
+        "type": "COACH_START",
+        "result": {
+          "roles": {
+            "target": 38,
+            "cause": [
+              11,
+              20,
+              27,
+              28,
+              29,
+              36,
+              43,
+              47
+            ],
+            "elimTarget": [],
+            "unitMember": [],
+            "scA": [],
+            "scB": [],
+            "fin": []
+          },
+          "digits": [
+            1
+          ],
+          "unit": null,
+          "arrows": [
+            {
+              "from": 11,
+              "to": 38,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 20,
+              "to": 38,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 27,
+              "to": 38,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 28,
+              "to": 38,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 29,
+              "to": 38,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 36,
+              "to": 38,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 43,
+              "to": 38,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 47,
+              "to": 38,
+              "style": "straight-arrow"
+            }
+          ],
+          "supportingText": "Only *1* can go here — all other digits appear in this cell's row, column, or box.",
+          "complexity": {
+            "acknowledged": false,
+            "note": null,
+            "endpoints": null
+          },
+          "technique": "Naked Single",
+          "rank": 1,
+          "type": "placement",
+          "eliminations": [],
+          "autoReveal": {
+            "required": false,
+            "cells": [
+              {
+                "cellIndex": 11,
+                "candidates": 16
+              },
+              {
+                "cellIndex": 20,
+                "candidates": 64
+              },
+              {
+                "cellIndex": 27,
+                "candidates": 2
+              },
+              {
+                "cellIndex": 28,
+                "candidates": 128
+              },
+              {
+                "cellIndex": 29,
+                "candidates": 256
+              },
+              {
+                "cellIndex": 36,
+                "candidates": 32
+              },
+              {
+                "cellIndex": 38,
+                "candidates": 1
+              },
+              {
+                "cellIndex": 43,
+                "candidates": 4
+              },
+              {
+                "cellIndex": 47,
+                "candidates": 8
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.205Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 38
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 38
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T23:50:53.209Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 11
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 11
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T23:50:53.212Z",
+      "action": {
+        "type": "SET_MODE",
+        "mode": "pen"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:53.215Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 38
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 38
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T23:50:53.223Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 1
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.230Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 72
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.233Z",
+      "action": {
+        "type": "HINT",
+        "hint": {
+          "cellIndex": 72,
+          "digit": 7,
+          "technique": "Naked Single"
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.244Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 78
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.247Z",
+      "action": {
+        "type": "HINT",
+        "hint": {
+          "cellIndex": 78,
+          "digit": 9,
+          "technique": "Naked Single"
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:53.250Z",
+      "action": {
+        "type": "CHECK"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:56.251Z",
+      "action": {
+        "type": "CLEAR_INCORRECT"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:56.827Z",
+      "action": {
+        "type": "PAGE_RELOADED",
+        "position": {
+          "puzzle": {
+            "givens": "000020000905306028807004006289063001600009030074000260090130605510002040006005010",
+            "solution": "163928574945376128827514396289763451651249837374851269492137685518692743736485912",
+            "tier": "easy",
+            "origin": "generated",
+            "id": "e273b712",
+            "gen": {
+              "requestedTier": "easy",
+              "seed": 4281449981,
+              "seedBy": "random",
+              "budget": 30,
+              "attempts": 3,
+              "rejected": {
+                "unsolved": 0,
+                "wrongTier": 2,
+                "byTier": {
+                  "kiddie": 2
+                }
+              },
+              "fallback": false
+            }
+          },
+          "board": "000020000945306028807004006289063001651009030074000260092130605510002040706005910",
+          "pencil": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "selected": null,
+          "mode": "pen",
+          "hintsRemaining": 1,
+          "attemptRecorded": false,
+          "won": false,
+          "incorrect": [],
+          "highlightPending": false,
+          "completionMessage": "",
+          "undo": null,
+          "generating": null,
+          "coach": null
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.165Z",
+      "action": {
+        "type": "PENCIL_TOGGLE",
+        "digit": 8
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:57.171Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 1
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:57.178Z",
+      "action": {
+        "type": "TOGGLE_MODE"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.186Z",
+      "action": {
+        "type": "TOGGLE_MODE"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.192Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 1
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:57.197Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 7
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:57.204Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 1
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:57.209Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 67
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.216Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 70
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.228Z",
+      "action": {
+        "type": "ERASE"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:57.233Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 4
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:57.243Z",
+      "action": {
+        "type": "PENCIL_TOGGLE",
+        "digit": 1
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:57.248Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 44
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.259Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 66
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.264Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 54
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.444Z",
+      "action": {
+        "type": "CHANGE_DIFFICULTY",
+        "difficulty": "kiddie"
+      },
+      "then": [
+        {
+          "type": "SET_GENERATING",
+          "flag": true,
+          "message": "Generating puzzle…",
+          "difficulty": "kiddie"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T23:50:57.455Z",
+      "action": {
+        "type": "GEN_PROGRESS",
+        "attempts": 1,
+        "budget": 20
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.475Z",
+      "action": {
+        "type": "NEW_PUZZLE",
+        "difficulty": "kiddie",
+        "puzzle": {
+          "givens": "839002647500000090060098002026859010150047030000003820010600489684921500900384061",
+          "solution": "839512647542736198761498352326859714158247936497163825213675489684921573975384261",
+          "tier": "kiddie",
+          "origin": "generated",
+          "id": "a967005a",
+          "gen": {
+            "requestedTier": "kiddie",
+            "seed": 3152986359,
+            "seedBy": "random",
+            "budget": 20,
+            "attempts": 1,
+            "rejected": {
+              "unsolved": 0,
+              "wrongTier": 0,
+              "byTier": {}
+            },
+            "fallback": false
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.793Z",
+      "action": {
+        "type": "CHECK"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:57.799Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 56
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.809Z",
+      "action": {
+        "type": "ERASE"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:57.814Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 3
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.825Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 7
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.832Z",
+      "action": {
+        "type": "ARROW_NAV",
+        "direction": "down"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.843Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 44
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.854Z",
+      "action": {
+        "type": "PENCIL_TOGGLE",
+        "digit": 8
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.862Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 1
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.871Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 49
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.877Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 7
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.887Z",
+      "action": {
+        "type": "UNDO"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.895Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 6
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.906Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 70
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.913Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 33
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.925Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 25
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.929Z",
+      "action": {
+        "type": "HINT",
+        "hint": {
+          "cellIndex": 25,
+          "digit": 5,
+          "technique": "Naked Single"
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.953Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 44
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.961Z",
+      "action": {
+        "type": "ERASE"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.964Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 56
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.976Z",
+      "action": {
+        "type": "ERASE"
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:57.980Z",
+      "action": {
+        "type": "COACH_START",
+        "result": {
+          "roles": {
+            "target": 4,
+            "cause": [
+              0,
+              1,
+              2,
+              5,
+              6,
+              7,
+              8,
+              31
+            ],
+            "elimTarget": [],
+            "unitMember": [],
+            "scA": [],
+            "scB": [],
+            "fin": []
+          },
+          "digits": [
+            1
+          ],
+          "unit": null,
+          "arrows": [
+            {
+              "from": 0,
+              "to": 4,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 1,
+              "to": 4,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 2,
+              "to": 4,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 5,
+              "to": 4,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 6,
+              "to": 4,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 7,
+              "to": 4,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 8,
+              "to": 4,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 31,
+              "to": 4,
+              "style": "straight-arrow"
+            }
+          ],
+          "supportingText": "Only *1* can go here — all other digits appear in this cell's row, column, or box.",
+          "complexity": {
+            "acknowledged": false,
+            "note": null,
+            "endpoints": null
+          },
+          "technique": "Naked Single",
+          "rank": 1,
+          "type": "placement",
+          "eliminations": [],
+          "autoReveal": {
+            "required": false,
+            "cells": [
+              {
+                "cellIndex": 0,
+                "candidates": 128
+              },
+              {
+                "cellIndex": 1,
+                "candidates": 4
+              },
+              {
+                "cellIndex": 2,
+                "candidates": 256
+              },
+              {
+                "cellIndex": 4,
+                "candidates": 1
+              },
+              {
+                "cellIndex": 5,
+                "candidates": 2
+              },
+              {
+                "cellIndex": 6,
+                "candidates": 32
+              },
+              {
+                "cellIndex": 7,
+                "candidates": 8
+              },
+              {
+                "cellIndex": 8,
+                "candidates": 64
+              },
+              {
+                "cellIndex": 31,
+                "candidates": 16
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T23:50:58.004Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 4
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 4
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T23:50:58.008Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 0
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T23:50:58.011Z",
+      "action": {
+        "type": "SET_MODE",
+        "mode": "pen"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:50:58.013Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 4
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 4
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T23:50:58.015Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 1
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.517Z",
+      "action": {
+        "type": "COACH_END",
+        "reason": "recap-timeout"
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.821Z",
+      "action": {
+        "type": "SET_MODE",
+        "mode": "pen"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T23:51:00.828Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 3
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.831Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 5
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.837Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 10
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.840Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 4
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.842Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 11
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.845Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 2
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.848Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 12
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.850Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 7
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.856Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 13
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.859Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 3
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.862Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 14
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.864Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 6
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.866Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 15
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.872Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 1
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.875Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 17
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.878Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 8
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.880Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 18
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.882Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 7
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.889Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 20
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.893Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 1
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.896Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 21
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.909Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 4
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.913Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 24
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.917Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 3
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.934Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 27
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.945Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 3
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.950Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 33
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.962Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 7
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.967Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 35
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.978Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 4
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.982Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 38
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.993Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 8
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:00.997Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 39
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.012Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 2
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.016Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 42
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.023Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 9
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.028Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 44
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.034Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 6
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.045Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 45
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.052Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 4
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.061Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 46
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.068Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 9
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.074Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 47
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.078Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 7
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.080Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 48
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.083Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 1
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.089Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 53
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.092Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 5
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.095Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 54
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.098Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 2
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.101Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 56
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.108Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 3
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.113Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 58
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.116Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 7
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.124Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 59
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.127Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 5
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.129Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 70
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.132Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 7
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.138Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 71
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.141Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 3
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.145Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 73
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.148Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 7
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.159Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 74
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.163Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 5
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.165Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 78
+      }
+    },
+    {
+      "at": "2026-11-16T23:51:01.172Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 2
+      }
+    }
+  ],
+  "errors": []
+}

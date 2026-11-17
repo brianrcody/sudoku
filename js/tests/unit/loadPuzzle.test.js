@@ -1,11 +1,11 @@
 /**
- * @fileoverview Unit tests for js/generator/loadPuzzle.js (LP1–LP10).
+ * @fileoverview Unit tests for js/generator/loadPuzzle.js (LP1–LP12).
  *
  * loadFromGivens runs inside the worker in production; it is imported directly
  * here because worker scripts are outside the coverage collector.
  */
 
-import { loadFromGivens } from '../../generator/loadPuzzle.js';
+import { loadFromGivens, validateGivens, checkGivens } from '../../generator/loadPuzzle.js';
 import { countSolutions } from '../../solver/uniqueness.js';
 import { UNRATED } from '../../config.js';
 import {
@@ -72,5 +72,41 @@ describe('generator/loadPuzzle.js', () => {
     const givens = toGivens(HARD);
     loadFromGivens(givens);
     expect(Array.from(givens).join('')).to.equal(HARD);
+  });
+
+  describe('validateGivens (Phase 2)', () => {
+    it('LP11: valid givens pass with their unique solution', () => {
+      const result = validateGivens(toGivens(KIDDIE));
+      expect(result.ok).to.be.true;
+      expect(Array.from(result.solution).join('')).to.equal(KIDDIE_SOLUTION);
+    });
+
+    for (const [reason, puzzle] of [
+      ['contradiction', CONTRADICTION],
+      ['complete', KIDDIE_SOLUTION],
+      ['no-solution', NO_SOLUTION],
+      ['multiple', MULTIPLE],
+    ]) {
+      it(`LP11: validateGivens rejects ${reason}`, () => {
+        expect(validateGivens(toGivens(puzzle))).to.deep.equal({ ok: false, reason });
+      });
+    }
+  });
+
+  describe('checkGivens (Phase 2)', () => {
+    it('LP12: givens whose unique solution is the recorded one pass, with nothing else in the result', () => {
+      expect(checkGivens(toGivens(KIDDIE), toGivens(KIDDIE_SOLUTION))).to.deep.equal({ ok: true });
+    });
+
+    it('LP12: a recorded solution that is not the unique solution is a solution-mismatch', () => {
+      const other = toGivens(KIDDIE_SOLUTION);
+      [other[0], other[1]] = [other[1], other[0]];
+      expect(checkGivens(toGivens(KIDDIE), other)).to.deep.equal({ ok: false, reason: 'solution-mismatch' });
+    });
+
+    it('LP12: invalid givens fail with the validation reason', () => {
+      expect(checkGivens(toGivens(MULTIPLE), toGivens(KIDDIE_SOLUTION)))
+        .to.deep.equal({ ok: false, reason: 'multiple' });
+    });
   });
 });

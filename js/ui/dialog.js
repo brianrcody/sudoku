@@ -28,6 +28,7 @@ export function mount(root) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
+      aria-describedby="modal-body"
     >
       <div class="modal">
         <h2 id="modal-title"></h2>

@@ -20,10 +20,12 @@
  *   emission if they have not yet been called.
  * - Re-entrant emit calls run to completion before the outer emit resumes.
  * - If a listener throws, the error is logged and remaining listeners still fire.
+ *   With `reportErrors` it is also emitted as `listener-error` on `diagnostics`.
  *
+ * @param {{ reportErrors?: boolean }} [opts]
  * @returns {Emitter}
  */
-export function createEmitter() {
+export function createEmitter({ reportErrors = true } = {}) {
   /** @type {Map<string, Array<function|null>>} */
   const map = new Map();
 
@@ -69,6 +71,7 @@ export function createEmitter() {
         fn(payload);
       } catch (err) {
         console.error(err);
+        if (reportErrors) diagnostics.emit('listener-error', { error: err, type, payload });
       }
     }
 
@@ -95,3 +98,13 @@ export function createEmitter() {
 
   return { on, off, emit, clear };
 }
+
+/**
+ * Process-wide diagnostics channel. No listeners unless developer mode is on.
+ * Built without `reportErrors`, so a failing diagnostics listener is logged and
+ * reported nowhere else.
+ *
+ * Events: `swallowed` `{ where, error }`, `generation` `{ event, … }`,
+ * `listener-error` `{ error, type, payload }`.
+ */
+export const diagnostics = createEmitter({ reportErrors: false });

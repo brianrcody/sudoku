@@ -8,12 +8,16 @@
  * top-tier background pre-generation.
  */
 
-import { makeLoadRequest } from '../worker/protocol.js';
+import { MSG, makeLoadRequest, makeCheckRequest } from '../worker/protocol.js';
 import { WORKER_URL } from '../config.js';
 
 /**
  * @param {{ createWorker?: function(): Worker }} [deps]
- * @returns {{ rateGivens: function(Uint8Array): Promise<import('../generator/loadPuzzle.js').LoadResult> }}
+ * @returns {{
+ *   rateGivens: function(Uint8Array): Promise<import('../generator/loadPuzzle.js').LoadResult>,
+ *   checkPuzzles: function(Array<{givens: Uint8Array, solution: Uint8Array}>):
+ *     Promise<Array<import('../generator/loadPuzzle.js').CheckResult>>,
+ * }}
  */
 export function createLoadProvider({
   createWorker = () => new Worker(WORKER_URL, { type: 'module' }),
@@ -31,14 +35,14 @@ export function createLoadProvider({
     worker = createWorker();
 
     worker.onmessage = function (event) {
-      // This instance only ever receives LOAD_REQUESTs, so every message is a
-      // LOAD_RESULT. A result can still arrive for a request already failed by
-      // onerror.
+      // This instance only ever receives LOAD_REQUESTs and CHECK_REQUESTs, so
+      // every message is a LOAD_RESULT or a CHECK_RESULT. A result can still
+      // arrive for a request already failed by onerror.
       const msg = event.data;
       const cb = pending.get(msg.id);
       if (!cb) return;
       pending.delete(msg.id);
-      cb.resolve(msg.result);
+      cb.resolve(msg.type === MSG.CHECK_RESULT ? msg.results : msg.result);
     };
 
     worker.onerror = function (err) {
@@ -66,5 +70,22 @@ export function createLoadProvider({
     });
   }
 
-  return { rateGivens };
+  /**
+   * Check puzzles against their recorded solutions in one request, without
+   * rating them.
+   *
+   * @param {Array<{givens: Uint8Array, solution: Uint8Array}>} puzzles
+   * @returns {Promise<Array<import('../generator/loadPuzzle.js').CheckResult>>}
+   *   One result per puzzle, in order.
+   */
+  function checkPuzzles(puzzles) {
+    const id = `check-${++requestCounter}`;
+    const w = _ensureWorker();
+    return new Promise((resolve, reject) => {
+      pending.set(id, { resolve, reject });
+      w.postMessage(makeCheckRequest({ id, puzzles }));
+    });
+  }
+
+  return { rateGivens, checkPuzzles };
 }

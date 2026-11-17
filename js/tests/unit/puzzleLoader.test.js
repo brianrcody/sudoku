@@ -1,12 +1,12 @@
 /**
- * @fileoverview Unit tests for js/game/puzzleLoader.js (PL-L1–PL-L24).
+ * @fileoverview Unit tests for js/game/puzzleLoader.js (PL-L1–PL-L26).
  *
  * The loader's collaborators are all injected, so every branch is driven here
  * with fakes: rateGivens (the worker), confirm (the dialog), beforeReplace.
  */
 
 import {
-  createPuzzleLoader, hasProgress, rejectionMessage, loadedMessage,
+  createPuzzleLoader, hasProgress, rejectionMessage, rejectionDetail, loadedMessage,
 } from '../../game/puzzleLoader.js';
 import { loadFromGivens } from '../../generator/loadPuzzle.js';
 import { UNRATED } from '../../config.js';
@@ -236,5 +236,64 @@ describe('game/puzzleLoader.js', () => {
       expect(outcome.status).to.equal('loaded');
       expect(log.confirms).to.have.length(0);
     });
+  });
+
+  describe('per-call confirmation', () => {
+    it('PL-L25a: a confirm passed to load is asked instead of the loader\'s own', async () => {
+      const state = makeState();
+      state.pen[EMPTY] = 4;
+      const { loader, log, dispatched } = makeLoader({ state, confirmAnswer: false });
+      const asked = [];
+
+      const outcome = await loader.load(KIDDIE, {
+        source: 'string',
+        confirm: async opts => { asked.push(opts); return true; },
+      });
+
+      expect(asked).to.deep.equal([{
+        title: 'Load this puzzle?',
+        body: 'Your current progress will be lost.',
+        confirmLabel: 'Load Puzzle',
+      }]);
+      expect(log.confirms).to.have.length(0);
+      expect(outcome.status).to.equal('loaded');
+      expect(dispatched).to.have.length(1);
+    });
+
+    it('PL-L25b: without a per-call confirm the loader\'s own is asked', async () => {
+      const state = makeState();
+      state.pen[EMPTY] = 4;
+      const { loader, log } = makeLoader({ state });
+
+      await loader.load(KIDDIE, { source: 'string' });
+
+      expect(log.confirms).to.have.length(1);
+    });
+  });
+
+  describe('rejectionDetail', () => {
+    const PREFIX = 'This puzzle can\'t be loaded. ';
+    const DETAILS = {
+      chars: 'Puzzles can contain only the digits 1–9, with 0 or . for empty cells.',
+      contradiction: 'A digit repeats in a row, column, or box.',
+      complete: 'The puzzle has no empty cells.',
+      'no-solution': 'The puzzle has no solution.',
+      multiple: 'The puzzle has more than one solution.',
+      error: 'The puzzle couldn\'t be checked.',
+    };
+
+    it('PL-L26: length — the detail states the cell count and the message is prefix + detail', () => {
+      expect(rejectionDetail('length', 80)).to.equal('A puzzle needs exactly 81 cells; this one has 80.');
+      expect(rejectionMessage('length', 80)).to.equal(PREFIX + rejectionDetail('length', 80));
+    });
+
+    for (const [reason, detail] of Object.entries(DETAILS)) {
+      it(`PL-L26: ${reason} — the detail ignores any length and the message is prefix + detail`, () => {
+        expect(rejectionDetail(reason)).to.equal(detail);
+        expect(rejectionDetail(reason, 80)).to.equal(detail);
+        expect(rejectionMessage(reason)).to.equal(PREFIX + detail);
+        expect(rejectionMessage(reason, 80)).to.equal(PREFIX + detail);
+      });
+    }
   });
 });

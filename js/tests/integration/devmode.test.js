@@ -12,6 +12,7 @@ import { contrast } from './sharing.test.js';
 import {
   KIDDIE, KIDDIE_SOLUTION, MEDIUM, HARD, UNRATED,
 } from '../fixtures/puzzles/loadable.js';
+import { twoActionDoc, TWO_ACTIONS_REPLAYED } from '../helpers/devSessionRig.js';
 
 const DEV_KEY = 'sudoku.dev.v1';
 const EMPTY = KIDDIE.indexOf('0');
@@ -67,7 +68,10 @@ describe('integration: developer mode', function () {
       expect($(iframe, '#dev-badge').textContent).to.equal('DEV');
       expect($(iframe, '#dev-title').textContent).to.equal('Developer tools');
       expect(devResources(iframe)).to.include.members(
-        ['/js/dev/devMode.js', '/js/dev/devPanel.js', '/js/dev/inspect.js', '/css/dev.css']);
+        ['/js/dev/devMode.js', '/js/dev/devPanel.js', '/js/dev/inspect.js', '/css/dev.css',
+          '/js/dev/devBoot.js', '/js/dev/recorder.js', '/js/dev/recorderStore.js', '/js/dev/devLog.js',
+          '/js/dev/sessionCodec.js', '/js/dev/machine.js',
+          '/js/dev/devSession.js', '/js/dev/devApi.js', '/js/dev/recorderPanel.js', '/js/dev/replay.js']);
       expect(JSON.parse(localStorage.getItem(DEV_KEY))).to.equal(true);
     });
 
@@ -447,7 +451,7 @@ describe('integration: developer mode', function () {
 
       await loadString(MEDIUM);
       await waitFor(() => boardString(iframe) === MEDIUM, 10000, 'loaded puzzle');
-      expect($(iframe, '#dev-gen-body').textContent).to.equal('This puzzle was loaded, not generated.');
+      expect($(iframe, '#dev-gen-info').textContent).to.equal('This puzzle was loaded, not generated.');
     });
   });
 
@@ -458,12 +462,16 @@ describe('integration: developer mode', function () {
       await openDev();
       for (const d of $$(iframe, '#dev-root details')) d.open = true;
       $(iframe, '#dev-inspect-run').click();
-      const controls = $$(iframe, '#dev-root button, #dev-root summary, #dev-root textarea, #dev-root pre, #dev-badge');
+      const controls = $$(iframe,
+        '#dev-root button, #dev-root summary, #dev-root textarea, #dev-root input, #dev-root select, '
+        + '#dev-root pre, #dev-root [tabindex="0"], #dev-badge');
       expect(controls.length).to.be.above(60);
       for (const el of controls) {
         const name = (el.getAttribute('aria-label') || el.labels?.[0]?.textContent || el.textContent).trim();
         expect(name, el.id || el.tagName).to.not.equal('');
-        if (el.disabled) continue;
+        // The copy-fallback field is hidden until a copy fails, and the report
+        // is not displayed until a replay fills it (aspec §12.1, vspec §4.4).
+        if (el.disabled || el.closest('[hidden]') || el.matches('.dev-report:empty')) continue;
         el.focus();
         expect(iframe.contentDocument.activeElement, el.id || el.tagName).to.equal(el);
       }
@@ -554,5 +562,89 @@ describe('integration: developer mode', function () {
       expect($(iframe, '#dev-root').getBoundingClientRect().left).to.equal(panelLeft);
       expect($(iframe, '#dev-badge').getBoundingClientRect().left).to.equal(badgeLeft);
     });
+  });
+
+  // ── Session recorder and Generate from seed in the app (Phase 7) ─────────
+
+  describe('session recorder and generate from seed', () => {
+    const counts = () => $(iframe, '#dev-rec-counts').textContent;
+    const recordedActions = () => iframe.contentWindow.sudokuDev.exportSession().document.actions.length;
+
+    /** Records an action, then clears the history through the panel's own confirmation. */
+    async function clearThroughDialog() {
+      gsOf(iframe).dispatch({ type: 'SELECT_CELL', index: EMPTY });
+      $(iframe, '#dev-rec').open = true;
+      $(iframe, '#dev-rec-clear').click();
+      await waitFor(() => $(iframe, '#modal-backdrop').classList.contains('open'), 5000, 'clear confirmation');
+      $(iframe, '#modal-confirm').click();
+      await waitFor(() => $(iframe, '#dev-rec-history-status').textContent === 'History cleared.', 5000, 'history cleared');
+    }
+
+    it('Clear history on an empty history leaves it empty: the click records no deselection', async () => {
+      await openDev();
+      await clearThroughDialog();
+
+      $(iframe, '#dev-rec-clear').click();
+      await appFrame(iframe);
+
+      expect($(iframe, '#modal-backdrop').classList.contains('open')).to.be.false;
+      expect(recordedActions()).to.equal(0);
+      expect(counts()).to.equal('0 actions, 0 errors recorded.');
+    });
+
+    it('a replay right after Clear history, on a board without progress, asks nothing', async () => {
+      await openDev();
+      await clearThroughDialog();
+      let asked = false;
+      const observer = new iframe.contentWindow.MutationObserver(() => {
+        asked ||= $(iframe, '#modal-backdrop').classList.contains('open');
+      });
+      observer.observe($(iframe, '#modal-backdrop'), { attributes: true, attributeFilter: ['class'] });
+
+      $(iframe, '#dev-rec-doc').value = JSON.stringify(twoActionDoc());
+      $(iframe, '#dev-rec-replay').click();
+      await waitFor(() => $(iframe, '#dev-rec-replay-status').textContent === TWO_ACTIONS_REPLAYED, 10000, 'replay outcome');
+      observer.disconnect();
+
+      expect(asked).to.be.false;
+      expect(recordedActions()).to.equal(2);
+    });
+
+    /** Each field, and how to show it. */
+    const fields = [
+      ['the copy-fallback field', '#dev-rec-fallback-text', async () => {
+        Object.defineProperty(iframe.contentWindow.navigator, 'clipboard', { value: undefined, configurable: true });
+        $(iframe, '#dev-rec').open = true;
+        $(iframe, '#dev-rec-copy').click();
+        await waitFor(() => !$(iframe, '#dev-rec-fallback').hidden, 5000, 'copy fallback field');
+      }],
+      ['the replay document field', '#dev-rec-doc', async () => { $(iframe, '#dev-rec').open = true; }],
+      ['the stop-after field', '#dev-rec-stop', async () => { $(iframe, '#dev-rec').open = true; }],
+      ['the seed field', '#dev-gen-seed', async () => { $(iframe, '#dev-gen').open = true; }],
+    ];
+    for (const [label, selector, reveal] of fields) {
+      it(`RPN14: digits, Backspace, Delete and arrows typed in ${label} never reach the board`, async () => {
+        await openDev();
+        await reveal();
+        gsOf(iframe).dispatch({ type: 'SELECT_CELL', index: EMPTY });
+        const field = $(iframe, selector);
+        field.focus();
+        const actions = [];
+        gsOf(iframe).on('changed', ({ action }) => actions.push(action.type));
+
+        const Kbd = iframe.contentWindow.KeyboardEvent;
+        const events = ['5', 'Backspace', 'Delete', 'ArrowRight', 'ArrowDown'].map(key => {
+          const e = new Kbd('keydown', { key, bubbles: true, cancelable: true });
+          field.dispatchEvent(e);
+          return e;
+        });
+
+        expect(iframe.contentDocument.activeElement).to.equal(field);
+        expect(events.map(e => e.defaultPrevented)).to.deep.equal([false, false, false, false, false]);
+        expect(actions).to.deep.equal([]);
+        expect(gsOf(iframe).getState().selected).to.equal(EMPTY);
+        expect(gsOf(iframe).getState().pen[EMPTY]).to.equal(0);
+      });
+    }
   });
 });

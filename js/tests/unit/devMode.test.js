@@ -1,11 +1,14 @@
 /**
- * @fileoverview Unit tests for js/dev/devMode.js (DM1–DM9).
+ * @fileoverview Unit tests for js/dev/devMode.js (DM1–DM9; DM10–DM15 from
+ * tspec-debug-instrumentation: the history purge, the fresh-session flag).
  *
  * The global beforeEach clears localStorage, so every test starts with no
  * saved setting.
  */
 
-import { initDevMode, isDevMode } from '../../dev/devMode.js';
+import { initDevMode, isDevMode, isFreshDevSession, RECORDER_DB } from '../../dev/devMode.js';
+import { diagnostics } from '../../util/events.js';
+import { seedDb } from '../helpers/fakeIdb.js';
 
 const KEY = 'sudoku.dev.v1';
 
@@ -59,5 +62,86 @@ describe('dev/devMode.js', () => {
   it('DM9: a saved value other than true does not enable it', () => {
     localStorage.setItem(KEY, '"1"');
     expect(initDevMode('')).to.be.false;
+  });
+
+  // ── Phase 4: the session history ────────────────────────────────────────
+
+  /** Runs `act` with `window.indexedDB` replaced by `value`, restoring it after. */
+  function withIndexedDB(value, act) {
+    const own = Object.getOwnPropertyDescriptor(window, 'indexedDB');
+    Object.defineProperty(window, 'indexedDB', { configurable: true, writable: true, value });
+    try {
+      return act();
+    } finally {
+      if (own) Object.defineProperty(window, 'indexedDB', own);
+      else delete window.indexedDB;
+    }
+  }
+
+  const listed = async () => (await indexedDB.databases()).some(db => db.name === RECORDER_DB);
+
+  it('DM10: ?dev=0 deletes the saved session history', async function () {
+    this.timeout(5000);
+    await seedDb(RECORDER_DB);
+    const before = await listed();
+
+    initDevMode('?dev=0');
+
+    expect(before).to.equal(true);
+    const deadline = Date.now() + 3000;
+    while (await listed()) {
+      if (Date.now() > deadline) throw new Error('the history database was not deleted');
+      await new Promise(r => setTimeout(r, 20));
+    }
+  });
+
+  it('DM11: ?dev=0 with a throwing deleteDatabase still turns the mode off, silently', () => {
+    initDevMode('?dev=1');
+    const swallowed = [];
+    const off = diagnostics.on('swallowed', e => swallowed.push(e));
+
+    let result;
+    try {
+      result = withIndexedDB({ deleteDatabase() { throw new DOMException('denied', 'SecurityError'); } },
+        () => initDevMode('?dev=0'));
+    } finally {
+      off();
+    }
+
+    expect(result).to.equal(false);
+    expect(isDevMode()).to.equal(false);
+    expect(swallowed).to.deep.equal([]);
+  });
+
+  it('DM12: ?dev=0 without IndexedDB does not throw', () => {
+    expect(withIndexedDB(undefined, () => initDevMode('?dev=0'))).to.equal(false);
+  });
+
+  it('DM13: ?dev=1 with nothing saved is a fresh developer session', () => {
+    initDevMode('?dev=1');
+
+    expect(isFreshDevSession()).to.equal(true);
+  });
+
+  describe('DM14: every other load is not fresh', () => {
+    const cases = [
+      ['?dev=1 when already on', () => initDevMode('?dev=1'), '?dev=1'],
+      ['no parameter with the mode saved on', () => initDevMode('?dev=1'), ''],
+      ['?dev=0', () => initDevMode('?dev=1'), '?dev=0'],
+      ['an unrecognised value', () => initDevMode('?dev=1'), '?dev=yes'],
+    ];
+    for (const [label, arrange, search] of cases) {
+      it(label, () => {
+        arrange();
+
+        initDevMode(search);
+
+        expect(isFreshDevSession()).to.equal(false);
+      });
+    }
+  });
+
+  it('DM15: the history database is named sudoku-dev-recorder', () => {
+    expect(RECORDER_DB).to.equal('sudoku-dev-recorder');
   });
 });

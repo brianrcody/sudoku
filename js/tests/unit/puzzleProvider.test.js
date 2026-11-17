@@ -9,6 +9,7 @@
 
 import { createClientGenProvider } from '/js/providers/clientGenProvider.js';
 import { MSG } from '/js/worker/protocol.js';
+import { diagnostics } from '/js/util/events.js';
 
 const STORAGE_PREFIX = 'sudoku.pregen.v1.';
 
@@ -237,5 +238,248 @@ describe('puzzleProvider / clientGenProvider', function () {
     }).to.not.throw();
     // peekReady must return null — corrupt entry discarded silently
     expect(provider.peekReady('hard')).to.be.null;
+  });
+});
+
+/**
+ * PP12–PP22 (debug instrumentation, Phase 2): seed, budget, generation
+ * diagnostics, and the Unrated background discard. A fake worker injected
+ * through `createWorker` records what is posted; each test drives its replies.
+ */
+describe('clientGenProvider — seed, budget, and generation events', () => {
+  let worker;
+  let events;
+  let warn;
+
+  function makeProvider() {
+    return createClientGenProvider({
+      createWorker: () => {
+        worker = {
+          posted: [],
+          onmessage: null,
+          onerror: null,
+          postMessage(msg) { this.posted.push(msg); },
+          reply(data) { this.onmessage({ data }); },
+        };
+        return worker;
+      },
+    });
+  }
+
+  function generated(difficulty, gen) {
+    return {
+      id: `p-${difficulty}`,
+      difficulty,
+      givens: Array.from({ length: 81 }, (_, i) => i % 10),
+      solution: Array.from({ length: 81 }, (_, i) => (i % 9) + 1),
+      solveTrace: [],
+      source: 'generated',
+      ...(gen === undefined ? {} : { gen }),
+    };
+  }
+
+  function genOf(requestedTier, seed, attempts = 4) {
+    return {
+      requestedTier, seed, seedBy: 'random', budget: 60, attempts,
+      rejected: { unsolved: 0, wrongTier: attempts - 1, byTier: {} }, fallback: false,
+    };
+  }
+
+  function primeStorage(difficulty, puzzle) {
+    localStorage.setItem(STORAGE_PREFIX + difficulty,
+      JSON.stringify({ version: 1, puzzle, generatedAt: new Date().toISOString() }));
+  }
+
+  const named = name => events.filter(e => e.event === name);
+
+  beforeEach(() => {
+    events = [];
+    diagnostics.on('generation', e => events.push(e));
+    warn = console.warn;
+    console.warn = () => {};
+  });
+
+  afterEach(() => { console.warn = warn; });
+
+  it('PP12: a cache hit reports the tier and the cached puzzle\'s seed', async () => {
+    primeStorage('easy', generated('easy', genOf('easy', 314)));
+    const provider = makeProvider();
+
+    await provider.requestPuzzle({ difficulty: 'easy' });
+
+    expect(events).to.deep.equal([{ event: 'cache-hit', tier: 'easy', seed: 314 }]);
+  });
+
+  it('PP12: a cache hit on a puzzle without generation data reports an undefined seed', async () => {
+    primeStorage('easy', generated('easy'));
+    const provider = makeProvider();
+
+    await provider.requestPuzzle({ difficulty: 'easy' });
+
+    expect(events).to.deep.equal([{ event: 'cache-hit', tier: 'easy', seed: undefined }]);
+  });
+
+  it('PP13: an unseeded cache miss reports cache-miss, then a foreground request, and posts it unseeded', () => {
+    const provider = makeProvider();
+
+    provider.requestPuzzle({ difficulty: 'hard' });
+
+    const [posted] = worker.posted;
+    expect(events).to.deep.equal([
+      { event: 'cache-miss', tier: 'hard' },
+      { event: 'request', tier: 'hard', seed: posted.seed, kind: 'foreground' },
+    ]);
+    expect(posted.seed).to.be.a('number');
+    expect(posted.seeded).to.equal(false);
+    expect(posted.budget).to.equal(undefined);
+  });
+
+  it('PP14: a seeded request bypasses a primed cache in both directions', async () => {
+    const cached = generated('easy', genOf('easy', 314));
+    primeStorage('easy', cached);
+    const stored = localStorage.getItem(STORAGE_PREFIX + 'easy');
+    const provider = makeProvider();
+
+    const result = provider.requestPuzzle({ difficulty: 'easy', seed: 7, budget: 3 });
+    const [posted] = worker.posted;
+    worker.reply({ type: MSG.GEN_RESULT, id: posted.id, puzzle: generated('easy', genOf('easy', 7)), fallback: false });
+    const { puzzle } = await result;
+
+    expect(named('cache-hit')).to.be.empty;
+    expect(named('cache-miss')).to.be.empty;
+    expect(named('request')).to.deep.equal([{ event: 'request', tier: 'easy', seed: 7, kind: 'seeded' }]);
+    expect(posted).to.include({ tier: 'easy', seed: 7, background: false, seeded: true, budget: 3 });
+    expect(puzzle.gen.seed).to.equal(7);
+    expect(provider.peekReady('easy').id).to.equal(cached.id);
+    expect(provider.peekReady('easy').gen.seed).to.equal(314);
+    expect(localStorage.getItem(STORAGE_PREFIX + 'easy')).to.equal(stored);
+  });
+
+  it('PP15: primeNext reports a background request', () => {
+    const provider = makeProvider();
+
+    provider.primeNext('medium');
+
+    const [posted] = worker.posted;
+    expect(events).to.deep.equal([{ event: 'request', tier: 'medium', seed: posted.seed, kind: 'background' }]);
+  });
+
+  it('PP16: GEN_PROGRESS reports attempts and budget', () => {
+    const provider = makeProvider();
+    provider.requestPuzzle({ difficulty: 'hard' });
+
+    worker.reply({ type: MSG.GEN_PROGRESS, id: worker.posted[0].id, attempts: 12, budget: 150 });
+
+    expect(named('progress')).to.deep.equal([{ event: 'progress', attempts: 12, budget: 150 }]);
+  });
+
+  it('PP17: a foreground result reports requested tier, tier, seed, attempts, and elapsed time, and no fallback', async () => {
+    const provider = makeProvider();
+    const result = provider.requestPuzzle({ difficulty: 'hard', seed: 9 });
+
+    worker.reply({
+      type: MSG.GEN_RESULT, id: worker.posted[0].id, puzzle: generated('hard', genOf('hard', 9, 4)),
+      fallback: false, elapsedMs: 42,
+    });
+    await result;
+
+    expect(named('result')).to.deep.equal([
+      { event: 'result', requestedTier: 'hard', tier: 'hard', seed: 9, attempts: 4, elapsedMs: 42 },
+    ]);
+    expect(named('fallback')).to.be.empty;
+  });
+
+  it('PP17: a foreground fallback result also reports the fallback', async () => {
+    const provider = makeProvider();
+    const result = provider.requestPuzzle({ difficulty: 'medium', seed: 143 });
+
+    worker.reply({
+      type: MSG.GEN_RESULT, id: worker.posted[0].id, puzzle: generated('expert', genOf('medium', 143, 60)),
+      fallback: true, elapsedMs: 1800,
+    });
+    await result;
+
+    expect(events.slice(-2)).to.deep.equal([
+      { event: 'result', requestedTier: 'medium', tier: 'expert', seed: 143, attempts: 60, elapsedMs: 1800 },
+      { event: 'fallback', requestedTier: 'medium', tier: 'expert', seed: 143 },
+    ]);
+  });
+
+  it('PP18: a rated background result is cached, stored, and reported', () => {
+    const provider = makeProvider();
+    provider.primeNext('kiddie');
+
+    worker.reply({
+      type: MSG.GEN_RESULT, id: worker.posted[0].id, puzzle: generated('kiddie', genOf('kiddie', 5, 1)),
+      fallback: false, elapsedMs: 8,
+    });
+
+    expect(provider.peekReady('kiddie').gen.seed).to.equal(5);
+    expect(JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'kiddie')).puzzle.gen.seed).to.equal(5);
+    expect(named('result')).to.deep.equal([
+      { event: 'result', requestedTier: 'kiddie', tier: 'kiddie', seed: 5, attempts: 1, elapsedMs: 8 },
+    ]);
+  });
+
+  it('PP19: an Unrated background result is discarded, and the next request for that tier misses the cache', () => {
+    const provider = makeProvider();
+    provider.primeNext('nightmare');
+
+    worker.reply({
+      type: MSG.GEN_RESULT, id: worker.posted[0].id, puzzle: generated('unrated', genOf('nightmare', 223, 2)),
+      fallback: true, elapsedMs: 400,
+    });
+    provider.requestPuzzle({ difficulty: 'nightmare' });
+
+    expect(named('discarded')).to.deep.equal([{ event: 'discarded', requestedTier: 'nightmare', seed: 223 }]);
+    expect(provider.peekReady('unrated')).to.be.null;
+    expect(provider.peekReady('nightmare')).to.be.null;
+    expect(localStorage.getItem(STORAGE_PREFIX + 'unrated')).to.be.null;
+    expect(localStorage.getItem(STORAGE_PREFIX + 'nightmare')).to.be.null;
+    expect(named('cache-miss')).to.deep.equal([{ event: 'cache-miss', tier: 'nightmare' }]);
+    expect(worker.posted).to.have.length(2);
+  });
+
+  it('PP20: an abort reports the tier and the abort reason', async () => {
+    const provider = makeProvider();
+    const ac = new AbortController();
+    const result = provider.requestPuzzle({ difficulty: 'expert', signal: ac.signal }).catch(e => e.name);
+
+    ac.abort('replaced');
+
+    expect(await result).to.equal('AbortError');
+    expect(named('cancelled')).to.deep.equal([{ event: 'cancelled', tier: 'expert', reason: 'replaced' }]);
+  });
+
+  it('PP21: GEN_ERROR reports failed with its message and rejects the request', async () => {
+    const provider = makeProvider();
+    const result = provider.requestPuzzle({ difficulty: 'hard' }).catch(e => e.message);
+
+    worker.reply({ type: MSG.GEN_ERROR, id: worker.posted[0].id, message: 'generator broke' });
+
+    expect(await result).to.equal('generator broke');
+    expect(named('failed')).to.deep.equal([{ event: 'failed', message: 'generator broke' }]);
+  });
+
+  it('PP21: a worker error reports failed with its message and rejects every pending request', async () => {
+    const provider = makeProvider();
+    const first = provider.requestPuzzle({ difficulty: 'hard' }).catch(e => e.message);
+    const second = provider.requestPuzzle({ difficulty: 'easy', seed: 3 }).catch(e => e.message);
+
+    worker.onerror({ message: 'worker died' });
+
+    expect(await first).to.equal('worker died');
+    expect(await second).to.equal('worker died');
+    expect(named('failed')).to.deep.equal([{ event: 'failed', message: 'worker died' }]);
+  });
+
+  it('PP22: seed 0 makes a seeded request', () => {
+    primeStorage('easy', generated('easy', genOf('easy', 314)));
+    const provider = makeProvider();
+
+    provider.requestPuzzle({ difficulty: 'easy', seed: 0 });
+
+    expect(events).to.deep.equal([{ event: 'request', tier: 'easy', seed: 0, kind: 'seeded' }]);
+    expect(worker.posted[0]).to.include({ seed: 0, seeded: true });
   });
 });

@@ -22,6 +22,10 @@ export const MSG = Object.freeze({
   LOAD_REQUEST: 'LOAD_REQUEST',
   /** Worker → Main: outcome of a LOAD_REQUEST. */
   LOAD_RESULT:  'LOAD_RESULT',
+  /** Main → Worker: check puzzles against their recorded solutions, without rating. */
+  CHECK_REQUEST: 'CHECK_REQUEST',
+  /** Worker → Main: outcome of a CHECK_REQUEST, one result per puzzle. */
+  CHECK_RESULT:  'CHECK_RESULT',
 });
 
 /**
@@ -39,11 +43,12 @@ export const MSG = Object.freeze({
 /**
  * Build a GEN_REQUEST envelope.
  *
- * @param {{ id: string, tier: string, seed: number, background?: boolean, budget?: number }} opts
+ * @param {{ id: string, tier: string, seed: number, background?: boolean, budget?: number, seeded?: boolean }} opts
+ *   `seeded`: the seed was chosen by the developer rather than at random.
  * @returns {object}
  */
-export function makeGenRequest({ id, tier, seed, background = false, budget }) {
-  return { type: MSG.GEN_REQUEST, id, tier, seed, background, budget };
+export function makeGenRequest({ id, tier, seed, background = false, budget, seeded = false }) {
+  return { type: MSG.GEN_REQUEST, id, tier, seed, background, budget, seeded };
 }
 
 /**
@@ -69,11 +74,13 @@ export function makeGenProgress({ id, attempts, budget }) {
 /**
  * Build a GEN_RESULT envelope.
  *
- * @param {{ id: string, puzzle: Puzzle, fallback?: boolean }} opts
+ * @param {{ id: string, puzzle: Puzzle, fallback?: boolean, elapsedMs?: number }} opts
+ *   `elapsedMs`: time spent generating, carried on the envelope rather than
+ *   the puzzle so that it cannot affect reproducibility.
  * @returns {object}
  */
-export function makeGenResult({ id, puzzle, fallback = false }) {
-  return { type: MSG.GEN_RESULT, id, puzzle, fallback };
+export function makeGenResult({ id, puzzle, fallback = false, elapsedMs }) {
+  return { type: MSG.GEN_RESULT, id, puzzle, fallback, elapsedMs };
 }
 
 /**
@@ -104,4 +111,24 @@ export function makeLoadRequest({ id, givens }) {
  */
 export function makeLoadResult({ id, result }) {
   return { type: MSG.LOAD_RESULT, id, result };
+}
+
+/**
+ * Build a CHECK_REQUEST envelope.
+ *
+ * @param {{ id: string, puzzles: Array<{givens: Uint8Array, solution: Uint8Array}> }} opts
+ * @returns {object}
+ */
+export function makeCheckRequest({ id, puzzles }) {
+  return { type: MSG.CHECK_REQUEST, id, puzzles };
+}
+
+/**
+ * Build a CHECK_RESULT envelope.
+ *
+ * @param {{ id: string, results: Array<import('../generator/loadPuzzle.js').CheckResult> }} opts
+ * @returns {object}
+ */
+export function makeCheckResult({ id, results }) {
+  return { type: MSG.CHECK_RESULT, id, results };
 }

@@ -2,6 +2,8 @@
  * @fileoverview Clipboard write with a boolean outcome instead of a rejection.
  */
 
+import { diagnostics } from './events.js';
+
 /**
  * Copy text to the clipboard.
  *
@@ -15,7 +17,8 @@ export async function copyText(text, clipboard = navigator.clipboard) {
   try {
     await clipboard.writeText(text);
     return true;
-  } catch {
+  } catch (error) {
+    diagnostics.emit('swallowed', { where: 'clipboard.copyText', error });
     return false;
   }
 }

@@ -3,6 +3,8 @@
  * (private browsing, quota exceeded, disabled by policy).
  */
 
+import { diagnostics } from '../util/events.js';
+
 /**
  * Reads and JSON-parses a localStorage item.
  *
@@ -14,7 +16,8 @@ export function getItem(key) {
     const raw = localStorage.getItem(key);
     if (raw === null) return null;
     return JSON.parse(raw);
-  } catch {
+  } catch (error) {
+    diagnostics.emit('swallowed', { where: 'storage.getItem', error });
     return null;
   }
 }
@@ -28,8 +31,9 @@ export function getItem(key) {
 export function setItem(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
-  } catch {
+  } catch (error) {
     // Silently ignore quota errors and disabled storage.
+    diagnostics.emit('swallowed', { where: 'storage.setItem', error });
   }
 }
 
@@ -41,7 +45,8 @@ export function setItem(key, value) {
 export function removeItem(key) {
   try {
     localStorage.removeItem(key);
-  } catch {
+  } catch (error) {
     // Silently ignore.
+    diagnostics.emit('swallowed', { where: 'storage.removeItem', error });
   }
 }

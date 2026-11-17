@@ -329,6 +329,318 @@
   white-space: pre-line;
 }
 
+/* ── Groups, fields and controls (vspec-007 §3) ───────────────────────── */
+
+/* The flex display rules below would otherwise defeat the hidden attribute
+   (the copy-fallback field is shown and hidden with it). */
+.dev-panel [hidden] {
+  display: none;
+}
+
+/* A tool holding several clusters of controls: a section with a small
+   uppercase heading echoing the panel h2. */
+.dev-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dev-group + .dev-group {
+  padding-top: 10px;
+  border-top: 1px dotted var(--border);
+}
+
+.dev-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.dev-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dev-field-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dev-input,
+.dev-textarea {
+  width: 100%;
+  padding: 6px 8px;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--given-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 4px;
+}
+
+.dev-textarea {
+  resize: vertical;
+}
+
+.dev-textarea[readonly] {
+  white-space: pre;
+}
+
+.dev-input:focus,
+.dev-textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.dev-input[aria-invalid="true"] {
+  border-color: var(--conflict);
+  box-shadow: inset 0 0 0 1px var(--conflict);
+}
+
+/* A row of short labelled fields ending in a button, bottom-aligned. */
+.dev-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 10px;
+}
+
+.dev-inline .btn {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.dev-field-seed {
+  width: 15ch;
+}
+
+/* The difficulty selector's look, reduced to panel size. */
+.dev-select {
+  padding: 5px 26px 5px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background-color: var(--surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  border: 1px solid var(--btn-border);
+  border-radius: 5px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+body.theme-coffee .dev-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238c6642'/%3E%3C/svg%3E");
+}
+
+body.theme-school .dev-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23718096'/%3E%3C/svg%3E");
+}
+
+body.theme-mountain .dev-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234d7a99'/%3E%3C/svg%3E");
+}
+
+body.theme-terminal .dev-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2339ff14'/%3E%3C/svg%3E");
+  border-color: var(--accent);
+}
+
+.dev-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Destructive action: an outline button pushed to the far end of its row.
+   Out-ranks the theme .btn and .btn:hover rules, so Terminal keeps the red
+   border on hover too. */
+.dev-buttons .dev-btn-end {
+  margin-left: auto;
+}
+
+.dev-buttons .btn.dev-btn-danger {
+  color: var(--conflict);
+  background: transparent;
+  border-color: var(--conflict);
+}
+
+.dev-buttons .btn.dev-btn-danger:hover {
+  background: var(--conflict-bg);
+  border-color: var(--conflict);
+}
+
+/* Small in-table button (Copy seed); the cell it sits in is monospace. */
+.btn.dev-btn-sm {
+  padding: 2px 8px;
+  margin-left: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  vertical-align: baseline;
+}
+
+body.theme-terminal .btn.dev-btn-sm {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+}
+
+/* ── Session recorder (vspec-007 §4) ──────────────────────────────────── */
+.dev-counts {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.dev-capacity {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Storage line: a standing condition rather than an outcome, so a callout
+   rather than a status line. Takes no space when empty. */
+.dev-callout {
+  padding: 5px 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--conflict-bg);
+  border-left: 3px solid var(--conflict);
+  border-radius: 0 4px 4px 0;
+}
+
+.dev-callout:empty {
+  display: none;
+}
+
+.dev-switches {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dev-switches .dev-switch {
+  flex-wrap: wrap;
+  column-gap: 8px;
+  row-gap: 0;
+  text-align: left;
+}
+
+.dev-switch-tag {
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Replay report ────────────────────────────────────────────────────── */
+.dev-report {
+  max-height: 340px;
+  padding: 8px 10px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  user-select: text;
+}
+
+.dev-report:empty {
+  display: none;
+}
+
+.dev-report:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.dev-report-scope {
+  color: var(--text-muted);
+}
+
+.dev-report-summary {
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.dev-report h4 {
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.dev-report ul {
+  margin-top: 4px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.dev-report li {
+  padding: 3px 0 3px 8px;
+  border-left: 3px solid var(--border);
+}
+
+.dev-report li + li {
+  margin-top: 4px;
+}
+
+.dev-report .dev-diverge {
+  border-left-color: var(--conflict);
+}
+
+.dev-report .dev-error-item {
+  border-left-color: var(--conflict);
+  border-left-style: dotted;
+}
+
+/* Out-ranks .dev-tool summary, which would make the line bold. */
+.dev-report details summary {
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.dev-report details summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.dev-report-errors {
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.dev-report-also {
+  color: var(--text-muted);
+}
+
+.dev-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.dev-compare-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.dev-compare .dev-json {
+  max-height: 180px;
+  margin-top: 2px;
+  font-size: 11px;
+}
+
 /* ── Side-by-side layout ──────────────────────────────────────────────────
    The panel sits to the right of the game when there is room for both (game
    area 860px + gap + panel), and flows underneath otherwise. It stays on the
@@ -352,6 +664,10 @@
   main.dev-host .dev-steps {
     max-height: 45vh;
   }
+
+  main.dev-host .dev-report {
+    max-height: 45vh;
+  }
 }
 
 /* ── Theme and motion adjustments ─────────────────────────────────────── */
@@ -361,7 +677,12 @@ body.theme-terminal #dev-load-input,
 body.theme-terminal .dev-steps,
 body.theme-terminal .dev-json,
 body.theme-terminal .dev-switch-track,
-body.theme-terminal .dev-switch-thumb {
+body.theme-terminal .dev-switch-thumb,
+body.theme-terminal .dev-callout,
+body.theme-terminal .dev-input,
+body.theme-terminal .dev-textarea,
+body.theme-terminal .dev-select,
+body.theme-terminal .dev-report {
   border-radius: 0;
 }
 

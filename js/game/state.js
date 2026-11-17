@@ -53,6 +53,31 @@ import { rowOf, colOf } from '../util/grid.js';
  */
 
 /**
+ * Payload of `DEV_RESTORE_POSITION`: the restorable part of a GameState, under
+ * the same names. `conflicts` and `winHandled` are derived on restore, and the
+ * check-highlight deadline is reduced to `highlightPending`.
+ *
+ * @typedef {Object} InternalPosition
+ * @property {object|null} puzzle
+ * @property {Uint8Array} pen
+ * @property {Uint16Array} pencil
+ * @property {number|null} selected
+ * @property {'pen'|'pencil'} activeMode
+ * @property {Set<number>} incorrect
+ * @property {boolean} highlightPending - A check highlight is waiting to expire.
+ * @property {number} hintsRemaining
+ * @property {boolean} attemptRecorded
+ * @property {boolean} won
+ * @property {boolean} generating
+ * @property {string} generatingMessage
+ * @property {string|null} generatingDifficulty
+ * @property {{attempts:number,budget:number}|null} genProgress
+ * @property {string} completionMessage
+ * @property {CoachSession|null} coachSession
+ * @property {UndoSnapshot|null} undoSnapshot
+ */
+
+/**
  * Derive the set of coached cell indices from a CoachStep's roles.
  *
  * This is the canonical union used for highlight tracking and panel logic. It
@@ -73,15 +98,40 @@ export function deriveCoachedCells(step) {
 }
 
 /**
+ * @typedef {Object} Timers
+ * @property {function(): number} now - Epoch milliseconds.
+ * @property {function(function, number): *} set - Schedules a callback; returns a handle.
+ * @property {function(*): void} clear - Cancels a handle returned by `set`.
+ */
+
+/** @type {Timers} */
+const DEFAULT_TIMERS = {
+  now: () => Date.now(),
+  set: (fn, ms) => setTimeout(fn, ms),
+  clear: id => clearTimeout(id),
+};
+
+/**
+ * @typedef {Object} DispatchTap
+ * @property {function(object): void} begin - Called before a public dispatch is reduced.
+ * @property {function(object): void} end - Called after it, even if the reducer throws.
+ *   Neither may throw.
+ */
+
+/**
  * @param {{
  *   stats: object,
  *   hintProvider: object,
  *   statsSuppressed?: function(): boolean,
+ *   tap?: DispatchTap|null,
+ *   timers?: Timers,
  * }} deps `statsSuppressed` returns true while no puzzle may record statistics
- *   (developer mode).
+ *   (developer mode). `tap` observes every public dispatch; the reducer's own
+ *   nested dispatches bypass it. `timers` replaces the clock and timeouts.
  * @returns {{ dispatch: function, getState: function, on: function }}
  */
-export function createGameState({ stats, hintProvider, statsSuppressed = () => false }) {
+export function createGameState({ stats, hintProvider, statsSuppressed = () => false,
+                                  tap = null, timers = DEFAULT_TIMERS }) {
   const emitter = createEmitter();
 
   /** @type {GameState} */
@@ -115,9 +165,10 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
   }
 
   function _scheduleClearIncorrect() {
-    if (clearIncorrectTimer !== null) clearTimeout(clearIncorrectTimer);
-    clearIncorrectTimer = setTimeout(() => {
+    if (clearIncorrectTimer !== null) timers.clear(clearIncorrectTimer);
+    clearIncorrectTimer = timers.set(() => {
       clearIncorrectTimer = null;
+      // Public dispatch: the expiry is a time-driven action in its own right.
       dispatch({ type: 'CLEAR_INCORRECT' });
     }, CHECK_HIGHLIGHT_MS);
   }
@@ -224,14 +275,43 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
 
     // Check for win condition after any pen entry.
     if (_isBoardFull()) {
-      dispatch({ type: 'ON_COMPLETION_EVALUATE' });
+      _reduce({ type: 'ON_COMPLETION_EVALUATE' });
       return true;
     }
 
     return true;
   }
 
+  /**
+   * Elimination-completion check: if all elimination targets have had their
+   * indicated candidates cleared from pencil, trigger the elim recap.
+   */
+  function _checkElimComplete() {
+    if (state.coachSession !== null
+        && state.coachSession.eliminationTargets !== null
+        && state.coachSession.recap === null) {
+      const targets = state.coachSession.eliminationTargets;
+      const allCleared = [...targets.entries()].every(
+        ([cellIndex, bits]) => (state.pencil[cellIndex] & bits) === 0
+      );
+      if (allCleared) {
+        _reduce({ type: 'COACH_FILL_RECAP', variant: 'elim' });
+      }
+    }
+  }
+
+  /**
+   * Public entry point. Brackets the reducer with the tap when one is set.
+   *
+   * @param {object} action
+   */
   function dispatch(action) {
+    if (tap === null) { _reduce(action); return; }
+    tap.begin(action);
+    try { _reduce(action); } finally { tap.end(action); }
+  }
+
+  function _reduce(action) {
     switch (action.type) {
       case 'PUZZLE_LOADED': {
         const puzzle = action.puzzle;
@@ -258,7 +338,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
         state.completionMessage = '';
         state.coachSession = null;
         state.undoSnapshot = null;
-        if (clearIncorrectTimer !== null) { clearTimeout(clearIncorrectTimer); clearIncorrectTimer = null; }
+        if (clearIncorrectTimer !== null) { timers.clear(clearIncorrectTimer); clearIncorrectTimer = null; }
         _emit(action, 'puzzle', 'pen', 'pencil', 'selected', 'activeMode', 'conflicts',
               'incorrect', 'incorrectShownUntil', 'hintsRemaining', 'attemptRecorded',
               'won', 'winHandled', 'generating', 'generatingMessage', 'generatingDifficulty',
@@ -350,12 +430,12 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
           const techType = session.step.type;
 
           if (!isCoached) {
-            dispatch({ type: 'COACH_END', reason: 'fill-non-coached' });
+            _reduce({ type: 'COACH_END', reason: 'fill-non-coached' });
           } else if (techType === 'elimination') {
-            dispatch({ type: 'COACH_END', reason: 'fill-coached-elim' });
+            _reduce({ type: 'COACH_END', reason: 'fill-coached-elim' });
           } else {
             const correct = state.puzzle.solution[filledCell] === action.digit;
-            dispatch({
+            _reduce({
               type: 'COACH_FILL_RECAP',
               variant: correct ? 'normal' : 'error',
             });
@@ -383,19 +463,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
           state.pencil[state.selected] |= bit;
         }
 
-        // Elimination-completion check: if all elimination targets have had their
-        // indicated candidates cleared from pencil, trigger the elim recap.
-        if (state.coachSession !== null
-            && state.coachSession.eliminationTargets !== null
-            && state.coachSession.recap === null) {
-          const targets = state.coachSession.eliminationTargets;
-          const allCleared = [...targets.entries()].every(
-            ([cellIndex, bits]) => (state.pencil[cellIndex] & bits) === 0
-          );
-          if (allCleared) {
-            dispatch({ type: 'COACH_FILL_RECAP', variant: 'elim' });
-          }
-        }
+        _checkElimComplete();
 
         _emit(action, 'pencil', 'undoSnapshot');
         break;
@@ -422,7 +490,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
         }
 
         if (state.coachSession !== null) {
-          dispatch({ type: 'COACH_END', reason: 'erase' });
+          _reduce({ type: 'COACH_END', reason: 'erase' });
         }
         break;
       }
@@ -442,7 +510,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
         _emit(action, 'pencil', 'undoSnapshot');
 
         if (state.coachSession !== null) {
-          dispatch({ type: 'COACH_END', reason: 'erase' });
+          _reduce({ type: 'COACH_END', reason: 'erase' });
         }
         break;
       }
@@ -476,7 +544,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
         state.incorrectShownUntil = 0;
         state.completionMessage = '';
         if (clearIncorrectTimer !== null) {
-          clearTimeout(clearIncorrectTimer);
+          timers.clear(clearIncorrectTimer);
           clearIncorrectTimer = null;
         }
 
@@ -499,7 +567,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
         if (state.pen[cellIdx] !== 0) break;
         if (state.won) break;
 
-        const hint = hintProvider.nextHint(
+        const hint = action.hint !== undefined ? action.hint : hintProvider.nextHint(
           state.puzzle,
           { pen: state.pen, conflicts: state.conflicts },
           { targetCell: cellIdx }
@@ -527,14 +595,14 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
         }
 
         if (state.coachSession !== null) {
-          dispatch({ type: 'COACH_END', reason: 'hint' });
+          _reduce({ type: 'COACH_END', reason: 'hint' });
         }
 
         _emit(action, 'pen', 'pencil', 'conflicts', 'incorrect', 'hintsRemaining');
 
         // Check completion.
         if (_isBoardFull()) {
-          dispatch({ type: 'ON_COMPLETION_EVALUATE' });
+          _reduce({ type: 'ON_COMPLETION_EVALUATE' });
         }
         break;
       }
@@ -544,7 +612,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
         if (!CHECK_VISIBLE[state.puzzle.difficulty]) break;
 
         state.incorrect = checkAll(state);
-        state.incorrectShownUntil = Date.now() + CHECK_HIGHLIGHT_MS;
+        state.incorrectShownUntil = timers.now() + CHECK_HIGHLIGHT_MS;
         _scheduleClearIncorrect();
         _emit(action, 'incorrect', 'incorrectShownUntil');
         break;
@@ -572,7 +640,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
             _emit(action, 'won', 'winHandled');
           } else if (!correct) {
             state.incorrect = wrong;
-            state.incorrectShownUntil = Date.now() + CHECK_HIGHLIGHT_MS;
+            state.incorrectShownUntil = timers.now() + CHECK_HIGHLIGHT_MS;
             state.completionMessage = "Not quite — some cells are incorrect. Keep going!";
             _scheduleClearIncorrect();
             _emit(action, 'incorrect', 'incorrectShownUntil', 'completionMessage');
@@ -587,7 +655,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
           } else if (!correct) {
             // Expert and above: no cell highlighting, but show a message briefly.
             state.completionMessage = "Not quite. Keep going!";
-            state.incorrectShownUntil = Date.now() + CHECK_HIGHLIGHT_MS;
+            state.incorrectShownUntil = timers.now() + CHECK_HIGHLIGHT_MS;
             _scheduleClearIncorrect();
             _emit(action, 'completionMessage', 'incorrectShownUntil');
           }
@@ -595,7 +663,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
 
         // Win takes precedence over any active coach session.
         if (state.won && state.winHandled && state.coachSession !== null) {
-          dispatch({ type: 'COACH_END', reason: 'won' });
+          _reduce({ type: 'COACH_END', reason: 'won' });
         }
         break;
       }
@@ -632,7 +700,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
         state.completionMessage = '';
         state.coachSession = null;
         state.undoSnapshot = null;
-        if (clearIncorrectTimer !== null) { clearTimeout(clearIncorrectTimer); clearIncorrectTimer = null; }
+        if (clearIncorrectTimer !== null) { timers.clear(clearIncorrectTimer); clearIncorrectTimer = null; }
         _emit(action, 'puzzle', 'pen', 'pencil', 'selected', 'activeMode', 'conflicts',
               'incorrect', 'incorrectShownUntil', 'hintsRemaining', 'attemptRecorded',
               'won', 'winHandled', 'generating', 'generatingMessage', 'generatingDifficulty',
@@ -659,7 +727,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
         state.completionMessage = '';
         state.coachSession = null;
         state.undoSnapshot = null;
-        if (clearIncorrectTimer !== null) { clearTimeout(clearIncorrectTimer); clearIncorrectTimer = null; }
+        if (clearIncorrectTimer !== null) { timers.clear(clearIncorrectTimer); clearIncorrectTimer = null; }
         _emit(action, 'pen', 'pencil', 'selected', 'activeMode', 'conflicts',
               'incorrect', 'incorrectShownUntil', 'hintsRemaining', 'won', 'winHandled',
               'completionMessage', 'coachSession', 'undoSnapshot');
@@ -672,7 +740,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
         // label to reassign. main.js reacts to the published action by
         // generating a puzzle at the chosen tier, which replaces this one.
         if (state.coachSession !== null) {
-          dispatch({ type: 'COACH_END', reason: 'puzzle-replaced' });
+          _reduce({ type: 'COACH_END', reason: 'puzzle-replaced' });
         }
         _emit(action);
         break;
@@ -704,7 +772,7 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
         state.incorrect = new Set();
         state.incorrectShownUntil = 0;
         state.completionMessage = '';
-        if (clearIncorrectTimer !== null) { clearTimeout(clearIncorrectTimer); clearIncorrectTimer = null; }
+        if (clearIncorrectTimer !== null) { timers.clear(clearIncorrectTimer); clearIncorrectTimer = null; }
         if (state.coachSession !== null) {
           _revertPencil(state.coachSession);
           state.coachSession = null;
@@ -713,6 +781,86 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
         state.undoSnapshot = null;
         _emit(action, 'pen', 'pencil', 'conflicts', 'incorrect', 'incorrectShownUntil',
               'completionMessage', 'coachSession', 'undoSnapshot');
+        break;
+      }
+
+      case 'DEV_SET_PENCIL': {
+        // Developer tools only: set one cell's marks outright. A move — undoable,
+        // and it can complete an elimination step like PENCIL_TOGGLE.
+        const { index, mask } = action;
+        if (!state.puzzle || state.won || state.generating) break;
+        if (state.puzzle.givens[index] !== 0 || state.pen[index] !== 0) break;
+        if (state.pencil[index] === mask) break;
+
+        _captureUndoSnapshot();
+        state.pencil[index] = mask;
+        _checkElimComplete();
+        _emit(action, 'pencil', 'undoSnapshot');
+        break;
+      }
+
+      case 'DEV_FILL_PENCIL': {
+        // Developer tools only: replace the marks of every empty cell. The coach
+        // session ends first so its revert cannot leave revealed marks behind.
+        if (!state.puzzle || state.won || state.generating) break;
+        if (state.coachSession !== null) {
+          _reduce({ type: 'COACH_END', reason: 'erase' });
+        }
+        _captureUndoSnapshot();
+        for (let i = 0; i < 81; i++) {
+          if (state.pen[i] === 0) state.pencil[i] = action.pencil[i];
+        }
+        _emit(action, 'pencil', 'undoSnapshot');
+        break;
+      }
+
+      case 'DEV_RESTORE_POSITION': {
+        // Developer tools only: replace the whole state with a replayed
+        // position. No guards, no statistics, no completion check. The puzzle
+        // and the coach step are immutable and shared; everything mutable is
+        // copied so the live state never aliases the payload.
+        const p = action.position;
+        state.puzzle = p.puzzle;
+        state.pen = new Uint8Array(p.pen);
+        state.pencil = new Uint16Array(p.pencil);
+        state.selected = p.selected;
+        state.activeMode = p.activeMode;
+        state.conflicts = computeConflicts(state.pen);
+        state.incorrect = new Set(p.incorrect);
+        state.hintsRemaining = p.hintsRemaining;
+        state.attemptRecorded = p.attemptRecorded;
+        state.won = p.won;
+        state.winHandled = p.won;
+        state.generating = p.generating;
+        state.generatingMessage = p.generatingMessage;
+        state.generatingDifficulty = p.generatingDifficulty;
+        state.genProgress = p.genProgress === null ? null : { ...p.genProgress };
+        state.completionMessage = p.completionMessage;
+        state.coachSession = p.coachSession === null ? null : {
+          ...p.coachSession,
+          coachedCells: new Set(p.coachSession.coachedCells),
+          pencilSnapshot: new Uint16Array(p.coachSession.pencilSnapshot),
+          coachRevealedBits: new Uint16Array(p.coachSession.coachRevealedBits),
+          eliminationTargets: p.coachSession.eliminationTargets === null
+            ? null
+            : new Map(p.coachSession.eliminationTargets),
+        };
+        state.undoSnapshot = p.undoSnapshot === null ? null : {
+          ...p.undoSnapshot,
+          pen: new Uint8Array(p.undoSnapshot.pen),
+          pencil: new Uint16Array(p.undoSnapshot.pencil),
+        };
+        if (clearIncorrectTimer !== null) { timers.clear(clearIncorrectTimer); clearIncorrectTimer = null; }
+        if (p.highlightPending) {
+          state.incorrectShownUntil = timers.now() + CHECK_HIGHLIGHT_MS;
+          _scheduleClearIncorrect();
+        } else {
+          state.incorrectShownUntil = 0;
+        }
+        _emit(action, 'puzzle', 'pen', 'pencil', 'selected', 'activeMode', 'conflicts',
+              'incorrect', 'incorrectShownUntil', 'hintsRemaining', 'attemptRecorded',
+              'won', 'winHandled', 'generating', 'generatingMessage', 'generatingDifficulty',
+              'genProgress', 'completionMessage', 'coachSession', 'undoSnapshot');
         break;
       }
 

@@ -8,7 +8,7 @@ import { fillGrid } from './fillGrid.js';
 import { buildMinimalPuzzle } from './removeCells.js';
 import { rate } from './rater.js';
 import { tierForRank } from '../solver/logical.js';
-import { ATTEMPT_BUDGET, GIVEN_COUNT_TARGET } from '../config.js';
+import { ATTEMPT_BUDGET, GIVEN_COUNT_TARGET, UNRATED } from '../config.js';
 
 /**
  * FNV-1a 32-bit hash of a sequence of bytes.
@@ -60,6 +60,8 @@ export function toPuzzle(givens, solution, tier, trace, seed) {
 /**
  * @typedef {Object} GenDiagnostics
  * @property {string} requestedTier
+ * @property {number} seed - The seed of the run that produced the puzzle.
+ * @property {'random'|'developer'} seedBy - Who chose the seed.
  * @property {number} budget
  * @property {number} attempts - Attempts made, including the degenerate extra one.
  * @property {{unsolved: number, wrongTier: number, byTier: Object<string, number>}} rejected
@@ -71,7 +73,8 @@ export function toPuzzle(givens, solution, tier, trace, seed) {
 /**
  * Generate a puzzle of the given tier, retrying up to `budget` times.
  * On budget exhaustion, returns the hardest candidate found so far (silent
- * fallback — the returned puzzle's `difficulty` may differ from `tier`).
+ * fallback — the returned puzzle's `difficulty` may differ from `tier`), or
+ * an Unrated puzzle when no candidate in the run was solvable.
  *
  * The returned puzzle carries `source: 'generated'` and a `gen` diagnostics
  * record. The counters only observe the loop: they never touch `opts.rng`, so
@@ -81,6 +84,7 @@ export function toPuzzle(givens, solution, tier, trace, seed) {
  * @param {{
  *   rng: function(): number,
  *   seed: number,
+ *   seeded?: boolean,
  *   budget?: number,
  *   onProgress?: function({attempts: number, budget: number}): void,
  *   abortSignal?: AbortSignal,
@@ -98,7 +102,12 @@ export function generateForTier(tier, opts) {
   const finish = (puzzle, fallback) => ({
     ...puzzle,
     source: 'generated',
-    gen: { requestedTier: tier, budget, attempts, rejected, fallback },
+    gen: {
+      requestedTier: tier,
+      seed: opts.seed,
+      seedBy: opts.seeded ? 'developer' : 'random',
+      budget, attempts, rejected, fallback,
+    },
   });
 
   // Track last progress-post time for throttling (§10.3).
@@ -152,7 +161,8 @@ export function generateForTier(tier, opts) {
     const solution = fillGrid(opts.rng);
     const givens   = buildMinimalPuzzle(solution, opts.rng, target);
     const result   = rate(givens);
-    const fallbackTier = tierForRank(result.hardestRank) ?? tier;
+    // A candidate the rater cannot finish has no true tier (fspec-007 §7.5).
+    const fallbackTier = result.solved ? tierForRank(result.hardestRank) : UNRATED;
     return finish(toPuzzle(givens, solution, fallbackTier, result.trace, opts.seed), true);
   }
 

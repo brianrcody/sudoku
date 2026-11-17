@@ -1,8 +1,8 @@
 /**
- * @fileoverview Unit tests for js/ui/srLive.js (UL1–UL3).
+ * @fileoverview Unit tests for js/ui/srLive.js (UL1–UL7).
  */
 
-import { mount, announce } from '../../ui/srLive.js';
+import { mount, announce, muted } from '../../ui/srLive.js';
 
 describe('ui/srLive.js', () => {
   let root;
@@ -53,5 +53,47 @@ describe('ui/srLive.js', () => {
     expect(region.getAttribute('aria-live')).to.equal('assertive');
     expect(region.getAttribute('aria-atomic')).to.equal('true');
     expect(region.getAttribute('role')).to.equal('status');
+  });
+
+  const twoFrames = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  it('UL4: announce inside muted leaves the region unchanged', async () => {
+    region.textContent = 'before';
+
+    muted(() => announce('x'));
+    await twoFrames();
+
+    expect(region.textContent).to.equal('before');
+  });
+
+  it('UL5: announce works again after muted returns', async () => {
+    muted(() => {});
+
+    announce('after');
+    await twoFrames();
+
+    expect(region.textContent).to.equal('after');
+  });
+
+  it('UL6: muted rethrows and still restores announcing', async () => {
+    const failure = new Error('inside');
+
+    expect(() => muted(() => { throw failure; })).to.throw(failure);
+    announce('after');
+    await twoFrames();
+
+    expect(region.textContent).to.equal('after');
+  });
+
+  it('UL7: an inner muted call returning does not unmute the outer one', async () => {
+    region.textContent = 'before';
+
+    muted(() => {
+      muted(() => {});
+      announce('x');
+    });
+    await twoFrames();
+
+    expect(region.textContent).to.equal('before');
   });
 });

@@ -33,11 +33,14 @@ describe('persist/storage.js', () => {
 
   // LS4: setItem swallows quota errors
   it('LS4: setItem does not throw when localStorage is unavailable', () => {
-    // Temporarily stub localStorage.setItem to throw a QuotaExceededError.
-    const orig = localStorage.setItem.bind(localStorage);
+    // Temporarily shadow Storage.prototype.setItem with an own property that
+    // throws; deleting it afterwards leaves localStorage exactly as it was.
     localStorage.setItem = () => { throw new DOMException('QuotaExceeded', 'QuotaExceededError'); };
-    expect(() => setItem('test-ls4', { x: 1 })).to.not.throw();
-    localStorage.setItem = orig;
+    try {
+      expect(() => setItem('test-ls4', { x: 1 })).to.not.throw();
+    } finally {
+      delete localStorage.setItem;
+    }
   });
 
   // LS5: Version-gate discards old versions

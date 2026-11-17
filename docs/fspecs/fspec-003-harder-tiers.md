@@ -138,6 +138,10 @@ A confirmation dialog (existing dialog component) appears:
 > ⟨ActualTier⟩. Play it?"
 > Buttons: **Play ⟨ActualTier⟩** (default) / **Cancel**
 
+*Amended 2026-11-15 by fspec-007 §7.5:* when the best puzzle found cannot be rated at all,
+it is offered as Unrated with its own body text, and playing it does not change the saved
+tier preference.
+
 - *Play:* the found puzzle loads; the difficulty selector and all labels show its **true**
   tier (⟨ActualTier⟩); statistics attribute it to ⟨ActualTier⟩.
 - *Cancel:* identical outcome to §5.3 Cancel.

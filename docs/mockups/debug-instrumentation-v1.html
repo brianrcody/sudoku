@@ -1,0 +1,3481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Debug Instrumentation — Mockup v1</title>
+<!--
+  Mockup v1 for fspec-007-debug-instrumentation (Session recorder tool and
+  Generation diagnostics seed controls). Self-contained.
+
+  Style blocks:
+    1. COPIED  — css/themes.css, base.css, grid.css, controls.css, stats.css,
+                 dev.css, verbatim from the shipped app.
+    2. NEW     — everything this feature adds to css/dev.css.
+    3. MOCKUP  — the mockup controls bar only; not part of the product.
+-->
+<style id="copied-app-css">
+/* ======================================================================
+   1. COPIED VERBATIM FROM THE SHIPPED APP — do not edit here
+   ====================================================================== */
+/* ─── css/themes.css ─── */
+/* ── Default / Minimalist theme values ───────────────────────────────── */
+:root,
+body.theme-minimalist {
+  --bg:            #f7f6f2;
+  --surface:       #ffffff;
+  --border:        #c8c4bb;
+  --border-strong: #2e2b25;
+  --text:          #1c1a16;
+  --text-muted:    #7a7570;
+  --text-given:    #1c1a16;
+  --given-bg:      #eceae4;
+  --accent:        #2c5282;
+  --accent-light:  #dbeafe;
+  --conflict:      #b91c1c;
+  --conflict-bg:   #fef2f2;
+  --pencil:        #5a6778;
+  --btn-bg:        #f0ede6;
+  --btn-hover:     #e4e0d7;
+  --btn-border:    #c8c4bb;
+  --active-mode:   #2c5282;
+  --win:           #15803d;
+  --stats-row-sep: #f0ede6;
+  --header-bg:     var(--surface);
+  --modal-bg:      var(--surface);
+  --win-banner-bg: rgba(255,255,255,0.92);
+  --primary-hover: #1e3a6e;
+  --coach:               #7c3aed;
+  --coach-light:         #ede9fe;
+  --coach-mid:           #c4b5fd;
+  --pencil-on-coach:       #ffffff;
+  --pencil-on-coach-light: var(--pencil);
+}
+
+/* ── Coffee Shop ──────────────────────────────────────────────────────── */
+body.theme-coffee {
+  --bg:            #3b2a1a;
+  --surface:       #f5ede0;
+  --border:        #c9a97a;
+  --border-strong: #7c4f22;
+  --text:          #2b1d0e;
+  --text-muted:    #8c6642;
+  --text-given:    #2b1d0e;
+  --given-bg:      #e8d5b8;
+  --accent:        #8b4513;
+  --accent-light:  #fde8cc;
+  --conflict:      #c0392b;
+  --conflict-bg:   #fdf0ee;
+  --pencil:        #7a5c3a;
+  --btn-bg:        #ecdfc8;
+  --btn-hover:     #e0cead;
+  --btn-border:    #c9a97a;
+  --active-mode:   #8b4513;
+  --win:           #a06b1a;
+  --stats-row-sep: #ecdfc8;
+  --header-bg:     #2b1d0e;
+  --modal-bg:      #f5ede0;
+  --win-banner-bg: rgba(245,237,224,0.93);
+  --primary-hover: #6b3410;
+  --coach:               #c2410c;
+  --coach-light:         #ffedd5;
+  --coach-mid:           #fb923c;
+  --pencil-on-coach:       #ffffff;
+  --pencil-on-coach-light: var(--pencil);
+}
+
+/* ── School ───────────────────────────────────────────────────────────── */
+body.theme-school {
+  --bg:            #f8f5e6;
+  --surface:       #fdfaf0;
+  --border:        #b8c4d4;
+  --border-strong: #4a5568;
+  --text:          #2d3748;
+  --text-muted:    #718096;
+  --text-given:    #1a202c;
+  --given-bg:      #edf0f5;
+  --accent:        #4a5568;
+  --accent-light:  #e2e8f0;
+  --conflict:      #c53030;
+  --conflict-bg:   #fff5f5;
+  --pencil:        #718096;
+  --btn-bg:        #edf2f7;
+  --btn-hover:     #e2e8f0;
+  --btn-border:    #b8c4d4;
+  --active-mode:   #4a5568;
+  --win:           #276749;
+  --stats-row-sep: #edf2f7;
+  --header-bg:     #fdfaf0;
+  --modal-bg:      #fdfaf0;
+  --win-banner-bg: rgba(253,250,240,0.93);
+  --primary-hover: #2d3748;
+  --coach:               #1d4ed8;
+  --coach-light:         #dbeafe;
+  --coach-mid:           #93c5fd;
+  --pencil-on-coach:       #ffffff;
+  --pencil-on-coach-light: var(--pencil);
+}
+
+/* ── Mountain ─────────────────────────────────────────────────────────── */
+body.theme-mountain {
+  --bg:            #e8f0f7;
+  --surface:       #f7fafc;
+  --border:        #adc6de;
+  --border-strong: #1a3a52;
+  --text:          #0f2233;
+  --text-muted:    #4d7a99;
+  --text-given:    #1a4d2e;
+  --given-bg:      #dce8f2;
+  --accent:        #1a6b8a;
+  --accent-light:  #cfe8f3;
+  --conflict:      #b91c1c;
+  --conflict-bg:   #fef2f2;
+  --pencil:        #2d6e4e;
+  --btn-bg:        #dce8f2;
+  --btn-hover:     #c8dcea;
+  --btn-border:    #adc6de;
+  --active-mode:   #1a6b8a;
+  --win:           #1a6b4e;
+  --stats-row-sep: #dce8f2;
+  --header-bg:     #1a3a52;
+  --modal-bg:      #f7fafc;
+  --win-banner-bg: rgba(247,250,252,0.93);
+  --primary-hover: #145a75;
+  --coach:               #0f766e;
+  --coach-light:         #ccfbf1;
+  --coach-mid:           #5eead4;
+  --pencil-on-coach:       #ffffff;
+  --pencil-on-coach-light: var(--pencil);
+}
+
+/* ── Digital Terminal ─────────────────────────────────────────────────── */
+body.theme-terminal {
+  --bg:            #0d0d0d;
+  --surface:       #111111;
+  --border:        #1f4a1f;
+  --border-strong: #39ff14;
+  --text:          #b0ffb0;
+  --text-muted:    #3d7a3d;
+  --text-given:    #39ff14;
+  --given-bg:      #0a1a0a;
+  --accent:        #39ff14;
+  --accent-light:  #0a2a0a;
+  --conflict:      #ff4444;
+  --conflict-bg:   #1a0505;
+  --pencil:        #3d7a3d;
+  --btn-bg:        #0f1f0f;
+  --btn-hover:     #162b16;
+  --btn-border:    #1f4a1f;
+  --active-mode:   #39ff14;
+  --win:           #39ff14;
+  --stats-row-sep: #0f1f0f;
+  --header-bg:     #090909;
+  --modal-bg:      #111111;
+  --win-banner-bg: rgba(11,11,11,0.95);
+  --primary-hover: #22cc00;
+  --coach:               #0e7490;
+  --coach-mid:           #155e75;
+  --coach-light:         #0a1f28;
+  --pencil-on-coach:       #b0ffb0;
+  --pencil-on-coach-light: #b0ffb0;
+}
+
+/* ─── css/base.css ─── */
+/* ── Reset & base typography ──────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif);
+  font-size: 15px;
+  line-height: 1.4;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* Terminal: monospace throughout */
+body.theme-terminal {
+  font-family: "Courier New", Courier, monospace;
+}
+
+/* ── Visually hidden utility (a11y) ────────────────────────────────────── */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Screen reader live region ────────────────────────────────────────── */
+#sr-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--header-bg);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body.theme-terminal header {
+  border-bottom: 1px solid var(--accent);
+  box-shadow: 0 1px 0 0 var(--accent);
+}
+
+body.theme-terminal header h1 {
+  color: var(--accent);
+  text-shadow: 0 0 8px rgba(57,255,20,0.4);
+  letter-spacing: 0.15em;
+}
+
+body.theme-mountain header {
+  color: #e8f0f7;
+  border-bottom-color: #2d5878;
+}
+
+body.theme-mountain header h1 {
+  color: #f7fafc;
+  letter-spacing: 0.06em;
+}
+
+body.theme-coffee header {
+  color: #f5ede0;
+  border-bottom-color: #7c4f22;
+}
+
+body.theme-coffee header h1 {
+  color: #f5ede0;
+}
+
+body.theme-school header {
+  border-bottom: 2px solid #b8c4d4;
+}
+
+/* ── Header right-side group: handedness switch + theme control ─────── */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* ── Theme control (header right) ────────────────────────────────────── */
+.theme-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+body.theme-mountain .theme-control {
+  color: #adc6de;
+}
+
+body.theme-coffee .theme-control {
+  color: #c9a97a;
+}
+
+.theme-control label {
+  white-space: nowrap;
+}
+
+/* ── Main layout ──────────────────────────────────────────────────────── */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 32px;
+  gap: 24px;
+}
+
+body.theme-coffee main {
+  background: linear-gradient(160deg, #3b2a1a 0%, #4a3020 50%, #3b2a1a 100%);
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+footer {
+  text-align: center;
+  padding: 20px 16px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+footer a {
+  color: inherit;
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
+body.theme-school main {
+  background-color: #f8f5e6;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 27px,
+    #a8b8cc 27px,
+    #a8b8cc 28px
+  );
+  background-position: 0 14px;
+}
+
+body.theme-mountain main {
+  background: linear-gradient(175deg, #d4e8f5 0%, #e8f0f7 40%, #f0f5fa 100%);
+}
+
+body.theme-terminal main {
+  background: #0d0d0d;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.15) 2px,
+    rgba(0,0,0,0.15) 4px
+  );
+}
+
+/* ── Game area layout ─────────────────────────────────────────────────── */
+.game-area {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 32px;
+  width: 100%;
+  max-width: 860px;
+  justify-content: center;
+}
+
+.left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 220px;
+  flex-shrink: 0;
+}
+
+/* Left-hand mode swaps the columns on wide viewports only. The query is the exact
+   complement of the mobile breakpoint below, so this higher-specificity rule never
+   overrides the stacked layout. */
+@media not all and (max-width: 720px) {
+  html[data-hand="left"] .game-area {
+    flex-direction: row-reverse;
+  }
+}
+
+/* ── Responsive: mobile ───────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  header {
+    padding: 12px 16px;
+  }
+
+  header h1 {
+    font-size: 16px;
+  }
+
+  main {
+    padding: 16px 12px 28px;
+    gap: 16px;
+  }
+
+  .game-area {
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .left-col {
+    width: 100%;
+    align-items: center;
+  }
+
+  .right-col {
+    width: 100%;
+    max-width: 414px;
+  }
+}
+
+/* ─── css/grid.css ─── */
+/* ── Difficulty row ───────────────────────────────────────────────────── */
+.difficulty-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.difficulty-row label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+body.theme-terminal .difficulty-row label {
+  letter-spacing: 0.1em;
+}
+
+#difficulty-select {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 28px 6px 10px;
+  border: 1px solid var(--btn-border);
+  border-radius: 5px;
+  background-color: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  font-family: inherit;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+body.theme-coffee #difficulty-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238c6642'/%3E%3C/svg%3E");
+}
+
+body.theme-school #difficulty-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23718096'/%3E%3C/svg%3E");
+}
+
+body.theme-terminal #difficulty-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2339ff14'/%3E%3C/svg%3E");
+  border-color: var(--accent);
+}
+
+body.theme-mountain #difficulty-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234d7a99'/%3E%3C/svg%3E");
+}
+
+#difficulty-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Grid wrapper & grid ──────────────────────────────────────────────── */
+.grid-wrapper {
+  position: relative;
+}
+
+.sudoku-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  border: 2.5px solid var(--border-strong);
+  border-radius: 3px;
+  overflow: hidden;
+  width: 414px;
+  height: 414px;
+  background: var(--surface);
+  user-select: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+body.theme-terminal .sudoku-grid {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(57,255,20,0.2), inset 0 0 4px rgba(57,255,20,0.05);
+  border-radius: 0;
+}
+
+body.theme-coffee .sudoku-grid {
+  box-shadow: 0 4px 16px rgba(59,42,26,0.4);
+}
+
+body.theme-school .sudoku-grid {
+  box-shadow: 2px 2px 8px rgba(74,85,104,0.12);
+}
+
+body.theme-mountain .sudoku-grid {
+  box-shadow: 0 2px 16px rgba(26,58,82,0.15);
+}
+
+/* ── Cells ────────────────────────────────────────────────────────────── */
+.cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 22px;
+  font-weight: 500;
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--text);
+  background: var(--surface);
+  transition: background 0.08s;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.theme-terminal .cell {
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+body.theme-school .cell {
+  font-family: Georgia, serif;
+}
+
+body.theme-coffee .cell {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+/* Last column: no right border */
+.cell:nth-child(9n) {
+  border-right: none;
+}
+
+/* Box dividers: right side of columns 3, 6 */
+.cell[data-col="3"],
+.cell[data-col="6"] {
+  border-right: 2.5px solid var(--border-strong);
+}
+
+/* Box dividers: bottom of rows 3, 6 */
+.cell[data-row="3"],
+.cell[data-row="6"] {
+  border-bottom: 2.5px solid var(--border-strong);
+}
+
+/* Last row: no bottom border */
+.cell[data-row="9"] {
+  border-bottom: none;
+}
+
+/* ── Cell states ──────────────────────────────────────────────────────── */
+.cell.given {
+  background: var(--given-bg);
+  color: var(--text-given);
+  font-weight: 700;
+  cursor: default;
+}
+
+body.theme-terminal .cell.given {
+  text-shadow: 0 0 6px rgba(57,255,20,0.5);
+}
+
+body.theme-school .cell.given {
+  color: #1a202c;
+  font-weight: 700;
+}
+
+.cell.pen {
+  color: var(--accent);
+}
+
+body.theme-school .cell.pen {
+  color: #4a5568;
+  font-style: italic;
+  font-weight: 400;
+}
+
+body.theme-terminal .cell.pen {
+  color: #b0ffb0;
+  text-shadow: 0 0 4px rgba(176,255,176,0.3);
+}
+
+body.theme-coffee .cell.pen {
+  color: #8b4513;
+}
+
+body.theme-mountain .cell.pen {
+  color: #1f6b45;
+}
+
+.cell.selected {
+  background: var(--accent-light) !important;
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+body.theme-terminal .cell.selected {
+  box-shadow: inset 0 0 8px rgba(57,255,20,0.25);
+}
+
+.cell.conflict {
+  background: var(--conflict-bg) !important;
+  color: var(--conflict) !important;
+}
+
+.cell.conflict.selected {
+  outline-color: var(--conflict);
+}
+
+body.theme-terminal .cell.conflict {
+  text-shadow: 0 0 6px rgba(255,68,68,0.6);
+}
+
+/* Incorrect highlight (Check results) */
+.cell.incorrect {
+  color: var(--conflict) !important;
+}
+
+.cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+/* ── Pencil marks ─────────────────────────────────────────────────────── */
+.pencil-marks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+}
+
+.pencil-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-weight: 500;
+  color: var(--pencil);
+  line-height: 1;
+}
+
+body.theme-terminal .pencil-mark {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 8px;
+}
+
+body.theme-school .pencil-mark {
+  font-style: italic;
+  font-size: 8px;
+  color: #718096;
+}
+
+body.theme-mountain .pencil-mark {
+  color: #2d6e4e;
+}
+
+.pencil-mark.empty {
+  visibility: hidden;
+}
+
+/* ── Coach-revealed pencil marks ─────────────────────────────────────── */
+.pencil-mark.coach-reveal {
+  color: var(--coach);
+  font-weight: 700;
+}
+
+/* ── Coached cell states ──────────────────────────────────────────────── */
+.cell.coached-cause {
+  background: var(--coach-light) !important;
+  box-shadow: inset 0 0 0 2px var(--coach-mid);
+  z-index: 2;
+}
+
+.cell.coached-target {
+  background: var(--coach-light) !important;
+  box-shadow: inset 0 0 0 2px var(--coach);
+  z-index: 2;
+}
+
+.cell.coached-elim-target {
+  outline: 2px dashed var(--coach);
+  outline-offset: -2px;
+  z-index: 2;
+  /* No background override */
+}
+
+.cell.coached-elim-target.selected,
+.cell.coached-sc-b.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.cell.coached-unit-member {
+  background: var(--coach-light) !important;
+  /* No outline override */
+}
+
+.cell.coached-sc-a {
+  background: var(--coach) !important;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 2px var(--coach);
+  z-index: 2;
+}
+
+.cell.coached-sc-a .pencil-mark {
+  color: var(--pencil-on-coach);
+}
+
+.cell.coached-sc-b {
+  background: var(--coach-light) !important;
+  outline: 2.5px dashed var(--coach);
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+.cell.coached-sc-b .pencil-mark {
+  color: var(--pencil-on-coach-light);
+}
+
+/* Finned-fish fin cell (vspec-003 §6): mid fill, dotted ring, "fin" tag. */
+.cell.coached-fin {
+  position: relative;
+  background: var(--coach-mid) !important;
+  outline: 2px dotted var(--coach);
+  outline-offset: -3px;
+  z-index: 2;
+}
+
+.cell.coached-fin::after {
+  content: "fin";
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--coach);
+  pointer-events: none;
+}
+
+.cell.coached-fin.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Focus ring overrides — coached cells use the coach accent color */
+.cell.coached-target:not(.selected):focus-visible,
+.cell.coached-cause:not(.selected):focus-visible {
+  outline-color: var(--coach);
+}
+
+/* ── Coach SVG overlay ────────────────────────────────────────────────── */
+#coach-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 414px;
+  height: 414px;
+  pointer-events: none;
+  z-index: 5;
+  display: none;
+  color: var(--coach);
+}
+
+#coach-overlay.visible {
+  display: block;
+}
+
+/* ── Win banner ───────────────────────────────────────────────────────── */
+.win-banner {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: var(--win-banner-bg);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 3px;
+  z-index: 10;
+}
+
+body.theme-terminal .win-banner {
+  border-radius: 0;
+}
+
+.win-banner.show {
+  display: flex;
+  pointer-events: auto;
+}
+
+.win-banner .win-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--win);
+  letter-spacing: 0.02em;
+}
+
+body.theme-terminal .win-banner .win-title {
+  text-shadow: 0 0 16px rgba(57,255,20,0.6);
+  letter-spacing: 0.1em;
+}
+
+.win-banner .win-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .sudoku-grid {
+    width: min(calc(100vw - 32px), 414px);
+    height: min(calc(100vw - 32px), 414px);
+  }
+
+  #coach-overlay {
+    width: min(calc(100vw - 32px), 414px);
+    height: min(calc(100vw - 32px), 414px);
+  }
+
+  .cell {
+    font-size: clamp(14px, 4.5vw, 22px);
+  }
+
+  .pencil-mark {
+    font-size: clamp(6px, 2vw, 9px);
+  }
+}
+
+@media (max-width: 375px) {
+  .sudoku-grid {
+    width: calc(100vw - 32px);
+    height: calc(100vw - 32px);
+  }
+
+  #coach-overlay {
+    width: calc(100vw - 32px);
+    height: calc(100vw - 32px);
+  }
+}
+
+/* ─── css/controls.css ─── */
+/* ── Number pad ───────────────────────────────────────────────────────── */
+.numpad {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.numpad-digits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.numpad-utils {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.numpad-bottom-row1 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.numpad-bottom-row2 {
+  width: 100%;
+}
+
+.numpad-bottom-row2 .btn-check {
+  width: 100%;
+}
+
+.numpad-undo-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+/* ── Base button ──────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border: 1px solid var(--btn-border);
+  border-radius: 5px;
+  background: var(--btn-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: var(--btn-hover);
+  border-color: var(--border);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Terminal */
+body.theme-terminal .btn {
+  border-radius: 0;
+  border-color: var(--border);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+body.theme-terminal .btn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 6px rgba(57,255,20,0.2);
+}
+
+/* Coffee */
+body.theme-coffee .btn {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(59,42,26,0.15);
+}
+
+/* School */
+body.theme-school .btn {
+  border-radius: 3px;
+}
+
+/* Mountain */
+body.theme-mountain .btn {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(26,58,82,0.1);
+}
+
+/* ── Digit buttons ────────────────────────────────────────────────────── */
+.btn-digit {
+  font-size: 20px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  padding: 12px 6px;
+}
+
+body.theme-terminal .btn-digit {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.theme-school .btn-digit {
+  font-family: Georgia, serif;
+  font-style: italic;
+}
+
+/* ── Mode toggle button ───────────────────────────────────────────────── */
+.btn-mode {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-mode.mode-pen {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.btn-mode.mode-pencil {
+  background: var(--surface);
+  border-color: var(--pencil);
+  color: var(--pencil);
+  font-weight: 600;
+}
+
+body.theme-terminal .btn-mode.mode-pen {
+  box-shadow: 0 0 8px rgba(57,255,20,0.25);
+}
+
+.btn-mode .mode-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.btn-mode .mode-main {
+  font-size: 13px;
+}
+
+body.theme-terminal .btn-mode .mode-main {
+  font-size: 12px;
+}
+
+.btn-mode .mode-sub {
+  font-size: 10px;
+  opacity: 0.7;
+  font-family: inherit;
+}
+
+/* ── Hint button ──────────────────────────────────────────────────────── */
+.btn-hint {
+  position: relative;
+}
+
+.hint-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--surface);
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  line-height: 1;
+  transition: background 0.2s, color 0.2s;
+}
+
+body.theme-terminal .hint-badge {
+  border-radius: 0;
+  color: #000;
+}
+
+.btn:disabled .hint-badge {
+  background: var(--text-muted);
+}
+
+/* ── Coach button ─────────────────────────────────────────────────────── */
+.btn-coach {
+  /* No additional rules — inherits .btn appearance in idle state */
+}
+
+.btn-coach.coaching {
+  background: var(--coach-light);
+  border-color: var(--coach);
+  color: var(--coach);
+  font-weight: 600;
+  box-shadow: 0 0 0 2px var(--coach-light), 0 0 0 3px var(--coach);
+  animation: coach-pulse 2s ease-in-out infinite;
+}
+
+@keyframes coach-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--coach-light), 0 0 0 3px var(--coach); }
+  50%       { box-shadow: 0 0 0 4px var(--coach-light), 0 0 0 5px var(--coach-mid); }
+}
+
+/* ── Explanation panel ────────────────────────────────────────────────── */
+.coach-panel-wrap {
+  overflow: hidden;
+  max-height: 0;
+  transition: none;
+}
+
+.coach-panel-wrap.open {
+  max-height: 220px;
+  transition: max-height 0.15s ease-out;
+}
+
+.coach-panel {
+  margin-top: 10px;
+  border: 1.5px solid var(--coach);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 14px 16px;
+  width: 414px;
+}
+
+body.theme-terminal .coach-panel {
+  border-radius: 0;
+}
+
+.coach-panel-technique {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--coach);
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+}
+
+.coach-panel-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+.coach-panel-text em {
+  color: var(--coach);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.coach-panel-text.coach-panel-note {
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
+/* ── Recap / error toast ──────────────────────────────────────────────── */
+.coach-recap {
+  display: none;
+  margin-top: 10px;
+  width: 414px;
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--coach);
+  background: var(--surface);
+  animation: fadein 0.15s ease;
+}
+
+.coach-recap.visible {
+  display: block;
+}
+
+.coach-recap.error {
+  border-left-color: var(--conflict);
+}
+
+.coach-recap.error .coach-recap-line1 {
+  color: var(--conflict);
+}
+
+.coach-recap-line1 {
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.coach-recap-line2 {
+  color: var(--text-muted);
+}
+
+@keyframes fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+body.theme-terminal .coach-recap {
+  border-radius: 0;
+}
+
+/* ── Action row ───────────────────────────────────────────────────────── */
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* Share takes its own full-width row beneath New Puzzle / Reset (vspec-006 §2). */
+#btn-share {
+  grid-column: 1 / -1;
+}
+
+/* ── Notice card (vspec-006 §3) ───────────────────────────────────────── */
+/* The width lives on the root: in the stacked layout the board column centres
+   its children, and a percentage max-width on the card itself would resolve
+   against a shrink-to-fit parent. */
+#notice-root {
+  width: 414px;
+  max-width: 100%;
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  animation: fadein 0.15s ease;
+}
+
+.notice-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notice-progress .notice-message {
+  color: var(--text-muted);
+}
+
+.notice-error {
+  border-left-color: var(--conflict);
+}
+
+.notice-error .notice-message {
+  font-weight: 600;
+}
+
+.notice-field {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 8px;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 12px;
+  color: var(--text);
+  /* Not --bg: in Coffee that is the dark page backdrop, and --text is dark. */
+  background: var(--given-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 4px;
+}
+
+.notice-field:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.notice-dismiss {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+body.theme-terminal .notice,
+body.theme-terminal .notice-field {
+  border-radius: 0;
+}
+
+/* ── Primary button (dialog confirm) ─────────────────────────────────── */
+.btn-primary {
+  background: var(--accent);
+  color: var(--surface);
+  border-color: var(--accent);
+}
+
+body.theme-terminal .btn-primary {
+  color: #000;
+  font-weight: 700;
+}
+
+body.theme-school .btn-primary {
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+body.theme-terminal .btn-primary:hover {
+  box-shadow: 0 0 10px rgba(57,255,20,0.4);
+}
+
+/* ── Confirmation dialog / modal ──────────────────────────────────────── */
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+body.theme-terminal .modal-backdrop {
+  background: rgba(0,0,0,0.75);
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal {
+  background: var(--modal-bg);
+  border-radius: 10px;
+  padding: 28px 28px 22px;
+  max-width: 340px;
+  width: 90%;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  border: 1px solid var(--border);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+body.theme-terminal .modal {
+  border-radius: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 24px rgba(57,255,20,0.2);
+}
+
+body.theme-coffee .modal {
+  box-shadow: 0 8px 40px rgba(59,42,26,0.4);
+}
+
+.modal h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.modal p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 22px;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ── Theme select (header) ────────────────────────────────────────────── */
+#theme-select {
+  font-size: 13px;
+  padding: 4px 24px 4px 8px;
+  border: 1px solid var(--btn-border);
+  border-radius: 4px;
+  background-color: var(--btn-bg);
+  color: var(--text);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  font-family: inherit;
+}
+
+body.theme-coffee #theme-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238c6642'/%3E%3C/svg%3E");
+}
+
+body.theme-school #theme-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23718096'/%3E%3C/svg%3E");
+}
+
+body.theme-terminal #theme-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2339ff14'/%3E%3C/svg%3E");
+  border-color: var(--accent);
+}
+
+body.theme-mountain .theme-control #theme-select {
+  background-color: #2d5878;
+  color: #e8f0f7;
+  border-color: #4d7a99;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23adc6de'/%3E%3C/svg%3E");
+}
+
+body.theme-coffee .theme-control #theme-select {
+  background-color: #3b2a1a;
+  color: #f5ede0;
+  border-color: #7c4f22;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c9a97a'/%3E%3C/svg%3E");
+}
+
+#theme-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Dark headers: the theme accent is near-invisible against them. */
+body.theme-coffee .theme-control #theme-select:focus {
+  outline-color: #c9a97a;
+}
+
+body.theme-mountain .theme-control #theme-select:focus {
+  outline-color: #adc6de;
+}
+
+/* ── Handedness switch (vspec-004) ────────────────────────────────────── */
+.hand-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.1s;
+}
+
+.header-controls .hand-switch:hover {
+  color: inherit;
+}
+
+.hand-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hand-switch-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  border: 1px solid var(--text-muted);
+  border-radius: 9px;
+  background: var(--btn-bg);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.hand-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform 0.15s, background 0.15s;
+}
+
+.hand-switch[aria-checked="true"] .hand-switch-track {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.hand-switch[aria-checked="true"] .hand-switch-thumb {
+  transform: translateX(14px);
+  background: var(--surface);
+}
+
+/* Dark headers: theme accents lack contrast against the header, so use the header's muted tone */
+body.theme-coffee .hand-switch { color: #c9a97a; }
+body.theme-coffee .hand-switch:focus-visible { outline-color: #c9a97a; }
+body.theme-coffee .hand-switch-track { border-color: #c9a97a; background: #3b2a1a; }
+body.theme-coffee .hand-switch-thumb { background: #c9a97a; }
+body.theme-coffee .hand-switch[aria-checked="true"] .hand-switch-track { background: #c9a97a; }
+body.theme-coffee .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #2b1d0e; }
+
+body.theme-mountain .hand-switch { color: #adc6de; }
+body.theme-mountain .hand-switch:focus-visible { outline-color: #adc6de; }
+body.theme-mountain .hand-switch-track { border-color: #adc6de; background: #2d5878; }
+body.theme-mountain .hand-switch-thumb { background: #adc6de; }
+body.theme-mountain .hand-switch[aria-checked="true"] .hand-switch-track { background: #adc6de; }
+body.theme-mountain .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #1a3a52; }
+
+body.theme-terminal .hand-switch-track { border-color: var(--accent); border-radius: 0; }
+body.theme-terminal .hand-switch-thumb { border-radius: 0; }
+body.theme-terminal .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #000; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hand-switch-track,
+  .hand-switch-thumb {
+    transition: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .hand-switch {
+    display: none;
+  }
+}
+
+/* ── Generation busy / progress card (vspec-003 §4) ───────────────────── */
+.busy-card {
+  margin-top: 10px;
+  width: 414px;
+  max-width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 22px 24px;
+  text-align: center;
+}
+
+body.theme-terminal .busy-card {
+  border-radius: 0;
+}
+
+.busy-spinner {
+  width: 22px;
+  height: 22px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  border: 3px solid var(--accent-light);
+  border-top-color: var(--accent);
+  animation: busy-spin 0.9s linear infinite;
+}
+
+@keyframes busy-spin {
+  to { transform: rotate(360deg); }
+}
+
+.busy-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.busy-progress {
+  font-size: 13px;
+  color: var(--text-muted);
+  min-height: 18px;
+  margin-bottom: 16px;
+}
+
+.busy-cancel {
+  margin-top: 0;
+}
+
+/* ─── css/stats.css ─── */
+/* ── Statistics panel ─────────────────────────────────────────────────── */
+.stats-panel {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  overflow: hidden;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+body.theme-terminal .stats-panel {
+  border-radius: 0;
+}
+
+body.theme-terminal .stats-panel:hover,
+body.theme-terminal .stats-panel:focus-within {
+  border-color: var(--accent);
+}
+
+.stats-heading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+body.theme-terminal .stats-heading {
+  color: var(--accent);
+  letter-spacing: 0.15em;
+  font-size: 10px;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.stats-table th {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: right;
+  padding: 6px 12px 4px;
+}
+
+.stats-table th:first-child {
+  text-align: left;
+}
+
+.stats-table td {
+  padding: 5px 12px;
+  text-align: right;
+  border-top: 1px solid var(--stats-row-sep);
+}
+
+.stats-table td:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+/* Active difficulty row */
+.stats-table tr.active-diff td {
+  background: var(--accent-light);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+body.theme-terminal .stats-table tr.active-diff td {
+  text-shadow: 0 0 4px rgba(57,255,20,0.3);
+}
+
+.stats-table tr.active-diff td:first-child::after {
+  content: " \25CF"; /* bullet */
+  font-size: 8px;
+  vertical-align: middle;
+}
+
+body.theme-terminal .stats-table tr.active-diff td:first-child::after {
+  content: " >";
+  font-size: 10px;
+}
+
+/* ─── css/dev.css ─── */
+/* Developer mode (vspec-005). Loaded only when developer mode is on — injected
+   by js/dev/devPanel.js. Colours come from the theme custom properties, so no
+   per-theme tables are needed. Inset fields use --given-bg, not --bg: Coffee's
+   --bg is its dark page backdrop, on which the (dark) --text is unreadable. */
+
+/* ── DEV badge ────────────────────────────────────────────────────────── */
+.dev-badge {
+  position: fixed;
+  bottom: 8px;
+  left: 8px;
+  z-index: 50;
+  padding: 3px 7px;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--surface);
+  background: var(--conflict);
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.dev-badge:hover {
+  opacity: 0.85;
+}
+
+.dev-badge:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Panel ────────────────────────────────────────────────────────────── */
+.dev-panel {
+  width: 100%;
+  max-width: 860px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: 6px;
+}
+
+.dev-panel:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.dev-panel h2 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.dev-note {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Tool sections ────────────────────────────────────────────────────── */
+.dev-tool {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.dev-tool summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dev-tool summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.dev-tool-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.dev-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dev-buttons .btn {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.dev-status {
+  min-height: 18px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dev-status.dev-error {
+  font-weight: 600;
+  color: var(--conflict);
+}
+
+/* ── Load from string ─────────────────────────────────────────────────── */
+#dev-load-input {
+  width: 100%;
+  padding: 6px 8px;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--given-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 4px;
+  resize: vertical;
+}
+
+#dev-load-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ── Step list ────────────────────────────────────────────────────────── */
+.dev-steps {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-left: 0;
+  list-style: none;
+  counter-reset: dev-step;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.dev-steps:empty {
+  display: none;
+}
+
+.dev-steps li {
+  display: flex;
+  counter-increment: dev-step;
+}
+
+.dev-steps li::before {
+  content: counter(dev-step) ".";
+  flex: 0 0 34px;
+  padding: 4px 4px 4px 0;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 12px;
+  text-align: right;
+  color: var(--text-muted);
+}
+
+.dev-steps button {
+  flex: 1;
+  padding: 4px 8px;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 12px;
+  text-align: left;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.dev-steps button:hover {
+  background: var(--btn-hover);
+}
+
+.dev-steps button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.dev-steps button[aria-pressed="true"] {
+  color: var(--surface);
+  background: var(--accent);
+}
+
+/* Steps the board has been set through; the last of them carries a marker. */
+.dev-steps button[data-applied] {
+  box-shadow: inset 3px 0 0 var(--win);
+}
+
+.dev-steps button[aria-current="step"]::after {
+  content: " ◀ board";
+  font-weight: 700;
+}
+
+/* ── Grid highlight for the selected step ─────────────────────────────── */
+.cell.dev-hl-place {
+  box-shadow: inset 0 0 0 3px var(--win);
+}
+
+.cell.dev-hl-elim {
+  box-shadow: inset 0 0 0 3px var(--conflict);
+}
+
+.cell.dev-hl-pattern {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  outline: 1px dashed var(--accent);
+  outline-offset: -5px;
+}
+
+/* ── Candidate overlay ────────────────────────────────────────────────── */
+.dev-cand-missing {
+  font-weight: 800;
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.dev-cand-extra {
+  font-weight: 800;
+  color: var(--conflict);
+  text-decoration: line-through;
+}
+
+/* The grid's per-theme .pencil-mark colour rules (School, Mountain) are more
+   specific than the two classes above; restate the divergence colours. */
+.cell .pencil-mark.dev-cand-missing {
+  color: var(--accent);
+}
+
+.cell .pencil-mark.dev-cand-extra {
+  color: var(--conflict);
+}
+
+.dev-legend {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dev-legend .dev-cand-agree {
+  color: var(--pencil);
+}
+
+.dev-switch {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  padding: 4px 2px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.dev-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.dev-switch-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  background: var(--btn-bg);
+  border: 1px solid var(--text-muted);
+  border-radius: 9px;
+  transition: background 0.15s;
+}
+
+.dev-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  transition: transform 0.15s;
+}
+
+.dev-switch[aria-checked="true"] .dev-switch-track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.dev-switch[aria-checked="true"] .dev-switch-thumb {
+  background: var(--surface);
+  transform: translateX(14px);
+}
+
+/* ── Coach JSON ───────────────────────────────────────────────────────── */
+.dev-json {
+  max-height: 320px;
+  padding: 8px;
+  overflow: auto;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 11.5px;
+  tab-size: 2;
+  color: var(--text);
+  background: var(--given-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.dev-json:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ── Diagnostics ──────────────────────────────────────────────────────── */
+.dev-table {
+  align-self: flex-start;
+  border-collapse: separate;
+  border-spacing: 0 3px;
+  font-size: 12px;
+}
+
+.dev-table th {
+  padding-right: 16px;
+  font-weight: 400;
+  text-align: left;
+  vertical-align: top;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.dev-table td {
+  font-family: ui-monospace, "Courier New", monospace;
+  white-space: pre-line;
+}
+
+/* ── Side-by-side layout ──────────────────────────────────────────────────
+   The panel sits to the right of the game when there is room for both (game
+   area 860px + gap + panel), and flows underneath otherwise. It stays on the
+   right in left-hand mode. */
+@media (min-width: 1400px) {
+  main.dev-host {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  main.dev-host .dev-panel {
+    position: sticky;
+    top: 16px;
+    flex: 0 0 480px;
+    width: 480px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+
+  main.dev-host .dev-steps {
+    max-height: 45vh;
+  }
+}
+
+/* ── Theme and motion adjustments ─────────────────────────────────────── */
+body.theme-terminal .dev-badge,
+body.theme-terminal .dev-panel,
+body.theme-terminal #dev-load-input,
+body.theme-terminal .dev-steps,
+body.theme-terminal .dev-json,
+body.theme-terminal .dev-switch-track,
+body.theme-terminal .dev-switch-thumb {
+  border-radius: 0;
+}
+
+/* Terminal's --bg and --surface are both near-black; text on --accent or
+   --conflict needs a dark colour there. */
+body.theme-terminal .dev-badge,
+body.theme-terminal .dev-steps button[aria-pressed="true"] {
+  color: #000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dev-switch-track,
+  .dev-switch-thumb {
+    transition: none;
+  }
+}
+
+</style>
+
+<style id="new-dev-css">
+/* ======================================================================
+   2. NEW — fspec-007 additions to css/dev.css
+   ====================================================================== */
+
+/* Flex display rules below would otherwise defeat the hidden attribute
+   (the copy-fallback field is shown and hidden with it). */
+.dev-panel [hidden] {
+  display: none;
+}
+
+/* ── Groups inside a tool ─────────────────────────────────────────────
+   The Session recorder holds three groups (History, Console logging,
+   Replay); Generation diagnostics gains one (Generate from seed). A group
+   is a section with a small uppercase heading echoing the panel h2. */
+.dev-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dev-group + .dev-group {
+  padding-top: 10px;
+  border-top: 1px dotted var(--border);
+}
+
+.dev-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ── Counts and storage line ──────────────────────────────────────────── */
+.dev-counts {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dev-capacity {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Storage line: persistent condition, not a transient outcome, so it is a
+   callout rather than a status line. Empty → takes no space. */
+.dev-callout {
+  padding: 5px 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--conflict-bg);
+  border-left: 3px solid var(--conflict);
+  border-radius: 0 4px 4px 0;
+}
+
+.dev-callout:empty {
+  display: none;
+}
+
+/* ── Button row with a destructive action pushed to the far end ─────── */
+.dev-buttons .dev-btn-end {
+  margin-left: auto;
+}
+
+.dev-buttons .btn.dev-btn-danger {
+  color: var(--conflict);
+  background: transparent;
+  border-color: var(--conflict);
+}
+
+.dev-buttons .btn.dev-btn-danger:hover {
+  background: var(--conflict-bg);
+}
+
+/* Small in-table button (Copy seed) */
+.btn.dev-btn-sm {
+  padding: 2px 8px;
+  margin-left: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  vertical-align: baseline;
+}
+
+body.theme-terminal .btn.dev-btn-sm {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+}
+
+/* ── Fields: the copy-fallback field, replay field, seed and stop fields ─ */
+.dev-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dev-field-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dev-input,
+.dev-textarea {
+  width: 100%;
+  padding: 6px 8px;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--given-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 4px;
+}
+
+.dev-textarea {
+  resize: vertical;
+}
+
+.dev-textarea[readonly] {
+  white-space: pre;
+}
+
+.dev-input:focus,
+.dev-textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.dev-input[aria-invalid="true"] {
+  border-color: var(--conflict);
+  box-shadow: inset 0 0 0 1px var(--conflict);
+}
+
+/* A row of short labelled fields ending in a button, bottom-aligned. */
+.dev-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 10px;
+}
+
+.dev-inline .btn {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.dev-inline .dev-field .dev-input { width: 100%; }
+.dev-field-seed { width: 15ch; }
+
+/* Tier selector: the difficulty selector's look, reduced to panel size. */
+.dev-select {
+  padding: 5px 26px 5px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background-color: var(--surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  border: 1px solid var(--btn-border);
+  border-radius: 5px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+body.theme-terminal .dev-select {
+  border-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2339ff14'/%3E%3C/svg%3E");
+}
+
+.dev-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Switch list (three logging switches) ─────────────────────────────── */
+.dev-switches {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dev-switches .dev-switch {
+  flex-wrap: wrap;
+  column-gap: 8px;
+  row-gap: 0;
+  text-align: left;
+}
+
+.dev-switch-tag {
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Replay report ────────────────────────────────────────────────────── */
+.dev-report {
+  max-height: 340px;
+  padding: 8px 10px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.45;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  user-select: text;
+}
+
+.dev-report:empty {
+  display: none;
+}
+
+.dev-report:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.dev-report-scope {
+  color: var(--text-muted);
+}
+
+.dev-report-summary {
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.dev-report h4 {
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.dev-report ul {
+  margin-top: 4px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.dev-report li {
+  padding: 3px 0 3px 8px;
+  border-left: 3px solid var(--border);
+}
+
+.dev-report li + li {
+  margin-top: 4px;
+}
+
+.dev-report .dev-diverge {
+  border-left-color: var(--conflict);
+}
+
+.dev-report .dev-error-item {
+  border-left-color: var(--conflict);
+  border-left-style: dotted;
+}
+
+.dev-report details summary {
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.dev-report details summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.dev-report-errors {
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.dev-report-also {
+  color: var(--text-muted);
+}
+
+.dev-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.dev-compare-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.dev-compare .dev-json {
+  max-height: 180px;
+  margin-top: 2px;
+  font-size: 11px;
+}
+
+.dev-report code {
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 11.5px;
+}
+
+/* Side-by-side: the report may use more of the viewport, like the step list. */
+@media (min-width: 1400px) {
+  main.dev-host .dev-report {
+    max-height: 45vh;
+  }
+}
+
+body.theme-terminal .dev-callout,
+body.theme-terminal .dev-input,
+body.theme-terminal .dev-textarea,
+body.theme-terminal .dev-select,
+body.theme-terminal .dev-report {
+  border-radius: 0;
+}
+</style>
+
+<style id="mockup-only-css">
+/* ======================================================================
+   3. MOCKUP CONTROLS — not part of the product
+   ====================================================================== */
+.mock-bar {
+  position: relative;
+  z-index: 60;
+  padding: 6px 12px 8px;
+  font: 12px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #111;
+  background: repeating-linear-gradient(-45deg, #ffe680, #ffe680 12px, #ffdd55 12px, #ffdd55 24px);
+  border-bottom: 2px solid #111;
+}
+.mock-bar > summary {
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+}
+.mock-bar > summary span { font-weight: 400; }
+.mock-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 6px;
+}
+.mock-grid label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.mock-grid select,
+.mock-grid button {
+  font: 12px system-ui, sans-serif;
+  color: #111;
+  background: #fff;
+  border: 1px solid #111;
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+.mock-grid select:focus-visible,
+.mock-grid button:focus-visible,
+.mock-grid input:focus-visible { outline: 2px solid #000; outline-offset: 1px; }
+.mock-info {
+  margin-top: 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+.mock-info b { font-family: system-ui, sans-serif; }
+
+/* "Show focus rings": paints every new control's focus-visible style at once. */
+body.mock-rings .dev-new-focus {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px !important;
+}
+body.mock-rings .dev-new-focus.dev-input,
+body.mock-rings .dev-new-focus.dev-textarea,
+body.mock-rings .dev-new-focus.dev-report { outline-offset: 1px !important; }
+</style>
+</head>
+<body class="theme-minimalist">
+
+<!-- ═══════════════ MOCKUP CONTROLS — NOT PART OF THE PRODUCT ═══════════════ -->
+<details class="mock-bar" open aria-label="Mockup controls (not part of the product)">
+  <summary>MOCKUP CONTROLS <span>— not part of the product. Pick a state; the real controls below are also clickable.</span></summary>
+  <div class="mock-grid">
+    <label>Theme
+      <select id="m-theme">
+        <option value="minimalist">Minimalist</option>
+        <option value="coffee">Coffee Shop</option>
+        <option value="school">School</option>
+        <option value="terminal">Digital Terminal</option>
+        <option value="mountain">Mountain</option>
+      </select></label>
+    <label><input type="checkbox" id="m-left"> Left-handed</label>
+    <label><input type="checkbox" id="m-below"> Force panel below game</label>
+    <label><input type="checkbox" id="m-rings"> Show focus rings on new controls</label>
+    <label>Recorder
+      <select id="m-rec">
+        <option value="normal">Normal counts</option>
+        <option value="capacity">At capacity</option>
+        <option value="empty">Empty history</option>
+      </select></label>
+    <label>Storage line
+      <select id="m-storage">
+        <option value="ok">Saving normally (empty)</option>
+        <option value="unavailable">Storage unavailable / save failed</option>
+        <option value="unreadable">Saved history unreadable</option>
+        <option value="tab">Another tab took over</option>
+      </select></label>
+    <label>Clipboard
+      <select id="m-clip">
+        <option value="ok">Copy succeeds</option>
+        <option value="fail">Copy fails</option>
+      </select></label>
+    <label>Copy session
+      <select id="m-copy">
+        <option value="none">Not used</option>
+        <option value="ok">Copied</option>
+        <option value="fail">Failed → fallback field</option>
+      </select></label>
+    <label>Replay
+      <select id="m-replay">
+        <option value="empty">Empty fields</option>
+        <option value="filled">Fields filled</option>
+        <option value="checking">Checking session…</option>
+        <option value="dlg-progress">Dialog: progress only</option>
+        <option value="dlg-history">Dialog: history only</option>
+        <option value="dlg-both">Dialog: both</option>
+        <option value="declined">Declined</option>
+        <option value="comparing">Comparing with current code…</option>
+        <option value="nodiv">Report: no divergences</option>
+        <option value="div">Report: divergences (one expanded)</option>
+        <option value="nothing">Report: nothing to compare</option>
+        <option value="stopped">Stopped by an error</option>
+        <option value="rej-empty">Rejected: no document</option>
+        <option value="rej-json">Rejected: not JSON</option>
+        <option value="rej-version">Rejected: newer version</option>
+        <option value="rej-action">Rejected: invalid action</option>
+        <option value="rej-stop">Rejected: bad stop value</option>
+      </select></label>
+    <label>Replay confirm (for clicks)
+      <select id="m-stake">
+        <option value="both">Progress + history</option>
+        <option value="progress">Progress only</option>
+        <option value="history">History only</option>
+        <option value="none">Nothing at stake</option>
+      </select></label>
+    <label>Clear history
+      <select id="m-clear">
+        <option value="none">Not used</option>
+        <option value="dialog">Confirmation dialog</option>
+        <option value="cleared">Cleared</option>
+        <option value="declined">Declined</option>
+      </select></label>
+    <label>Logging
+      <select id="m-log">
+        <option value="default">Defaults (on, on, off)</option>
+        <option value="all-on">All on</option>
+        <option value="all-off">All off</option>
+      </select></label>
+    <label>Diagnostics
+      <select id="m-diag">
+        <option value="random">Seed recorded (random)</option>
+        <option value="seeded">Seed recorded (seeded run)</option>
+        <option value="unrecorded">Seed not recorded</option>
+        <option value="loaded">Loaded puzzle (no table)</option>
+        <option value="noorigin">No origin recorded</option>
+      </select></label>
+    <label>Copy seed
+      <select id="m-seedcopy">
+        <option value="none">Not used</option>
+        <option value="ok">Copied</option>
+        <option value="fail">Failed</option>
+      </select></label>
+    <label>Generate
+      <select id="m-gen">
+        <option value="idle">Idle</option>
+        <option value="invalid">Validation error</option>
+        <option value="confirm">Confirmation dialog</option>
+        <option value="generating">Generating</option>
+        <option value="generated">Generated</option>
+        <option value="fallback">Fallback (Kiddie–Expert)</option>
+        <option value="nogen">Declined / fallback cancelled</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="replaced">Replaced by another request</option>
+        <option value="failed">Generator failed</option>
+      </select></label>
+    <label>Game has progress (for Generate clicks) <input type="checkbox" id="m-progress" checked></label>
+  </div>
+  <div class="mock-info" aria-live="off">
+    <b>Viewport:</b> <span id="m-vw"></span> &nbsp; <b>Last screen-reader announcement:</b> <span id="m-announce">—</span>
+  </div>
+</details>
+<!-- ═══════════════════════ END MOCKUP CONTROLS ═══════════════════════ -->
+
+<div id="sr-live" aria-live="assertive" aria-atomic="true" role="status"></div>
+
+<header>
+    <h1>Sudoku</h1>
+    <div class="header-controls">
+      <button type="button" id="hand-toggle" class="hand-switch" role="switch" aria-checked="false">
+        <span class="hand-switch-label">Left-handed</span>
+        <span class="hand-switch-track" aria-hidden="true"><span class="hand-switch-thumb"></span></span>
+      </button>
+      <div class="theme-control">
+        <label for="theme-select">Theme</label>
+        <select id="theme-select" aria-label="Select visual theme">
+          <option value="minimalist" selected="">Minimalist</option>
+          <option value="coffee">Coffee Shop</option>
+          <option value="school">School</option>
+          <option value="terminal">Digital Terminal</option>
+          <option value="mountain">Mountain</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+<main class="dev-host">
+<div id="app-root" class="game-area">
+
+            <div class="left-col">
+
+                <div id="controls-root">
+    <div class="difficulty-row">
+      <label for="difficulty-select">Difficulty</label>
+      <select id="difficulty-select" aria-label="Select difficulty level">
+        <option value="kiddie">Kiddie</option>
+        <option value="easy">Easy</option>
+        <option value="medium" selected="">Medium</option>
+        <option value="hard">Hard</option>
+        <option value="expert">Expert</option>
+        <option value="diabolical">Diabolical</option>
+        <option value="nightmare">Nightmare</option>
+      </select>
+    </div>
+  </div>
+
+                <div class="grid-wrapper">
+                    <div id="win-banner-root" style="position:absolute;inset:0;z-index:10;pointer-events:none;">
+    <div class="win-banner" id="win-banner" aria-hidden="true">
+      <div class="win-title">Puzzle Complete!</div>
+      <div class="win-sub">Well done.</div>
+    </div>
+  </div>
+
+                    <div id="grid-root">
+            <div class="sudoku-grid" role="grid" aria-label="Sudoku puzzle" tabindex="0"><div class="cell" data-index="0" data-row="1" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 1: empty"></div><div class="cell" data-index="1" data-row="1" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 2: empty"></div><div class="cell given" data-index="2" data-row="1" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 3: 6 (given)" aria-readonly="true">6</div><div class="cell" data-index="3" data-row="1" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 4: empty"></div><div class="cell" data-index="4" data-row="1" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 5: empty"></div><div class="cell" data-index="5" data-row="1" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 6: empty"></div><div class="cell" data-index="6" data-row="1" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 7: empty"></div><div class="cell given" data-index="7" data-row="1" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 8: 3 (given)" aria-readonly="true">3</div><div class="cell given" data-index="8" data-row="1" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 1, column 9: 9 (given)" aria-readonly="true">9</div><div class="cell given" data-index="9" data-row="2" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 1: 7 (given)" aria-readonly="true">7</div><div class="cell" data-index="10" data-row="2" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 2: empty"></div><div class="cell given" data-index="11" data-row="2" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 3: 3 (given)" aria-readonly="true">3</div><div class="cell given" data-index="12" data-row="2" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 4: 2 (given)" aria-readonly="true">2</div><div class="cell given" data-index="13" data-row="2" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 5: 8 (given)" aria-readonly="true">8</div><div class="cell" data-index="14" data-row="2" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 6: empty"></div><div class="cell given" data-index="15" data-row="2" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 7: 1 (given)" aria-readonly="true">1</div><div class="cell" data-index="16" data-row="2" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 8: empty"></div><div class="cell" data-index="17" data-row="2" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 2, column 9: empty"></div><div class="cell" data-index="18" data-row="3" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 1: empty"></div><div class="cell" data-index="19" data-row="3" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 2: empty"></div><div class="cell given" data-index="20" data-row="3" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 3: 1 (given)" aria-readonly="true">1</div><div class="cell" data-index="21" data-row="3" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 4: empty"></div><div class="cell given" data-index="22" data-row="3" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 5: 3 (given)" aria-readonly="true">3</div><div class="cell given" data-index="23" data-row="3" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 6: 9 (given)" aria-readonly="true">9</div><div class="cell" data-index="24" data-row="3" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 7: empty"></div><div class="cell" data-index="25" data-row="3" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 8: empty"></div><div class="cell given" data-index="26" data-row="3" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 3, column 9: 8 (given)" aria-readonly="true">8</div><div class="cell given" data-index="27" data-row="4" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 1: 6 (given)" aria-readonly="true">6</div><div class="cell given" data-index="28" data-row="4" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 2: 4 (given)" aria-readonly="true">4</div><div class="cell" data-index="29" data-row="4" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 3: empty"></div><div class="cell given" data-index="30" data-row="4" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 4: 8 (given)" aria-readonly="true">8</div><div class="cell" data-index="31" data-row="4" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 5: empty"></div><div class="cell given" data-index="32" data-row="4" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 6: 1 (given)" aria-readonly="true">1</div><div class="cell" data-index="33" data-row="4" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 7: empty"></div><div class="cell given" data-index="34" data-row="4" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 8: 2 (given)" aria-readonly="true">2</div><div class="cell" data-index="35" data-row="4" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 4, column 9: empty"></div><div class="cell given" data-index="36" data-row="5" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 1: 3 (given)" aria-readonly="true">3</div><div class="cell" data-index="37" data-row="5" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 2: empty"></div><div class="cell given" data-index="38" data-row="5" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 3: 2 (given)" aria-readonly="true">2</div><div class="cell" data-index="39" data-row="5" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 4: empty"></div><div class="cell given" data-index="40" data-row="5" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 5: 7 (given)" aria-readonly="true">7</div><div class="cell given" data-index="41" data-row="5" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 6: 4 (given)" aria-readonly="true">4</div><div class="cell" data-index="42" data-row="5" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 7: empty"></div><div class="cell" data-index="43" data-row="5" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 8: empty"></div><div class="cell" data-index="44" data-row="5" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 5, column 9: empty"></div><div class="cell" data-index="45" data-row="6" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 1: empty"></div><div class="cell" data-index="46" data-row="6" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 2: empty"></div><div class="cell" data-index="47" data-row="6" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 3: empty"></div><div class="cell given" data-index="48" data-row="6" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 4: 5 (given)" aria-readonly="true">5</div><div class="cell" data-index="49" data-row="6" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 5: empty"></div><div class="cell given" data-index="50" data-row="6" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 6: 3 (given)" aria-readonly="true">3</div><div class="cell" data-index="51" data-row="6" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 7: empty"></div><div class="cell given" data-index="52" data-row="6" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 8: 4 (given)" aria-readonly="true">4</div><div class="cell given" data-index="53" data-row="6" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 6, column 9: 6 (given)" aria-readonly="true">6</div><div class="cell given" data-index="54" data-row="7" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 1: 9 (given)" aria-readonly="true">9</div><div class="cell" data-index="55" data-row="7" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 2: empty"></div><div class="cell" data-index="56" data-row="7" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 3: empty"></div><div class="cell given" data-index="57" data-row="7" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 4: 3 (given)" aria-readonly="true">3</div><div class="cell given" data-index="58" data-row="7" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 5: 5 (given)" aria-readonly="true">5</div><div class="cell" data-index="59" data-row="7" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 6: empty"></div><div class="cell" data-index="60" data-row="7" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 7: empty"></div><div class="cell" data-index="61" data-row="7" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 8: empty"></div><div class="cell" data-index="62" data-row="7" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 7, column 9: empty"></div><div class="cell" data-index="63" data-row="8" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 1: empty"></div><div class="cell given" data-index="64" data-row="8" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 2: 3 (given)" aria-readonly="true">3</div><div class="cell given" data-index="65" data-row="8" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 3: 5 (given)" aria-readonly="true">5</div><div class="cell given" data-index="66" data-row="8" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 4: 1 (given)" aria-readonly="true">1</div><div class="cell given" data-index="67" data-row="8" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 5: 4 (given)" aria-readonly="true">4</div><div class="cell given" data-index="68" data-row="8" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 6: 8 (given)" aria-readonly="true">8</div><div class="cell" data-index="69" data-row="8" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 7: empty"></div><div class="cell" data-index="70" data-row="8" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 8: empty"></div><div class="cell" data-index="71" data-row="8" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 8, column 9: empty"></div><div class="cell" data-index="72" data-row="9" data-col="1" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 1: empty"></div><div class="cell" data-index="73" data-row="9" data-col="2" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 2: empty"></div><div class="cell" data-index="74" data-row="9" data-col="3" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 3: empty"></div><div class="cell given" data-index="75" data-row="9" data-col="4" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 4: 9 (given)" aria-readonly="true">9</div><div class="cell given" data-index="76" data-row="9" data-col="5" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 5: 6 (given)" aria-readonly="true">6</div><div class="cell" data-index="77" data-row="9" data-col="6" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 6: empty"></div><div class="cell given" data-index="78" data-row="9" data-col="7" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 7: 5 (given)" aria-readonly="true">5</div><div class="cell" data-index="79" data-row="9" data-col="8" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 8: empty"></div><div class="cell" data-index="80" data-row="9" data-col="9" role="gridcell" tabindex="0" aria-selected="false" aria-label="Row 9, column 9: empty"></div></div>
+          </div>
+
+                    <svg id="coach-overlay" width="414" height="414" viewBox="0 0 414 414" aria-hidden="true">
+            <defs>
+              <marker id="coach-arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+                <polygon points="0 0, 6 2, 0 4" fill="currentColor" opacity="0.7"></polygon>
+              </marker>
+            </defs>
+            <g id="coach-overlay-content"></g>
+          </svg>
+        </div>
+
+                <div id="busy-root" hidden=""></div>
+
+                <div id="notice-root" hidden=""></div>
+
+                <div id="coach-panel-wrap" class="coach-panel-wrap"></div>
+
+                <div id="coach-recap" class="coach-recap" role="status" aria-live="polite"></div>
+
+      </div>
+            <div class="right-col">
+
+                <div id="numpad-root">
+    <div class="numpad" role="toolbar" aria-label="Number pad">
+      <div class="numpad-digits" id="numpad-digits"><button class="btn btn-digit" aria-label="Enter 1">1</button><button class="btn btn-digit" aria-label="Enter 2">2</button><button class="btn btn-digit" aria-label="Enter 3">3</button><button class="btn btn-digit" aria-label="Enter 4">4</button><button class="btn btn-digit" aria-label="Enter 5">5</button><button class="btn btn-digit" aria-label="Enter 6">6</button><button class="btn btn-digit" aria-label="Enter 7">7</button><button class="btn btn-digit" aria-label="Enter 8">8</button><button class="btn btn-digit" aria-label="Enter 9">9</button></div>
+      <div class="numpad-utils">
+        <button class="btn" id="btn-clear" aria-label="Clear selected cell">Clear</button>
+        <button class="btn btn-mode mode-pen" id="btn-mode" aria-label="Switch to Pencil mode" aria-pressed="false">
+          <span class="mode-label">
+            <span class="mode-main" id="mode-label-main">Pen</span>
+            <span class="mode-sub" id="mode-label-sub">tap for pencil</span>
+          </span>
+        </button>
+      </div>
+      <div class="numpad-undo-row">
+        <button class="btn btn-erase-all" id="btn-erase-all" aria-label="Erase all pencil marks" disabled="">Erase all pencil</button>
+        <button class="btn btn-undo" id="btn-undo" aria-label="Undo last move" disabled="">Undo</button>
+      </div>
+      <div class="numpad-bottom-row1">
+        <button class="btn btn-hint" id="btn-hint" aria-label="Hint, 3 remaining">
+          Hint <span class="hint-badge" id="hint-count">3</span>
+        </button>
+        <button class="btn btn-coach" id="btn-coach" aria-label="Coach">Coach</button>
+      </div>
+      <div class="numpad-bottom-row2">
+        <button class="btn btn-check" id="btn-check" aria-label="Check answers">Check</button>
+      </div>
+      <div class="completion-msg" id="completion-msg" aria-live="polite" hidden=""></div>
+    </div>
+  </div>
+
+                <div class="action-row">
+          <button class="btn" id="btn-new" aria-label="Start new puzzle">New Puzzle</button>
+          <button class="btn" id="btn-reset" aria-label="Reset current puzzle">Reset</button>
+          <button class="btn" id="btn-share" aria-label="Share puzzle link">Share</button>
+        </div>
+
+                <div id="stats-root">
+    <div class="stats-panel">
+      <div class="stats-heading">Statistics</div>
+      <table class="stats-table" aria-label="Game statistics by difficulty">
+        <thead>
+          <tr>
+            <th scope="col">Level</th>
+            <th scope="col">Tried</th>
+            <th scope="col">Won</th>
+          </tr>
+        </thead>
+        <tbody id="stats-tbody"><tr aria-label="Kiddie: 0 attempted, 0 won">
+      <td>Kiddie</td>
+      <td>0</td>
+      <td>0</td>
+    </tr><tr class="active-diff" aria-label="Easy: 0 attempted, 0 won">
+      <td>Easy</td>
+      <td>0</td>
+      <td>0</td>
+    </tr><tr aria-label="Medium: 0 attempted, 0 won">
+      <td>Medium</td>
+      <td>0</td>
+      <td>0</td>
+    </tr><tr aria-label="Hard: 0 attempted, 0 won">
+      <td>Hard</td>
+      <td>0</td>
+      <td>0</td>
+    </tr><tr aria-label="Expert: 0 attempted, 0 won">
+      <td>Expert</td>
+      <td>0</td>
+      <td>0</td>
+    </tr><tr aria-label="Diabolical: 0 attempted, 0 won">
+      <td>Diabolical</td>
+      <td>0</td>
+      <td>0</td>
+    </tr><tr aria-label="Nightmare: 0 attempted, 0 won">
+      <td>Nightmare</td>
+      <td>0</td>
+      <td>0</td>
+    </tr></tbody>
+      </table>
+    </div>
+  </div>
+
+      </div>
+    </div>
+
+<section id="dev-root" class="dev-panel" tabindex="-1" aria-labelledby="dev-title">
+  <h2 id="dev-title">Developer tools</h2>
+  <p class="dev-note">Statistics are not recorded while developer mode is on.
+    Load the app with ?dev=0 to turn it off.</p>
+
+  <!-- ── Existing tools, unchanged ── -->
+  <details class="dev-tool" id="dev-load">
+    <summary>Load puzzle from string</summary>
+    <div class="dev-tool-body">
+      <label for="dev-load-input">Puzzle string — 81 cells, 0 or . for empty</label>
+      <textarea id="dev-load-input" rows="3" spellcheck="false" autocomplete="off"></textarea>
+      <div class="dev-buttons">
+        <button type="button" class="btn" id="dev-load-btn">Load</button>
+      </div>
+      <p class="dev-status" id="dev-load-status" role="status"></p>
+    </div>
+  </details>
+
+  <details class="dev-tool" id="dev-inspector">
+    <summary>Solver step inspector</summary>
+    <div class="dev-tool-body">
+      <div class="dev-buttons">
+        <button type="button" class="btn" id="dev-inspect-run">Run solver</button>
+        <button type="button" class="btn" id="dev-inspect-clear">Clear</button>
+        <button type="button" class="btn" id="dev-inspect-restore" disabled>Restore board</button>
+      </div>
+      <p class="dev-note">Click a step, or use the arrow keys, to show it on the board.
+        Double-click it, or press Enter or Space, to set the board to that step.</p>
+      <p class="dev-status" id="dev-inspect-summary" role="status"></p>
+      <p class="dev-status" id="dev-inspect-board"></p>
+      <ol class="dev-steps" id="dev-inspect-list" aria-label="Solver steps"></ol>
+    </div>
+  </details>
+
+  <details class="dev-tool" id="dev-overlay">
+    <summary>Candidate overlay</summary>
+    <div class="dev-tool-body">
+      <button type="button" class="dev-switch" id="dev-overlay-toggle" role="switch" aria-checked="false">
+        <span class="dev-switch-track" aria-hidden="true"><span class="dev-switch-thumb"></span></span>
+        <span>Show computed candidates</span>
+      </button>
+      <p class="dev-legend">
+        <span class="dev-cand-agree">5</span> agrees with your marks ·
+        <span class="dev-cand-missing">5</span> computed, not marked ·
+        <span class="dev-cand-extra">5</span> marked, not a candidate
+      </p>
+    </div>
+  </details>
+
+  <details class="dev-tool" id="dev-coach">
+    <summary>Coach step data</summary>
+    <div class="dev-tool-body">
+      <div class="dev-buttons">
+        <button type="button" class="btn" id="dev-coach-copy" disabled>Copy JSON</button>
+      </div>
+      <p class="dev-status" id="dev-coach-status" role="status"></p>
+      <pre class="dev-json" id="dev-coach-json" tabindex="0" role="region" aria-label="Coach step JSON">No active coach session.</pre>
+    </div>
+  </details>
+
+  <!-- ── Generation diagnostics: existing table + NEW seed rows and generate group ── -->
+  <details class="dev-tool" id="dev-gen" open>
+    <summary>Generation diagnostics</summary>
+    <div class="dev-tool-body" id="dev-gen-body">
+      <div id="dev-gen-info"><!-- table or message, rendered by script --></div>
+      <p class="dev-status" id="dev-seed-status" role="status"></p>
+
+      <section class="dev-group" aria-labelledby="dev-genseed-title">
+        <h3 class="dev-group-title" id="dev-genseed-title">Generate from seed</h3>
+        <div class="dev-inline">
+          <div class="dev-field">
+            <label for="dev-gen-tier">Tier</label>
+            <select id="dev-gen-tier" class="dev-select dev-new-focus">
+              <option value="kiddie">Kiddie</option>
+              <option value="easy" selected>Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+              <option value="expert">Expert</option>
+              <option value="diabolical">Diabolical</option>
+              <option value="nightmare">Nightmare</option>
+            </select>
+          </div>
+          <div class="dev-field dev-field-seed">
+            <label for="dev-gen-seed">Seed</label>
+            <input type="text" id="dev-gen-seed" class="dev-input dev-new-focus"
+                   inputmode="numeric" spellcheck="false" autocomplete="off"
+                   aria-describedby="dev-gen-status">
+          </div>
+          <button type="button" class="btn dev-new-focus" id="dev-gen-btn" aria-label="Generate from seed">Generate</button>
+        </div>
+        <p class="dev-status" id="dev-gen-status" role="status"></p>
+      </section>
+    </div>
+  </details>
+
+  <!-- ── NEW: Session recorder ── -->
+  <details class="dev-tool" id="dev-rec" open>
+    <summary class="dev-new-focus">Session recorder</summary>
+    <div class="dev-tool-body">
+
+      <section class="dev-group" aria-labelledby="dev-rec-history-title">
+        <h3 class="dev-group-title" id="dev-rec-history-title">History</h3>
+        <p class="dev-counts" id="dev-rec-counts"></p>
+        <p class="dev-callout" id="dev-rec-storage" role="status"></p>
+        <div class="dev-buttons">
+          <button type="button" class="btn dev-new-focus" id="dev-rec-copy" aria-label="Copy session document">Copy session</button>
+          <button type="button" class="btn dev-btn-danger dev-btn-end dev-new-focus" id="dev-rec-clear">Clear history</button>
+        </div>
+        <p class="dev-status" id="dev-rec-status" role="status"></p>
+        <div class="dev-field" id="dev-rec-fallback" hidden>
+          <label for="dev-rec-fallback-text">Session document</label>
+          <textarea id="dev-rec-fallback-text" class="dev-textarea dev-new-focus" rows="6" readonly spellcheck="false"></textarea>
+        </div>
+      </section>
+
+      <section class="dev-group" aria-labelledby="dev-rec-log-title">
+        <h3 class="dev-group-title" id="dev-rec-log-title">Console logging</h3>
+        <div class="dev-switches">
+          <button type="button" class="dev-switch dev-new-focus" role="switch" aria-checked="true" data-cat="Generation worker">
+            <span class="dev-switch-track" aria-hidden="true"><span class="dev-switch-thumb"></span></span>
+            <span>Log generation worker</span> <span class="dev-switch-tag" aria-hidden="true">[dev:gen]</span>
+          </button>
+          <button type="button" class="dev-switch dev-new-focus" role="switch" aria-checked="true" data-cat="Swallowed exceptions">
+            <span class="dev-switch-track" aria-hidden="true"><span class="dev-switch-thumb"></span></span>
+            <span>Log swallowed exceptions</span> <span class="dev-switch-tag" aria-hidden="true">[dev:swallowed]</span>
+          </button>
+          <button type="button" class="dev-switch dev-new-focus" role="switch" aria-checked="false" data-cat="Action trace">
+            <span class="dev-switch-track" aria-hidden="true"><span class="dev-switch-thumb"></span></span>
+            <span>Log action trace</span> <span class="dev-switch-tag" aria-hidden="true">[dev:action]</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="dev-group" aria-labelledby="dev-rec-replay-title">
+        <h3 class="dev-group-title" id="dev-rec-replay-title">Replay</h3>
+        <div class="dev-field">
+          <label for="dev-replay-doc">Session document to replay</label>
+          <textarea id="dev-replay-doc" class="dev-textarea dev-new-focus" rows="4" spellcheck="false" autocomplete="off"
+                    placeholder="Paste a session document (JSON)"></textarea>
+        </div>
+        <div class="dev-inline">
+          <div class="dev-field">
+            <label for="dev-replay-stop">Stop after action</label>
+            <input type="text" id="dev-replay-stop" class="dev-input dev-new-focus"
+                   inputmode="numeric" pattern="[0-9]*" spellcheck="false" autocomplete="off"
+                   aria-describedby="dev-replay-stop-hint">
+          </div>
+          <button type="button" class="btn dev-new-focus" id="dev-replay-btn">Replay</button>
+        </div>
+        <p class="dev-field-hint" id="dev-replay-stop-hint">Optional. Leave empty to replay every action.</p>
+        <p class="dev-status" id="dev-replay-status" role="status"></p>
+        <div class="dev-report dev-new-focus" id="dev-replay-report" role="region" aria-label="Replay report" tabindex="0"></div>
+      </section>
+
+    </div>
+  </details>
+</section>
+</main>
+
+<!-- Confirmation dialog: the app's dialog.js markup, plus aria-describedby so the
+     body is read on open (fspec-007 §11). -->
+<div id="dialog-root">
+  <div class="modal-backdrop" id="modal-backdrop" role="dialog" aria-modal="true"
+       aria-labelledby="modal-title" aria-describedby="modal-body">
+    <div class="modal">
+      <h2 id="modal-title"></h2>
+      <p id="modal-body"></p>
+      <div class="modal-actions">
+        <button class="btn" id="modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="modal-confirm"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>&copy; 2026 Brian Cody</p>
+</footer>
+
+<a id="dev-badge" class="dev-badge" href="#dev-root" aria-label="Developer mode on — skip to developer tools">DEV</a>
+
+<script>
+/* Mockup behaviour only: state switching and enough of each flow to show the
+   UX. No game logic. All wording is taken from fspec-007. */
+(function () {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const TIERS = { kiddie: 'Kiddie', easy: 'Easy', medium: 'Medium', hard: 'Hard',
+    expert: 'Expert', diabolical: 'Diabolical', nightmare: 'Nightmare' };
+  const fmt = n => n.toLocaleString('en-US');
+
+  // ── Announcements (the app's #sr-live) ───────────────────────────────
+  function announce(msg) {
+    const live = $('sr-live');
+    live.textContent = '';
+    requestAnimationFrame(() => { live.textContent = msg; });
+    $('m-announce').textContent = msg;
+  }
+
+  // ── Status helper ────────────────────────────────────────────────────
+  function setStatus(el, text, isError) {
+    el.textContent = text || '';
+    el.classList.toggle('dev-error', !!isError);
+  }
+
+  // ── Dialog (mirrors js/ui/dialog.js: focus trap, Escape, focus return) ─
+  const dlg = {
+    backdrop: $('modal-backdrop'), title: $('modal-title'), body: $('modal-body'),
+    cancel: $('modal-cancel'), confirm: $('modal-confirm'),
+    trigger: null, onConfirm: null, onCancel: null,
+  };
+  function openDialog({ title, body, confirmLabel, trigger, onConfirm, onCancel }) {
+    dlg.title.textContent = title;
+    dlg.body.textContent = body;
+    dlg.confirm.textContent = confirmLabel;
+    dlg.trigger = trigger; dlg.onConfirm = onConfirm; dlg.onCancel = onCancel;
+    dlg.backdrop.classList.add('open');
+    dlg.cancel.focus();
+  }
+  function closeDialog(confirmed) {
+    if (!dlg.backdrop.classList.contains('open')) return;
+    dlg.backdrop.classList.remove('open');
+    const cb = confirmed ? dlg.onConfirm : dlg.onCancel;
+    if (dlg.trigger) dlg.trigger.focus();
+    if (cb) cb();
+  }
+  dlg.cancel.addEventListener('click', () => closeDialog(false));
+  dlg.confirm.addEventListener('click', () => closeDialog(true));
+  dlg.backdrop.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); closeDialog(false); }
+    if (e.key === 'Tab') {
+      if (e.shiftKey && document.activeElement === dlg.cancel) { e.preventDefault(); dlg.confirm.focus(); }
+      else if (!e.shiftKey && document.activeElement === dlg.confirm) { e.preventDefault(); dlg.cancel.focus(); }
+    }
+  });
+
+  // ── Theme, hand, layout, focus rings ─────────────────────────────────
+  const headerTheme = $('theme-select');
+  function setTheme(v) {
+    document.body.className = document.body.className.replace(/\btheme-\w+/, '').trim() + ' theme-' + v;
+    document.documentElement.setAttribute('data-theme', v);
+    $('m-theme').value = v;
+    if (headerTheme) headerTheme.value = v;
+  }
+  $('m-theme').addEventListener('change', e => setTheme(e.target.value));
+  if (headerTheme) headerTheme.addEventListener('change', e => setTheme(e.target.value));
+
+  const handToggle = $('hand-toggle');
+  function setHand(left) {
+    if (left) document.documentElement.setAttribute('data-hand', 'left');
+    else document.documentElement.removeAttribute('data-hand');
+    $('m-left').checked = left;
+    if (handToggle) handToggle.setAttribute('aria-checked', String(left));
+  }
+  $('m-left').addEventListener('change', e => setHand(e.target.checked));
+  if (handToggle) handToggle.addEventListener('click', () =>
+    setHand(handToggle.getAttribute('aria-checked') !== 'true'));
+
+  $('m-below').addEventListener('change', e =>
+    document.querySelector('main').classList.toggle('dev-host', !e.target.checked));
+  $('m-rings').addEventListener('change', e =>
+    document.body.classList.toggle('mock-rings', e.target.checked));
+
+  function showViewport() {
+    const w = window.innerWidth;
+    const below = w < 1400 || $('m-below').checked;
+    $('m-vw').textContent = `${w}px — panel ${below ? 'below the game' : 'beside the game'}` +
+      (w <= 720 ? ' (phone layout)' : '') + '. Resize the window to change.';
+  }
+  window.addEventListener('resize', showViewport);
+  $('m-below').addEventListener('change', showViewport);
+
+  // ── Recorder counts and storage line ─────────────────────────────────
+  const rec = { actions: 412, errors: 3, capacity: 5000, atCapacity: false };
+  function renderCounts() {
+    const el = $('dev-rec-counts');
+    el.textContent = `${fmt(rec.actions)} actions, ${fmt(rec.errors)} errors recorded.`;
+    if (rec.atCapacity) {
+      const cap = document.createElement('span');
+      cap.className = 'dev-capacity';
+      cap.textContent = `At capacity (${fmt(rec.capacity)}): the oldest entries are being discarded.`;
+      el.appendChild(document.createTextNode(' '));
+      el.appendChild(cap);
+    }
+  }
+  $('m-rec').addEventListener('change', e => {
+    const v = e.target.value;
+    if (v === 'normal') Object.assign(rec, { actions: 412, errors: 3, atCapacity: false });
+    if (v === 'capacity') Object.assign(rec, { actions: 4988, errors: 12, atCapacity: true });
+    if (v === 'empty') Object.assign(rec, { actions: 0, errors: 0, atCapacity: false });
+    renderCounts();
+  });
+
+  const STORAGE = {
+    ok: '',
+    unavailable: 'History is not being saved — it will be lost on reload.',
+    unreadable: 'The saved history couldn\'t be read and was discarded.',
+    tab: 'Another tab has taken over the saved history. This tab\'s history is kept until it is closed or reloaded.',
+  };
+  $('m-storage').addEventListener('change', e => {
+    $('dev-rec-storage').textContent = STORAGE[e.target.value];
+  });
+
+  // ── Copy session ─────────────────────────────────────────────────────
+  function sessionDocument() {
+    return JSON.stringify({
+      format: 1,
+      exportedAt: '2026-11-15T14:07:52.311Z',
+      seed: 2847719305,
+      tier: 'easy',
+      start: {
+        puzzle: { givens: '006000039703280100001039008640801020302074000000503046900350000035148000000960500', tier: 'easy', origin: 'generated' },
+        pen: '0'.repeat(81), pencil: '…', hintsRemaining: 3, mode: 'pen', selected: null,
+      },
+      actions: [
+        { t: '2026-11-15T13:58:04.102Z', kind: 'select', cell: 40 },
+        { t: '2026-11-15T13:58:05.417Z', kind: 'enter', cell: 40, digit: 6 },
+        { t: '2026-11-15T13:58:09.880Z', kind: 'hint', cell: 12, digit: 4, technique: 'Hidden Single' },
+        '… ' + (rec.actions - 3) + ' more',
+      ],
+      errors: rec.errors ? [{ t: '2026-11-15T14:01:11.020Z', after: 57, kind: 'listener', message: 'Cannot read properties of null (reading \'step\')' }] : [],
+    }, null, 2);
+  }
+  function hideFallback() { $('dev-rec-fallback').hidden = true; }
+  function copySession(outcome) {
+    const status = $('dev-rec-status');
+    if (outcome === 'ok') {
+      hideFallback();
+      const msg = `Session copied: ${fmt(rec.actions)} actions, ${fmt(rec.errors)} errors.`;
+      setStatus(status, msg, false);
+      announce(msg);
+    } else {
+      const field = $('dev-rec-fallback-text');
+      field.value = sessionDocument();
+      $('dev-rec-fallback').hidden = false;
+      const msg = 'Couldn\'t copy automatically. The session document is shown for you to copy.';
+      setStatus(status, msg, true);
+      field.focus();
+      field.select();
+      field.scrollTop = 0;
+      announce(msg);
+    }
+  }
+  $('dev-rec-copy').addEventListener('click', () => copySession($('m-clip').value));
+  $('m-copy').addEventListener('change', e => {
+    if (e.target.value === 'none') { setStatus($('dev-rec-status'), ''); hideFallback(); }
+    else copySession(e.target.value);
+  });
+
+  // ── Clear history ────────────────────────────────────────────────────
+  function doClear() {
+    Object.assign(rec, { actions: 0, errors: 0, atCapacity: false });
+    $('m-rec').value = 'empty';
+    renderCounts();
+    $('dev-replay-report').innerHTML = '';
+    hideFallback();
+    setStatus($('dev-rec-status'), 'History cleared.');
+    announce('History cleared.');
+  }
+  function declineClear() {
+    setStatus($('dev-rec-status'), 'History not cleared.');
+    announce('History not cleared.');
+  }
+  function clearHistory() {
+    if (rec.actions + rec.errors === 0) { doClear(); return; }
+    openDialog({
+      title: 'Clear recorded history?',
+      body: `The recorded history (${fmt(rec.actions)} actions, ${fmt(rec.errors)} errors) will be discarded. Your game is not affected.`,
+      confirmLabel: 'Clear History',
+      trigger: $('dev-rec-clear'),
+      onConfirm: doClear,
+      onCancel: declineClear,
+    });
+  }
+  $('dev-rec-clear').addEventListener('click', clearHistory);
+  $('m-clear').addEventListener('change', e => {
+    const v = e.target.value;
+    if (v === 'none') setStatus($('dev-rec-status'), '');
+    if (v === 'dialog') {
+      if (rec.actions + rec.errors === 0) { Object.assign(rec, { actions: 412, errors: 3 }); renderCounts(); $('m-rec').value = 'normal'; }
+      clearHistory();
+    }
+    if (v === 'cleared') doClear();
+    if (v === 'declined') declineClear();
+  });
+
+  // ── Logging switches ─────────────────────────────────────────────────
+  const switches = [...document.querySelectorAll('#dev-rec .dev-switch')];
+  switches.forEach(sw => sw.addEventListener('click', () => {
+    const on = sw.getAttribute('aria-checked') !== 'true';
+    sw.setAttribute('aria-checked', String(on));
+    announce(`${sw.dataset.cat} logging ${on ? 'on' : 'off'}.`);
+  }));
+  $('m-log').addEventListener('change', e => {
+    const states = { default: [true, true, false], 'all-on': [true, true, true], 'all-off': [false, false, false] }[e.target.value];
+    switches.forEach((sw, i) => sw.setAttribute('aria-checked', String(states[i])));
+  });
+
+  // Stop-after field accepts digits only (fspec-007 §11).
+  $('dev-replay-stop').addEventListener('input', e => {
+    const clean = e.target.value.replace(/\D+/g, '');
+    if (clean !== e.target.value) e.target.value = clean;
+  });
+
+  // ── Replay ───────────────────────────────────────────────────────────
+  const SAMPLE_DOC = '{\n  "format": 1,\n  "exportedAt": "2026-11-15T14:07:52.311Z",\n  "seed": 2847719305,\n  "tier": "easy",\n  "start": { … },\n  "actions": [ … 214 actions … ],\n  "errors": [ … ]\n}';
+  const replayStatus = $('dev-replay-status');
+  const report = $('dev-replay-report');
+  let replayTimer = null;
+
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+
+  function compareBlock(recorded, current) {
+    const wrap = el('div', 'dev-compare');
+    for (const [label, value] of [['Recorded', recorded], ['Current', current]]) {
+      const box = el('div');
+      box.appendChild(el('div', 'dev-compare-label', label));
+      const pre = el('pre', 'dev-json', JSON.stringify(value, null, 2));
+      pre.tabIndex = 0;
+      pre.setAttribute('role', 'region');
+      pre.setAttribute('aria-label', label + ' values');
+      box.appendChild(pre);
+      wrap.appendChild(box);
+    }
+    return wrap;
+  }
+
+  function divergence(text, also, recorded, current, open) {
+    const li = el('li', 'dev-diverge');
+    const d = el('details');
+    if (open) d.open = true;
+    const s = el('summary');
+    s.appendChild(document.createTextNode(text));
+    if (also) {
+      s.appendChild(document.createTextNode(' '));
+      s.appendChild(el('span', 'dev-report-also', 'Also differs: ' + also + '.'));
+    }
+    d.appendChild(s);
+    d.appendChild(compareBlock(recorded, current));
+    li.appendChild(d);
+    return li;
+  }
+
+  function list(items, cls) {
+    const ul = el('ul');
+    items.forEach(t => {
+      if (t instanceof Node) ul.appendChild(t);
+      else ul.appendChild(el('li', cls, t));
+    });
+    return ul;
+  }
+
+  function errorsPart(r, e, items) {
+    const frag = document.createDocumentFragment();
+    frag.appendChild(el('p', 'dev-report-errors', `Errors: ${r} recorded in the replayed range, ${e} raised during this replay.`));
+    frag.appendChild(list(items, 'dev-error-item'));
+    return frag;
+  }
+
+  const REPORTS = {
+    nodiv() {
+      report.innerHTML = '';
+      report.appendChild(el('p', 'dev-report-scope', 'Replayed 214 of 214 actions.'));
+      report.appendChild(el('p', 'dev-report-summary', 'No divergences: all 41 computed results match the current code (29 coach steps, 12 hints).'));
+      return 'Session replayed: 214 of 214 actions. No divergences in 41 computed results.';
+    },
+    div() {
+      report.innerHTML = '';
+      report.appendChild(el('p', 'dev-report-scope', 'Replayed 214 of 214 actions.'));
+      report.appendChild(el('p', 'dev-report-summary', '3 of 41 computed results differ from the current code:'));
+      report.appendChild(list([
+        divergence('Action 57 — coach step at 14:02:31.118: technique — recorded X-Wing, current Hidden Pair.',
+          'eliminations, cell roles, text',
+          { technique: 'X-Wing', eliminations: [{ cell: 22, digit: 7 }, { cell: 67, digit: 7 }],
+            cellRoles: { cause: [19, 25, 64, 70], target: [22, 67] },
+            text: 'Digit 7 is confined to two rows in columns 2 and 8…' },
+          { technique: 'Hidden Pair', eliminations: [{ cell: 22, digit: 3 }, { cell: 22, digit: 9 }],
+            cellRoles: { cause: [21, 22], target: [22] },
+            text: 'In row 3, digits 4 and 7 can only go in two cells…' }, true),
+        divergence('Action 112 — coach step (Naked Triple): differs in arrows, text.', null,
+          { arrows: [[30, 33], [33, 35]], text: 'Cells r4c4, r4c7 and r4c9 hold only 2, 5 and 8…' },
+          { arrows: [[30, 35]], text: 'Cells r4c4, r4c7 and r4c9 contain only 2, 5 and 8…' }, false),
+        divergence('Action 168 — hint at r6c2: technique — recorded Hidden Single, current Naked Single.', null,
+          { technique: 'Hidden Single' }, { technique: 'Naked Single' }, false),
+      ]));
+      report.appendChild(el('h4', null, 'Not compared'));
+      report.appendChild(list([
+        'Action 90 — hint: not compared — the recorded action changed nothing.',
+        'Action 131 — coach step: not compared — the current code raised an error: Cannot read properties of undefined (reading \'cells\')',
+      ]));
+      report.appendChild(errorsPart(1, 1, [
+        'Recorded — listener exception after action 57: TypeError: Cannot read properties of null (reading \'step\')',
+        'Raised during this replay — uncaught error after action 131: TypeError: Cannot read properties of undefined (reading \'cells\')',
+      ]));
+      return 'Session replayed: 214 of 214 actions. 3 divergences in 41 computed results. 2 not compared.';
+    },
+    nothing() {
+      report.innerHTML = '';
+      report.appendChild(el('p', 'dev-report-scope', 'Replayed 18 of 18 actions. Replay ended during a puzzle generation; the busy state was cleared.'));
+      report.appendChild(el('p', 'dev-report-summary', 'No computed results to compare: the replayed actions contain no coach steps or hints.'));
+      return 'Session replayed: 18 of 18 actions. No computed results to compare.';
+    },
+    stopped() {
+      report.innerHTML = '';
+      report.appendChild(el('p', 'dev-report-scope', 'Replayed 76 of 214 actions.'));
+      report.appendChild(el('p', 'dev-report-summary', 'No divergences: all 14 computed results match the current code (10 coach steps, 4 hints).'));
+      report.appendChild(errorsPart(0, 1, [
+        'Raised during this replay — uncaught error at action 77: TypeError: Cannot read properties of null (reading \'pencil\')',
+      ]));
+      return 'Replay stopped at action 77 of 214: TypeError: Cannot read properties of null (reading \'pencil\'). The board shows the position before that action.';
+    },
+  };
+
+  const REJECT = {
+    'rej-empty': 'No session document was supplied.',
+    'rej-json': 'The text is not valid JSON.',
+    'rej-version': 'It is format version 3; this build reads versions 1 to 1.',
+    'rej-action': 'Action 12 is not valid: it is of an unknown kind ("pencil-fill").',
+    'rej-stop': 'Stop after must be a whole number, 0 or greater.',
+  };
+
+  function finishReplay(kind) {
+    const msg = REPORTS[kind]();
+    setStatus(replayStatus, msg, kind === 'stopped');
+    announce(msg);
+  }
+  function reject(key) {
+    report.innerHTML = '';
+    const msg = 'This session can\'t be replayed. ' + REJECT[key];
+    setStatus(replayStatus, msg, true);
+    announce(msg);
+  }
+  function declined() {
+    const msg = 'Session not replayed. Your game and recorded history are unchanged.';
+    setStatus(replayStatus, msg);
+    announce(msg);
+  }
+  function comparing(then) {
+    report.innerHTML = '';
+    setStatus(replayStatus, 'Comparing with current code…');
+    if (then) replayTimer = setTimeout(() => finishReplay(then), 1400);
+  }
+  function confirmBody(stake) {
+    const h = `the recorded history (${fmt(rec.actions)} actions, ${fmt(rec.errors)} errors) will be discarded.`;
+    return { progress: 'Your current progress will be lost.',
+      history: 'The recorded history (' + h.slice('the recorded history ('.length),
+      both: 'Your current progress will be lost, and ' + h }[stake];
+  }
+  function openReplayDialog(stake, then) {
+    if (rec.actions + rec.errors === 0 && stake !== 'progress') {
+      Object.assign(rec, { actions: 412, errors: 3 }); renderCounts(); $('m-rec').value = 'normal';
+    }
+    openDialog({
+      title: 'Replay this session?',
+      body: confirmBody(stake),
+      confirmLabel: 'Replay',
+      trigger: $('dev-replay-btn'),
+      onConfirm: () => comparing(then || 'div'),
+      onCancel: declined,
+    });
+  }
+
+  // Clicking Replay walks the real flow; the outcome depends on the field.
+  $('dev-replay-btn').addEventListener('click', () => {
+    clearTimeout(replayTimer);
+    const text = $('dev-replay-doc').value.trim();
+    setStatus(replayStatus, 'Checking session…');
+    replayTimer = setTimeout(() => {
+      if (!text) return reject('rej-empty');
+      if (!/^[{[]/.test(text)) return reject('rej-json');
+      const stake = $('m-stake').value;
+      if (stake === 'none') comparing('div');
+      else openReplayDialog(stake);
+    }, 700);
+  });
+
+  $('m-replay').addEventListener('change', e => {
+    clearTimeout(replayTimer);
+    const v = e.target.value;
+    const doc = $('dev-replay-doc'), stop = $('dev-replay-stop');
+    if (v === 'empty') { doc.value = ''; stop.value = ''; report.innerHTML = ''; setStatus(replayStatus, ''); return; }
+    if (v !== 'rej-empty') doc.value = v === 'rej-json' ? 'session from Tuesday, see above' : SAMPLE_DOC;
+    else doc.value = '';
+    stop.value = v === 'stopped' ? '' : (v === 'rej-stop' ? '' : stop.value);
+    if (v === 'filled') { report.innerHTML = ''; setStatus(replayStatus, ''); }
+    if (v === 'checking') { report.innerHTML = ''; setStatus(replayStatus, 'Checking session…'); }
+    if (v.startsWith('dlg-')) { setStatus(replayStatus, 'Checking session…'); openReplayDialog(v.slice(4), 'div'); }
+    if (v === 'declined') declined();
+    if (v === 'comparing') comparing(null);
+    if (REPORTS[v]) finishReplay(v);
+    if (REJECT[v]) {
+      if (v === 'rej-stop') stop.value = '';  // a non-digit value cannot be typed; shown via API/paste path
+      reject(v);
+    }
+  });
+
+  // ── Generation diagnostics ───────────────────────────────────────────
+  const BASE_ROWS = [
+    ['Requested tier', 'Easy'],
+    ['Achieved tier', 'Easy'],
+    ['Fallback used', 'No'],
+    ['Attempts', '2 of 30'],
+    ['Rejected — unsolvable by solver', '0'],
+    ['Rejected — wrong tier', '1 (Kiddie 1)'],
+    ['Technique profile', 'Naked Single × 44\nHidden Single × 1'],
+  ];
+  const diag = { mode: 'random', seed: 2847719305, rows: BASE_ROWS };
+
+  function renderDiag() {
+    const host = $('dev-gen-info');
+    host.innerHTML = '';
+    if (diag.mode === 'loaded' || diag.mode === 'noorigin') {
+      host.appendChild(el('p', 'dev-status', diag.mode === 'loaded'
+        ? 'This puzzle was loaded, not generated.'
+        : 'No generation data was recorded for this puzzle.'));
+      return;
+    }
+    const table = el('table', 'dev-table');
+    const row = (label, valueNode) => {
+      const tr = el('tr');
+      const th = el('th', null, label);
+      th.scope = 'row';
+      const td = el('td');
+      td.appendChild(valueNode);
+      tr.append(th, td);
+      table.appendChild(tr);
+      return td;
+    };
+    const recorded = diag.mode !== 'unrecorded';
+    const seedTd = row('Seed', el('span', 'dev-seed', recorded ? String(diag.seed) : 'Not recorded'));
+    const btn = el('button', 'btn dev-btn-sm dev-new-focus', 'Copy seed');
+    btn.type = 'button';
+    btn.id = 'dev-seed-copy';
+    btn.disabled = !recorded;
+    btn.addEventListener('click', () => seedCopy($('m-clip').value));
+    seedTd.appendChild(btn);
+    row('Seed chosen by', document.createTextNode(
+      !recorded ? '—' : diag.mode === 'seeded' ? 'Developer (seeded run)' : 'Generator (random)'));
+    for (const [l, v] of diag.rows) row(l, document.createTextNode(v));
+    host.appendChild(table);
+  }
+  function seedCopy(outcome) {
+    const msg = outcome === 'ok' ? 'Seed copied.' : 'Couldn\'t copy — select the seed and copy it manually.';
+    setStatus($('dev-seed-status'), msg, outcome !== 'ok');
+    announce(msg);
+  }
+  $('m-diag').addEventListener('change', e => {
+    diag.mode = e.target.value;
+    diag.seed = diag.mode === 'seeded' ? 1234567 : 2847719305;
+    diag.rows = BASE_ROWS;
+    setStatus($('dev-seed-status'), '');
+    renderDiag();
+  });
+  $('m-seedcopy').addEventListener('change', e => {
+    if (e.target.value === 'none') setStatus($('dev-seed-status'), '');
+    else {
+      if (diag.mode !== 'random' && diag.mode !== 'seeded') { diag.mode = 'random'; $('m-diag').value = 'random'; renderDiag(); }
+      seedCopy(e.target.value);
+    }
+  });
+
+  // Generate from seed
+  const genStatus = $('dev-gen-status');
+  const seedField = $('dev-gen-seed');
+  const tierSel = $('dev-gen-tier');
+  let genTimer = null;
+  const busyRoot = $('busy-root');
+
+  function showBusy(on, tier) {
+    if (!busyRoot) return;
+    if (!on) { busyRoot.hidden = true; busyRoot.innerHTML = ''; return; }
+    const progress = tier === 'diabolical' || tier === 'nightmare';
+    busyRoot.hidden = false;
+    busyRoot.innerHTML =
+      '<div class="busy-card" role="status"><div class="busy-spinner" aria-hidden="true"></div>' +
+      '<div class="busy-title">Generating puzzle…</div>' +
+      (progress ? '<div class="busy-progress">Searching for a worthy puzzle… (attempt 112 of 400)</div>' +
+        '<button type="button" class="btn busy-cancel" aria-label="Cancel puzzle search">Cancel</button>' : '') +
+      '</div>';
+    const c = busyRoot.querySelector('.busy-cancel');
+    if (c) c.addEventListener('click', () => endGen('cancelled'));
+  }
+  function setSeedInvalid(bad) {
+    if (bad) seedField.setAttribute('aria-invalid', 'true');
+    else seedField.removeAttribute('aria-invalid');
+  }
+  function seedValue() {
+    const s = seedField.value.trim();
+    return /^\d+$/.test(s) && Number(s) <= 4294967295 ? Number(s) : null;
+  }
+  function endGen(kind) {
+    clearTimeout(genTimer);
+    showBusy(false);
+    const s = seedValue() ?? 1234567;
+    const tier = TIERS[tierSel.value];
+    let msg, err = false;
+    if (kind === 'generated') {
+      msg = `Generated a ${tier} puzzle from seed ${s}.`;
+      diag.mode = 'seeded'; diag.seed = s;
+      diag.rows = BASE_ROWS.map(([l, v]) => [l, (l === 'Requested tier' || l === 'Achieved tier') ? tier : v]);
+      $('m-diag').value = 'seeded'; renderDiag();
+    } else if (kind === 'fallback') {
+      msg = `Generated from seed ${s}. No Expert puzzle was found within the budget; this one is rated Hard.`;
+      tierSel.value = 'expert';
+      diag.mode = 'seeded'; diag.seed = s;
+      diag.rows = [['Requested tier', 'Expert'], ['Achieved tier', 'Hard'], ['Fallback used', 'Yes'],
+        ['Attempts', '30 of 30'], ['Rejected — unsolvable by solver', '3'],
+        ['Rejected — wrong tier', '27 (Medium 9, Hard 18)'],
+        ['Technique profile', 'Naked Single × 31\nHidden Single × 12\nNaked Pair × 2\nPointing Pair × 1']];
+      $('m-diag').value = 'seeded'; renderDiag();
+    } else if (kind === 'nogen') msg = 'No puzzle generated. Your game continues.';
+    else if (kind === 'cancelled') msg = 'Generation cancelled.';
+    else if (kind === 'replaced') msg = 'Generation replaced by another request.';
+    else if (kind === 'failed') { msg = 'The puzzle couldn\'t be generated.'; err = true; }
+    setStatus(genStatus, msg, err);
+    announce(msg);
+    $('dev-gen-btn').focus();
+  }
+  function startGen(s) {
+    setSeedInvalid(false);
+    setStatus(genStatus, `Generating from seed ${s}…`);
+    showBusy(true, tierSel.value);
+    clearTimeout(genTimer);
+    genTimer = setTimeout(() => endGen('generated'), 1600);
+  }
+  function invalidSeed() {
+    setSeedInvalid(true);
+    const msg = 'Seed must be a whole number from 0 to 4294967295.';
+    setStatus(genStatus, msg, true);
+    announce(msg);
+  }
+  $('dev-gen-btn').addEventListener('click', () => {
+    const s = seedValue();
+    if (s === null) return invalidSeed();
+    if ($('m-progress').checked) {
+      openDialog({
+        title: 'Generate from this seed?',
+        body: 'Your current progress will be lost.',
+        confirmLabel: 'Generate',
+        trigger: $('dev-gen-btn'),
+        onConfirm: () => startGen(s),
+        onCancel: () => endGen('nogen'),
+      });
+    } else startGen(s);
+  });
+  seedField.addEventListener('input', () => setSeedInvalid(false));
+
+  $('m-gen').addEventListener('change', e => {
+    const v = e.target.value;
+    clearTimeout(genTimer);
+    showBusy(false);
+    setSeedInvalid(false);
+    if (v === 'idle') { seedField.value = ''; setStatus(genStatus, ''); return; }
+    if (v === 'invalid') { seedField.value = '-42'; invalidSeed(); return; }
+    seedField.value = '1234567';
+    if (v === 'confirm') { $('m-progress').checked = true; $('dev-gen-btn').click(); return; }
+    if (v === 'generating') {
+      setStatus(genStatus, 'Generating from seed 1234567…');
+      showBusy(true, tierSel.value);
+      return;
+    }
+    endGen(v);
+  });
+
+  // ── Initial render ───────────────────────────────────────────────────
+  renderCounts();
+  renderDiag();
+  showViewport();
+  setTheme('minimalist');
+})();
+
+</script>
+</body>
+</html>

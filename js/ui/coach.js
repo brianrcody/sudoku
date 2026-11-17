@@ -55,8 +55,13 @@ export function mount(root, gameState) {
 
   _wireButton();
 
-  gameState.on('changed', ({ changed }) => {
+  gameState.on('changed', ({ action, changed }) => {
     if (changed.has('puzzle')) _lastSessionHadErrorRecap = false;
+    // A restored position in a recap gets a full recap period of its own.
+    if (action.type === 'DEV_RESTORE_POSITION' && _recapTimer !== null) {
+      clearTimeout(_recapTimer);
+      _recapTimer = null;
+    }
     if ([...changed].some(k => RELEVANT_KEYS.has(k))) {
       _render(gameState.getState());
     }

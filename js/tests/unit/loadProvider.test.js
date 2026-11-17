@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for js/providers/loadProvider.js (LV1–LV7).
+ * @fileoverview Unit tests for js/providers/loadProvider.js (LV1–LV11).
  *
  * LV1–LV6 inject a fake worker to drive every branch deterministically; LV7
  * runs one request through the real worker script.
@@ -7,7 +7,7 @@
 
 import { createLoadProvider } from '../../providers/loadProvider.js';
 import { MSG } from '../../worker/protocol.js';
-import { KIDDIE, toGivens } from '../fixtures/puzzles/loadable.js';
+import { KIDDIE, KIDDIE_SOLUTION, toGivens } from '../fixtures/puzzles/loadable.js';
 
 function makeFakeWorkerFactory() {
   const workers = [];
@@ -98,5 +98,70 @@ describe('providers/loadProvider.js', () => {
     expect(result.puzzle.difficulty).to.equal('kiddie');
     expect(result.puzzle.givens).to.be.instanceof(Uint8Array);
     expect(result.puzzle.solution).to.be.instanceof(Uint8Array);
+  });
+
+  describe('checkPuzzles (Phase 2)', () => {
+    const valid = () => ({ givens: toGivens(KIDDIE), solution: toGivens(KIDDIE_SOLUTION) });
+    const mismatch = () => {
+      const solution = toGivens(KIDDIE_SOLUTION);
+      [solution[0], solution[1]] = [solution[1], solution[0]];
+      return { givens: toGivens(KIDDIE), solution };
+    };
+
+    it('LV8: checkPuzzles posts one CHECK_REQUEST carrying the whole list', () => {
+      const { createWorker, workers } = makeFakeWorkerFactory();
+      const puzzles = [valid(), mismatch()];
+
+      createLoadProvider({ createWorker }).checkPuzzles(puzzles);
+
+      expect(workers[0].posted).to.have.length(1);
+      expect(workers[0].posted[0].type).to.equal(MSG.CHECK_REQUEST);
+      expect(workers[0].posted[0].puzzles).to.equal(puzzles);
+    });
+
+    it('LV9: a CHECK_RESULT resolves the check with its results', async () => {
+      const { createWorker, workers } = makeFakeWorkerFactory();
+      const check = createLoadProvider({ createWorker }).checkPuzzles([valid()]);
+      const results = [{ ok: true }];
+
+      workers[0].onmessage({ data: { type: MSG.CHECK_RESULT, id: workers[0].posted[0].id, results } });
+
+      expect(await check).to.equal(results);
+    });
+
+    it('LV9: an interleaved LOAD_RESULT resolves its load with its result, and the check with its results', async () => {
+      const { createWorker, workers } = makeFakeWorkerFactory();
+      const provider = createLoadProvider({ createWorker });
+      const check = provider.checkPuzzles([valid()]);
+      const load = provider.rateGivens(toGivens(KIDDIE));
+      const [checkReq, loadReq] = workers[0].posted;
+      const results = [{ ok: true }];
+
+      workers[0].reply(loadReq.id, { ok: false, reason: 'multiple' });
+      workers[0].onmessage({ data: { type: MSG.CHECK_RESULT, id: checkReq.id, results } });
+
+      expect(await load).to.deep.equal({ ok: false, reason: 'multiple' });
+      expect(await check).to.equal(results);
+    });
+
+    it('LV10: a worker error rejects a pending check and a pending load', async () => {
+      const { createWorker, workers } = makeFakeWorkerFactory();
+      const provider = createLoadProvider({ createWorker });
+      const check = provider.checkPuzzles([valid()]).catch(e => e.message);
+      const load = provider.rateGivens(toGivens(KIDDIE)).catch(e => e.message);
+
+      workers[0].onerror({ message: 'boom' });
+
+      expect(await check).to.equal('boom');
+      expect(await load).to.equal('boom');
+    });
+
+    it('LV11: the real worker checks a valid puzzle and a mismatched solution', async function () {
+      this.timeout(15000);
+
+      const results = await createLoadProvider().checkPuzzles([valid(), mismatch()]);
+
+      expect(results).to.deep.equal([{ ok: true }, { ok: false, reason: 'solution-mismatch' }]);
+    });
   });
 });

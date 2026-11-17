@@ -7,6 +7,7 @@
 
 import * as cookies from '../persist/cookies.js';
 import { DIFFICULTY_ORDER } from '../config.js';
+import { diagnostics } from '../util/events.js';
 
 const COOKIE_NAME = 'sudoku.stats';
 const VERSION = 1;
@@ -53,7 +54,8 @@ async function load() {
       if (!parsed.stats[key]) parsed.stats[key] = defaults[key];
     }
     return parsed.stats;
-  } catch {
+  } catch (error) {
+    diagnostics.emit('swallowed', { where: 'cookieStatsStore.load', error });
     return defaultStats();
   }
 }
@@ -68,8 +70,9 @@ async function save(stats) {
   try {
     const encoded = encodeURIComponent(JSON.stringify({ version: VERSION, stats }));
     cookies.set(COOKIE_NAME, encoded, { maxAge: 60 * 60 * 24 * 365 * 2, path: '/', sameSite: 'Lax' });
-  } catch {
+  } catch (error) {
     // Best-effort; swallow I/O errors per persist-layer policy.
+    diagnostics.emit('swallowed', { where: 'cookieStatsStore.save', error });
   }
 }
 

@@ -3,9 +3,14 @@
  *
  * Provides:
  * - beforeEach hook that resets shared DOM/storage state
+ * - afterEach hooks that clear the diagnostics channel's listeners and delete
+ *   the developer-mode session history database
  * - makeFakeGameState factory for UI unit tests
  * - defaultState fixture matching GameState shape
  */
+
+import { diagnostics } from '/js/util/events.js';
+import { RECORDER_DB } from '/js/dev/devMode.js';
 
 // ---------------------------------------------------------------------------
 // Global beforeEach: clean shared state between every test
@@ -30,6 +35,23 @@ beforeEach(function () {
 
   // Reset handedness to the default (attribute absent).
   document.documentElement.removeAttribute('data-hand');
+});
+
+// No test may leave a listener on the process-wide diagnostics channel.
+afterEach(function () {
+  diagnostics.clear();
+});
+
+// No test may inherit another's session history. App frames opened with
+// developer mode on use the real recorder database; root hooks run after each
+// file's own afterEach, so those frames are gone, and the store closes any
+// connection still open when the delete arrives.
+afterEach(function () {
+  return new Promise(resolve => {
+    const req = indexedDB.deleteDatabase(RECORDER_DB);
+    req.onsuccess = () => resolve();
+    req.onerror = () => resolve();
+  });
 });
 
 // ---------------------------------------------------------------------------

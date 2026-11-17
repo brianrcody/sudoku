@@ -20,6 +20,10 @@ import {
   overlayLabel,
   describeGeneration,
 } from './inspect.js';
+import { createDevSession } from './devSession.js';
+import { install as installApi } from './devApi.js';
+import { mount as mountRecorder } from './recorderPanel.js';
+import { DIFFICULTY_ORDER, TIER_LABELS } from '../config.js';
 
 const STYLESHEET_URL = new URL('../../css/dev.css', import.meta.url);
 
@@ -35,6 +39,11 @@ const HIGHLIGHT_ROLES = [
 
 let _gameState = null;
 let _panel = null;
+/**
+ * @type {import('./devSession.js').DevSession|null} The controller shared by
+ * the panel's tools and `window.sudokuDev`.
+ */
+let _session = null;
 
 let _overlayOn = false;
 /** @type {ReturnType<typeof runInspector>|null} */
@@ -60,15 +69,26 @@ let _basePencil = null;
 let _appliedCandidates = null;
 
 /**
- * Mount the developer tools.
+ * Mount the developer tools once the recorder's saved history is merged, then
+ * install `window.sudokuDev`, so neither observes the unmerged history.
  *
  * @param {object} deps
  * @param {{ getState: function, on: function, dispatch: function }} deps.gameState
- * @param {function(string): Promise<{status: string, message: string}>} deps.loadPuzzle
- *   The shared puzzle loader, bound to the `string` source.
+ * @param {function(string, object=): Promise<{status: string, message: string}>} deps.loadPuzzle
+ *   The shared puzzle loader, bound to the `string` source; options pass through.
+ * @param {import('./devBoot.js').DevBoot} deps.dev - The developer boot object.
+ * @param {function({title: string, body: string, confirmLabel: string}): Promise<boolean>} deps.confirm
+ * @param {function(object): Promise<object>} deps.generateSeeded - `foreground.generateSeeded`.
+ * @param {function(): string} deps.getGenerationTier - Initial tier of the Generate-from-seed selector.
+ * @param {function(): void} deps.beforeReplace - Cancels a generation and closes any dialog.
+ * @param {function(Array): Promise<Array>} deps.checkPuzzles - `loadProvider.checkPuzzles`.
  * @param {function(string): Promise<boolean>} [deps.copy]
  */
-export function mount({ gameState, loadPuzzle, copy = copyText }) {
+export async function mount({
+  gameState, loadPuzzle, dev, confirm, generateSeeded, getGenerationTier, beforeReplace, checkPuzzles,
+  copy = copyText,
+}) {
+  await dev.recorder.ready;
   _gameState = gameState;
   _overlayOn = false;
   _inspection = null;
@@ -96,6 +116,8 @@ export function mount({ gameState, loadPuzzle, copy = copyText }) {
   _panel.id = 'dev-root';
   _panel.className = 'dev-panel';
   _panel.tabIndex = -1;
+  // No control in the panel deselects the board, so operating it never records a DESELECT (fspec D-35 e).
+  _panel.dataset.keepSelection = '';
   _panel.setAttribute('aria-labelledby', 'dev-title');
   _panel.innerHTML = `
     <h2 id="dev-title">Developer tools</h2>
@@ -158,7 +180,29 @@ export function mount({ gameState, loadPuzzle, copy = copyText }) {
 
     <details class="dev-tool" id="dev-gen">
       <summary>Generation diagnostics</summary>
-      <div class="dev-tool-body" id="dev-gen-body"></div>
+      <div class="dev-tool-body" id="dev-gen-body">
+        <div id="dev-gen-info"></div>
+        <p class="dev-status" id="dev-gen-copy-status" role="status"></p>
+        <section class="dev-group" aria-labelledby="dev-gen-seeded-title">
+          <h3 class="dev-group-title" id="dev-gen-seeded-title">Generate from seed</h3>
+          <div class="dev-inline">
+            <div class="dev-field">
+              <label for="dev-gen-tier">Tier</label>
+              <select class="dev-select" id="dev-gen-tier">${
+                DIFFICULTY_ORDER.map(tier => `<option value="${tier}">${TIER_LABELS[tier]}</option>`).join('')
+              }</select>
+            </div>
+            <div class="dev-field dev-field-seed">
+              <label for="dev-gen-seed">Seed</label>
+              <input class="dev-input" id="dev-gen-seed" type="text" inputmode="numeric"
+                     spellcheck="false" autocomplete="off">
+            </div>
+            <button type="button" class="btn" id="dev-gen-run"
+                    aria-label="Generate from seed">Generate</button>
+          </div>
+          <p class="dev-status" id="dev-gen-status" role="status"></p>
+        </section>
+      </div>
     </details>
   `;
   const main = document.querySelector('main');
@@ -172,6 +216,7 @@ export function mount({ gameState, loadPuzzle, copy = copyText }) {
   _wireInspector();
   _wireOverlay();
   _wireCoach(copy);
+  _wireSeedCopy(copy);
 
   gameState.on('changed', ({ action, changed }) => {
     // The inspector's own board writes do not make its results stale.
@@ -186,6 +231,13 @@ export function mount({ gameState, loadPuzzle, copy = copyText }) {
   _renderCoach();
   _renderGeneration();
   setCellDecorator(_decorate);
+
+  _session = createDevSession({
+    gameState, dev, loadPuzzle, confirm, generateSeeded, beforeReplace, checkPuzzles, copy,
+  });
+  mountRecorder(_panel, { session: _session, recorder: dev.recorder, log: dev.log });
+  _wireGenerate(getGenerationTier());
+  installApi(_session);
 }
 
 const _el = id => _panel.querySelector(`#${id}`);
@@ -472,8 +524,10 @@ function _renderCoach() {
 // Generation diagnostics
 // ---------------------------------------------------------------------------
 
+// Only the table (or its message) is re-rendered; the copy status line and
+// the Generate-from-seed group are permanent.
 function _renderGeneration() {
-  const body = _el('dev-gen-body');
+  const body = _el('dev-gen-info');
   const info = describeGeneration(_gameState.getState().puzzle, givens => rate(givens).trace);
   body.innerHTML = '';
 
@@ -493,9 +547,74 @@ function _renderGeneration() {
     th.scope = 'row';
     th.textContent = label;
     const td = document.createElement('td');
-    td.textContent = value;
+    if (label === 'Seed') td.append(..._seedCell(value, info.seed));
+    else td.textContent = value;
     tr.append(th, td);
     table.appendChild(tr);
   }
   body.appendChild(table);
+}
+
+/** The Seed row's value and its Copy seed button, disabled when no seed is recorded. */
+function _seedCell(value, seed) {
+  const span = document.createElement('span');
+  span.id = 'dev-gen-seed-value';
+  span.textContent = value;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'btn dev-btn-sm';
+  button.id = 'dev-gen-copy';
+  button.setAttribute('aria-label', 'Copy seed');
+  button.textContent = 'Copy seed';
+  button.disabled = seed === null;
+  return [span, button];
+}
+
+// Delegated: the button is rebuilt with the table.
+function _wireSeedCopy(copy) {
+  _el('dev-gen-info').addEventListener('click', async (e) => {
+    if (!e.target.closest('#dev-gen-copy')) return;
+    const ok = await copy(_el('dev-gen-seed-value').textContent);
+    const message = ok ? 'Seed copied.' : 'Couldn\'t copy — select the seed and copy it manually.';
+    const status = _el('dev-gen-copy-status');
+    status.classList.toggle('dev-error', !ok);
+    status.textContent = message;
+    announce(message);
+  });
+}
+
+/**
+ * Generate from seed (fspec §7.2). The controller validates, confirms, and
+ * announces; the panel shows the outcome and returns focus to Generate after
+ * its own run, whatever the outcome.
+ */
+function _wireGenerate(initialTier) {
+  const tier = _el('dev-gen-tier');
+  const seed = _el('dev-gen-seed');
+  const run = _el('dev-gen-run');
+  const status = _el('dev-gen-status');
+  tier.value = initialTier;
+
+  seed.addEventListener('input', () => {
+    seed.removeAttribute('aria-invalid');
+    seed.removeAttribute('aria-describedby');
+  });
+
+  run.addEventListener('click', async () => {
+    const result = await _session.generate(tier.value, seed.value, {
+      ask: true,
+      onStart: () => {
+        status.classList.remove('dev-error');
+        status.textContent = `Generating from seed ${Number(seed.value.trim())}…`;
+      },
+    });
+    const invalid = result.reason === 'invalid-seed';
+    if (invalid) {
+      seed.setAttribute('aria-invalid', 'true');
+      seed.setAttribute('aria-describedby', 'dev-gen-status');
+    }
+    status.classList.toggle('dev-error', invalid || result.reason === 'failed');
+    status.textContent = result.message;
+    run.focus();
+  });
 }

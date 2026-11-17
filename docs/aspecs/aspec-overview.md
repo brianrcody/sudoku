@@ -133,6 +133,8 @@ sudoku/
 │   ├── game/
 │   │   ├── state.js                  # In-memory game state reducer
 │   │   ├── puzzleLoader.js           # V4: the one loader — parse, rate, confirm, PUZZLE_LOADED
+│   │   ├── foreground.js             # V4: foreground generation — busy lifecycle, cancel, honest/Unrated fallback,
+│   │   │                             #   tier preference, seeded runs; extracted from main.js (aspec-debug-instrumentation.md §9.4)
 │   │   ├── conflicts.js              # Conflict detection on row/col/box
 │   │   ├── correctness.js            # Per-tier checking (realtime/on-demand/on-complete[-silent])
 │   │   └── statistics.js             # Stats counters, persistence hook
@@ -161,14 +163,28 @@ sudoku/
 │   ├── dev/                          # V4 developer mode (aspec-dev-mode.md)
 │   │   ├── devMode.js                # Flag: ?dev=1/0 + localStorage. Always loaded
 │   │   ├── inspect.js                # Pure helpers: inspector, candidate diff, diagnostics. Lazy
-│   │   └── devPanel.js               # Panel UI, badge, grid decorator. Lazy (import() when flag on)
+│   │   ├── devPanel.js               # Panel UI, badge, grid decorator. Lazy (import() when flag on)
+│   │   ├── devBoot.js                # V4 debug instrumentation (aspec-debug-instrumentation.md); all lazy:
+│   │   │                             #   early dev bootstrap, awaited at step 1.5 when the flag is on
+│   │   ├── sessionCodec.js           #   position/action/document codec, fingerprint, validation
+│   │   ├── machine.js                #   headless game machine; verbatim action application
+│   │   ├── recorder.js               #   session history: dispatch tap, capacity, error entries, export
+│   │   ├── recorderStore.js          #   IndexedDB persistence + tab ownership
+│   │   ├── devLog.js                 #   logging switches and console writers
+│   │   ├── replay.js                 #   replay run, divergence comparison, report
+│   │   ├── devSession.js             #   controller shared by the panel and the API
+│   │   ├── devApi.js                 #   window.sudokuDev
+│   │   └── recorderPanel.js          #   Session recorder tool
 │   └── tests/
 │       ├── setup.html                # Mocha/Chai test runner page
 │       ├── setup.js                  # Global beforeEach/afterEach, fixtures
 │       ├── fixtures/
 │       │   ├── puzzles/              # Hand-curated positions per technique
 │       │   │   └── coach/            # Coach-specific fixtures (rank-is-minimum guaranteed)
-│       │   └── grids/                # Filled solutions for uniqueness tests
+│       │   ├── grids/                # Filled solutions for uniqueness tests
+│       │   └── sessions/             # V4: session-document fixtures (aspec-debug-instrumentation.md §13)
+│       ├── helpers/
+│       │   └── replayFixture.js      # V4: replays a session document inside the suite
 │       ├── unit/
 │       │   ├── prng.test.js
 │       │   ├── grid.test.js
@@ -205,6 +221,8 @@ sudoku/
 │       │   ├── (V4 loading/sharing)  # config, puzzleString, clipboard, loadPuzzle, loadProvider,
 │       │   │                         #   puzzleLoader, state-unrated, ui-notice, ui-share
 │       │   ├── (V4 developer mode)   # devMode, inspect, devPanel, pipeline-diagnostics
+│       │   ├── (V4 debug instrumentation) # sessionCodec, machine, recorder, recorderStore, devLog, replay,
+│       │   │                         #   devSession, devApi, recorderPanel, state-devtools, session-fixtures, foreground
 │       │   └── coach/
 │       │       ├── analyzer.test.js  # Coach analyzer unit tests (aspec-coach-analyzer.md §13)
 │       │       └── session.test.js   # CoachSession reducer unit tests (aspec-coach-ui.md §16.1)
@@ -216,7 +234,8 @@ sudoku/
 │           ├── coach.test.js         # Full coach flow integration tests (aspec-coach-ui.md §16.2)
 │           ├── _app.js               # V4: shared iframe helpers (sized frames, precise waits, seeding)
 │           ├── sharing.test.js       # V4: share links, Unrated, Share action (tspec-puzzle-sharing.md)
-│           └── devmode.test.js       # V4: developer mode end to end (tspec-dev-mode.md)
+│           ├── devmode.test.js       # V4: developer mode end to end (tspec-dev-mode.md)
+│           └── debug.test.js         # V4: recorder, replay, seeded generation, API end to end
 ├── test-runner/
 │   ├── run.js                        # Playwright script: boot browser, open tests/setup.html, harvest results + coverage
 │   └── serve.js                      # Tiny static file server (Node built-in http) for tests only
@@ -256,6 +275,16 @@ The reducer exposes:
 - `dispatch(action) → void`
 - `getState() → GameState` (read-only by convention)
 - `on('changed', (payload) => {}) → unsubscribe` (built on `util/events.js`)
+
+**V4 debug instrumentation (`aspec-debug-instrumentation.md` §4).** The flow above is
+unchanged. Two seams sit beside it, both inert when developer mode is off:
+
+- `createGameState` accepts an optional `tap`. The public `dispatch` calls `tap.begin` /
+  `tap.end` around the reducer; the reducer's own nested dispatches do not. With no tap
+  the cost is one null comparison per dispatch.
+- `util/events.js` exports a shared `diagnostics` emitter. Always-loaded modules emit
+  `swallowed` (from silent `catch` blocks), `generation`, and `listener-error` on it. It
+  has no listeners unless developer mode is on.
 
 ---
 
@@ -363,6 +392,17 @@ c8 with `--include=js/**` and `--exclude=js/tests/**`. Target: **100% branch cov
 52. `devMode.js`; pipeline diagnostics; grid decorator seam; `inspect.js`; `devPanel.js` + `dev.css`
 53. `main.js` wiring: generation tier, loader, link handling, lazy dev import
 
+**Phase 14 — Debug Instrumentation (V4)** (see `aspec-debug-instrumentation.md` §15)
+54. Seams: `diagnostics` emitter, reducer tap / timers / `HINT.hint` / `DEV_*` actions, swallowed-exception emits
+54b. `game/foreground.js`: foreground generation extracted from `main.js`, behaviour-preserving; `foreground.test.js`
+55. Seed plumbing: pipeline `gen.seed`, protocol, worker, provider `seed`; foreground seeded runs; Unrated fallback; no-rating puzzle check
+56. `sessionCodec.js`, `machine.js`
+57. `recorderStore.js`, `recorder.js`, `devLog.js`, `devBoot.js`; `main.js` boot wiring
+58. `replay.js`; fixture helper and first fixtures
+59. `devSession.js`; `devApi.js`
+60. `recorderPanel.js`; Generation diagnostics additions; `dev.css`
+61. Integration, a11y, and performance tests
+
 **Milestone exits:**
 - Phase 2: solver correctly rates 100% of a curated 50-puzzle regression set at known difficulty.
 - Phase 3: `generateForTier` produces a correctly-rated puzzle for all five tiers within budget.
@@ -452,3 +492,4 @@ All other fspec and vspec requirements map cleanly onto this plan.
 | `aspec-left-hand.md` | V4 left-hand layout — `<html data-hand>`, `ui/handedness.js`, head-script extension, CSS column swap, header switch | Implementor (Phase 12), Reviewer, QE |
 | `aspec-puzzle-sharing.md` | V4 puzzle loading and sharing — the Unrated tier, the single loader (codec → worker → `puzzleLoader`), load protocol, statistics gating, Share UI, notice, link handling | Implementor (Phase 13), Reviewer, QE |
 | `aspec-dev-mode.md` | V4 developer mode — flag, lazy loading, grid decorator seam, `inspect.js`, `devPanel.js`, generation diagnostics data | Implementor (Phase 13), Reviewer, QE |
+| `aspec-debug-instrumentation.md` | V4 debug instrumentation — dispatch tap, session recorder and IndexedDB store, session document format, headless replay and divergence report, `window.sudokuDev`, seeded generation, logging and error capture, regression-fixture helper | Implementor (Phase 14), Reviewer, QE |

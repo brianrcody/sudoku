@@ -8,6 +8,7 @@
 
 import { parsePuzzleString } from '../util/puzzleString.js';
 import { TIER_LABELS, UNRATED } from '../config.js';
+import { diagnostics } from '../util/events.js';
 
 /**
  * @typedef {{status: 'loaded', puzzle: object, message: string}
@@ -48,13 +49,22 @@ export function hasProgress(state) {
 /**
  * @param {string} reason - A parse or validation failure code.
  * @param {number} [length] - Cell count, for the `length` reason.
+ * @returns {string} The sentence explaining the rejection, without the
+ *   "This puzzle can't be loaded." prefix.
+ */
+export function rejectionDetail(reason, length) {
+  return reason === 'length'
+    ? `A puzzle needs exactly 81 cells; this one has ${length}.`
+    : REJECTIONS[reason];
+}
+
+/**
+ * @param {string} reason - A parse or validation failure code.
+ * @param {number} [length] - Cell count, for the `length` reason.
  * @returns {string} The full user-facing rejection message.
  */
 export function rejectionMessage(reason, length) {
-  const detail = reason === 'length'
-    ? `A puzzle needs exactly 81 cells; this one has ${length}.`
-    : REJECTIONS[reason];
-  return `This puzzle can't be loaded. ${detail}`;
+  return `This puzzle can't be loaded. ${rejectionDetail(reason, length)}`;
 }
 
 /**
@@ -76,7 +86,7 @@ export function loadedMessage(difficulty) {
  * }} deps
  *   `beforeReplace` runs immediately before the puzzle is swapped in; the app
  *   uses it to cancel in-flight generation so the loaded puzzle wins.
- * @returns {{ load: function(string, {source: 'link'|'string', onChecking?: function(): void}): Promise<LoadOutcome> }}
+ * @returns {{ load: function(string, {source: 'link'|'string', onChecking?: function(): void, confirm?: function}): Promise<LoadOutcome> }}
  */
 export function createPuzzleLoader({ gameState, rateGivens, confirm, beforeReplace }) {
   function _rejected(reason, length) {
@@ -89,11 +99,12 @@ export function createPuzzleLoader({ gameState, rateGivens, confirm, beforeRepla
    * Overlapping loads are independent: the last to finish is the current puzzle.
    *
    * @param {string} text - Puzzle string.
-   * @param {{source: 'link'|'string', onChecking?: function(): void}} opts
+   * @param {{source: 'link'|'string', onChecking?: function(): void, confirm?: function}} opts
    *   `onChecking` fires once parsing has passed and worker validation begins.
+   *   `confirm` replaces the loader's confirmation for this call only.
    * @returns {Promise<LoadOutcome>}
    */
-  async function load(text, { source, onChecking }) {
+  async function load(text, { source, onChecking, confirm: confirmOnce }) {
     const parsed = parsePuzzleString(text);
     if (!parsed.ok) return _rejected(parsed.reason, parsed.length);
 
@@ -102,7 +113,8 @@ export function createPuzzleLoader({ gameState, rateGivens, confirm, beforeRepla
     let result;
     try {
       result = await rateGivens(parsed.givens);
-    } catch {
+    } catch (error) {
+      diagnostics.emit('swallowed', { where: 'puzzleLoader.rateGivens', error });
       result = { ok: false, reason: 'error' };
     }
     if (!result.ok) return _rejected(result.reason);
@@ -110,7 +122,7 @@ export function createPuzzleLoader({ gameState, rateGivens, confirm, beforeRepla
     // Progress is judged now, not when the load started: the player may have
     // moved while the puzzle was being checked.
     if (hasProgress(gameState.getState())) {
-      const confirmed = await confirm({
+      const confirmed = await (confirmOnce ?? confirm)({
         title: DIALOG_TITLES[source],
         body: 'Your current progress will be lost.',
         confirmLabel: 'Load Puzzle',

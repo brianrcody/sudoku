@@ -163,4 +163,12 @@ describe('ui/dialog.js', () => {
     expect(() => root.querySelector('#modal-cancel').click()).to.not.throw();
     expect(confirmed).to.equal(0);
   });
+
+  it('UD13: the dialog is described by its body text', () => {
+    openTestDialog();
+
+    const backdrop = root.querySelector('#modal-backdrop');
+    expect(backdrop.getAttribute('aria-describedby')).to.equal('modal-body');
+    expect(root.querySelector('#modal-body').textContent).to.equal('Are you sure?');
+  });
 });

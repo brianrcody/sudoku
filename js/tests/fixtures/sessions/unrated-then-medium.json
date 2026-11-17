@@ -1,0 +1,604 @@
+{
+  "format": "sudoku-session",
+  "version": 1,
+  "exportedAt": "2026-11-16T13:06:43.549Z",
+  "start": {
+    "puzzle": null,
+    "board": "000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "pencil": [
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      []
+    ],
+    "selected": null,
+    "mode": "pen",
+    "hintsRemaining": 0,
+    "attemptRecorded": false,
+    "won": false,
+    "incorrect": [],
+    "highlightPending": false,
+    "completionMessage": "",
+    "undo": null,
+    "generating": null,
+    "coach": null
+  },
+  "actions": [
+    {
+      "at": "2026-11-16T13:06:41.856Z",
+      "action": {
+        "type": "SET_GENERATING",
+        "flag": true,
+        "message": "Generating puzzle…",
+        "difficulty": "easy"
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:41.903Z",
+      "action": {
+        "type": "GEN_PROGRESS",
+        "attempts": 1,
+        "budget": 30
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.003Z",
+      "action": {
+        "type": "PUZZLE_LOADED",
+        "puzzle": {
+          "givens": "000060053000150090320490016180040607093020005060001240000000900030289504940570000",
+          "solution": "819762453674153892325498716182945637493627185567831249256314978731289564948576321",
+          "tier": "easy",
+          "origin": "generated",
+          "id": "a2b1564b",
+          "gen": {
+            "requestedTier": "easy",
+            "seed": 600205965,
+            "seedBy": "random",
+            "budget": 30,
+            "attempts": 1,
+            "rejected": {
+              "unsolved": 0,
+              "wrongTier": 0,
+              "byTier": {}
+            },
+            "fallback": false
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.241Z",
+      "action": {
+        "type": "PUZZLE_LOADED",
+        "puzzle": {
+          "givens": "000000039000001005003050800008090006070002000100400000009080050020000600400700000",
+          "solution": "751846239892371465643259871238197546974562318165438927319684752527913684486725193",
+          "tier": "unrated",
+          "origin": "link",
+          "id": "15519a80"
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.334Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 5
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T13:06:42.341Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 0
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.347Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 7
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.364Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 59
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.376Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 63
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.387Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 5
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.395Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 9
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.406Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 2
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.414Z",
+      "action": {
+        "type": "UNDO"
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.423Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 5
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.430Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 2
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.444Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 5
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.453Z",
+      "action": {
+        "type": "ARROW_NAV",
+        "direction": "right"
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.460Z",
+      "action": {
+        "type": "ARROW_NAV",
+        "direction": "right"
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.465Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 80
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.475Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 3
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.480Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 3
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T13:06:42.490Z",
+      "action": {
+        "type": "ARROW_NAV",
+        "direction": "up"
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.496Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 5
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.504Z",
+      "action": {
+        "type": "ERASE"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T13:06:42.507Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 0
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.509Z",
+      "action": {
+        "type": "HINT"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T13:06:42.511Z",
+      "action": {
+        "type": "COACH_NO_TECHNIQUE",
+        "reason": "error"
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.547Z",
+      "action": {
+        "type": "PUZZLE_LOADED",
+        "puzzle": {
+          "givens": "900002801160009040800400000009000060020084000007050180038001005010090074700005010",
+          "solution": "974562831162839547853417926589173462621984753347256189438721695215698374796345218",
+          "tier": "medium",
+          "origin": "string",
+          "id": "41259143"
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.757Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 1
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T13:06:42.761Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 43
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.769Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 67
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.775Z",
+      "action": {
+        "type": "PENCIL_TOGGLE",
+        "digit": 8
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T13:06:42.780Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 31
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.788Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 4
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.795Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 68
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.804Z",
+      "action": {
+        "type": "UNDO"
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.813Z",
+      "action": {
+        "type": "ARROW_NAV",
+        "direction": "down"
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.824Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 5
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T13:06:42.833Z",
+      "action": {
+        "type": "COACH_START",
+        "result": {
+          "roles": {
+            "target": 46,
+            "cause": [
+              10,
+              29,
+              37,
+              47,
+              49,
+              51,
+              52,
+              55
+            ],
+            "elimTarget": [],
+            "unitMember": [],
+            "scA": [],
+            "scB": [],
+            "fin": []
+          },
+          "digits": [
+            4
+          ],
+          "unit": null,
+          "arrows": [
+            {
+              "from": 10,
+              "to": 46,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 29,
+              "to": 46,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 37,
+              "to": 46,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 47,
+              "to": 46,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 49,
+              "to": 46,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 51,
+              "to": 46,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 52,
+              "to": 46,
+              "style": "straight-arrow"
+            },
+            {
+              "from": 55,
+              "to": 46,
+              "style": "straight-arrow"
+            }
+          ],
+          "supportingText": "Only *4* can go here — all other digits appear in this cell's row, column, or box.",
+          "complexity": {
+            "acknowledged": false,
+            "note": null,
+            "endpoints": null
+          },
+          "technique": "Naked Single",
+          "rank": 1,
+          "type": "placement",
+          "eliminations": [],
+          "autoReveal": {
+            "required": false,
+            "cells": [
+              {
+                "cellIndex": 10,
+                "candidates": 32
+              },
+              {
+                "cellIndex": 29,
+                "candidates": 256
+              },
+              {
+                "cellIndex": 37,
+                "candidates": 2
+              },
+              {
+                "cellIndex": 46,
+                "candidates": 8
+              },
+              {
+                "cellIndex": 47,
+                "candidates": 64
+              },
+              {
+                "cellIndex": 49,
+                "candidates": 16
+              },
+              {
+                "cellIndex": 51,
+                "candidates": 1
+              },
+              {
+                "cellIndex": 52,
+                "candidates": 128
+              },
+              {
+                "cellIndex": 55,
+                "candidates": 4
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.846Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 46
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 46
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T13:06:42.856Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 10
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 10
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T13:06:42.860Z",
+      "action": {
+        "type": "SET_MODE",
+        "mode": "pen"
+      },
+      "noChange": true
+    },
+    {
+      "at": "2026-11-16T13:06:42.862Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 46
+      },
+      "then": [
+        {
+          "type": "COACH_FOCUS_COACHED_CELL",
+          "index": 46
+        }
+      ]
+    },
+    {
+      "at": "2026-11-16T13:06:42.871Z",
+      "action": {
+        "type": "PEN_ENTER",
+        "digit": 4
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.896Z",
+      "action": {
+        "type": "SELECT_CELL",
+        "index": 45
+      }
+    },
+    {
+      "at": "2026-11-16T13:06:42.909Z",
+      "action": {
+        "type": "HINT",
+        "hint": {
+          "cellIndex": 45,
+          "digit": 3,
+          "technique": "Naked Single"
+        }
+      }
+    }
+  ],
+  "errors": []
+}

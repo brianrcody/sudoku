@@ -28,14 +28,19 @@ import { createStatistics } from './game/statistics.js';
 import { requestPuzzle, peekReady, primeNext } from './providers/puzzleProvider.js';
 import { nextHint } from './providers/hintProvider.js';
 import { createGameState } from './game/state.js';
+import { createForegroundGenerator } from './game/foreground.js';
 import { createPuzzleLoader } from './game/puzzleLoader.js';
 import { createLoadProvider } from './providers/loadProvider.js';
 import { getItem, setItem, removeItem } from './persist/storage.js';
 import { initDevMode, isDevMode } from './dev/devMode.js';
-import { HINT_LIMITS, TIER_LABELS, SHARE_PARAM, isRatedTier } from './config.js';
+import { HINT_LIMITS, SHARE_PARAM } from './config.js';
+import { diagnostics } from './util/events.js';
 
 // ── Step 1.5: developer-mode flag (?dev=1 / ?dev=0, persisted) ─────────────
+// With the mode on, the recorder exists before the game state, so no dispatch
+// can precede it.
 const devMode = initDevMode(location.search);
+const devBoot = devMode ? (await import('./dev/devBoot.js')).boot() : null;
 
 // ── Step 2: reconcile cookies with the document ────────────────────────────
 // The inline head <script> already applied the theme class to <body> and the
@@ -58,48 +63,33 @@ await stats.init();
 const puzzleProvider = { requestPuzzle, peekReady, primeNext };
 
 // ── Step 5: hint provider ─────────────────────────────────────────────────
-const hintProvider = { nextHint };
+const hintProvider = devBoot ? devBoot.wrapHintProvider({ nextHint }) : { nextHint };
 
 // ── Step 6: game state ────────────────────────────────────────────────────
-const gameState = createGameState({ stats, hintProvider, statsSuppressed: isDevMode });
+const gameState = createGameState({
+  stats, hintProvider, statsSuppressed: isDevMode, tap: devBoot?.tap ?? null,
+});
 if (typeof window !== 'undefined') window.gameState = gameState;
 
 // ── Step 7: restore or request puzzle ─────────────────────────────────────
 const STATE_KEY = 'sudoku.state.v1';
 const DIFF_KEY = 'sudoku.currentDifficulty.v1';
 
-/** Tiers whose budget-exhaustion fallback prompts the user (fspec-003 §5.4). */
-const HONEST_FALLBACK_TIERS = new Set(['diabolical', 'nightmare']);
-
-/** @type {AbortController|null} Controller for the in-flight foreground request. */
-let _genAbort = null;
-
-// The tier the player last chose. Distinct from the current puzzle's
-// difficulty, which a loaded puzzle can set to another tier or to Unrated.
-const savedDiffPref = getItem(DIFF_KEY);
-let preferredTier = isRatedTier(savedDiffPref) ? savedDiffPref : 'easy';
-
-/**
- * The tier New Puzzle and pre-generation use: the tier being generated if a
- * generation is pending, else the current puzzle's tier when it has one, else
- * the player's last choice.
- *
- * @param {object} state - GameState
- * @returns {string}
- */
-function _generationTier(state) {
-  if (state.generatingDifficulty) return state.generatingDifficulty;
-  const difficulty = state.puzzle?.difficulty;
-  return isRatedTier(difficulty) ? difficulty : preferredTier;
-}
+const foreground = createForegroundGenerator({
+  gameState,
+  requestPuzzle: puzzleProvider.requestPuzzle,
+  openDialog, announce, diagnostics,
+  preference: { read: () => getItem(DIFF_KEY), write: tier => setItem(DIFF_KEY, tier) },
+});
 
 const savedBlob = getItem(STATE_KEY);
+const restorable = savedBlob && savedBlob.version === 1 && savedBlob.puzzle;
 
-if (savedBlob && savedBlob.version === 1 && savedBlob.puzzle) {
+if (restorable) {
   // Restore in-progress game from localStorage.
   const puzzle = {
     id: savedBlob.puzzle.id,
-    difficulty: savedBlob.difficulty ?? preferredTier,
+    difficulty: savedBlob.difficulty ?? foreground.preferredTier(),
     givens: new Uint8Array(savedBlob.puzzle.givens),
     solution: new Uint8Array(savedBlob.puzzle.solution),
     solveTrace: [],
@@ -144,10 +134,15 @@ if (savedBlob && savedBlob.version === 1 && savedBlob.puzzle) {
     attemptRecorded: savedBlob.attemptRecorded ?? false,
     hintsRemaining: savedBlob.hintsRemaining ?? HINT_LIMITS[puzzle.difficulty],
   });
+}
 
-} else {
+// Recording starts here: the restore burst above is one "page reloaded" entry,
+// and the boot request below is recorded.
+devBoot?.bootComplete(gameState);
+
+if (!restorable) {
   // No saved state — request a new puzzle.
-  _requestForeground(preferredTier, puzzle => {
+  foreground.request(foreground.preferredTier(), puzzle => {
     gameState.dispatch({ type: 'PUZZLE_LOADED', puzzle });
   });
 }
@@ -181,7 +176,7 @@ mountCoachOverlay(document.body, gameState);
 mountBusy(
   document.getElementById('busy-root'),
   gameState,
-  { onCancel: _cancelForeground }
+  { onCancel: foreground.cancel }
 );
 
 mountStats(
@@ -211,10 +206,10 @@ document.getElementById('btn-new')?.addEventListener('click', () => {
       title: 'Start a new puzzle?',
       body: 'Your current progress will be lost.',
       confirmLabel: 'New Puzzle',
-      onConfirm: () => _startNewPuzzle(_generationTier(state)),
+      onConfirm: () => foreground.startNew(foreground.generationTier(state), _afterNewPuzzle('btn-new')),
     });
   } else {
-    _startNewPuzzle(_generationTier(state));
+    foreground.startNew(foreground.generationTier(state), _afterNewPuzzle('btn-new'));
   }
 });
 
@@ -232,86 +227,15 @@ document.getElementById('btn-reset')?.addEventListener('click', () => {
 });
 
 /**
- * @param {string} difficulty
- * @param {string} [focusId] - Control that takes focus once the puzzle loads:
+ * @param {string} focusId - Control that takes focus once the puzzle loads:
  *   the one the player started it from.
+ * @returns {function(): void} The `afterLoad` callback for `foreground.startNew`.
  */
-function _startNewPuzzle(difficulty, focusId = 'btn-new') {
-  _requestForeground(difficulty, puzzle => {
-    gameState.dispatch({ type: 'NEW_PUZZLE', difficulty: puzzle.difficulty, puzzle });
+function _afterNewPuzzle(focusId) {
+  return () => {
     removeItem(STATE_KEY);
-    announce('New puzzle started.');
     document.getElementById(focusId)?.focus();
-  });
-}
-
-// ── Foreground generation with progress, cancel, and honest fallback ───────
-
-/**
- * Request a puzzle in the foreground with the busy-card lifecycle: progress
- * dispatches, cancel support, and the honest-fallback dialog for the top
- * tiers. `onLoaded(puzzle)` runs only when a puzzle should actually load.
- *
- * @param {string} difficulty
- * @param {function(object): void} onLoaded
- */
-function _requestForeground(difficulty, onLoaded) {
-  _genAbort?.abort();
-  const controller = new AbortController();
-  _genAbort = controller;
-
-  gameState.dispatch({
-    type: 'SET_GENERATING', flag: true, message: 'Generating puzzle…', difficulty,
-  });
-
-  puzzleProvider.requestPuzzle({
-    difficulty,
-    signal: controller.signal,
-    onProgress({ attempts, budget }) {
-      if (_genAbort === controller) {
-        gameState.dispatch({ type: 'GEN_PROGRESS', attempts, budget });
-      }
-    },
-  }).then(({ puzzle, fallback }) => {
-    if (_genAbort !== controller) return; // superseded by a newer request
-    _genAbort = null;
-
-    if (fallback && HONEST_FALLBACK_TIERS.has(difficulty)) {
-      gameState.dispatch({ type: 'SET_GENERATING', flag: false });
-      const requested = TIER_LABELS[difficulty];
-      const actual = TIER_LABELS[puzzle.difficulty] ?? puzzle.difficulty;
-      openDialog({
-        title: `No ${requested} puzzle found`,
-        body: `The generator couldn't find a ${requested} puzzle this time. ` +
-              `The best it found is rated ${actual}. Play it?`,
-        confirmLabel: `Play ${actual}`,
-        onConfirm: () => {
-          setItem(DIFF_KEY, puzzle.difficulty);
-          preferredTier = puzzle.difficulty;
-          onLoaded(puzzle);
-        },
-      });
-      return;
-    }
-
-    onLoaded(puzzle);
-  }).catch(err => {
-    if (err && err.name === 'AbortError') return; // cancelled — state already reset
-    console.error('[main] Failed to generate puzzle:', err);
-    if (_genAbort === controller) {
-      _genAbort = null;
-      gameState.dispatch({ type: 'SET_GENERATING', flag: false });
-    }
-  });
-}
-
-/** Cancel the in-flight foreground generation and restore the prior state. */
-function _cancelForeground() {
-  if (_genAbort === null) return;
-  _genAbort.abort();
-  _genAbort = null;
-  gameState.dispatch({ type: 'SET_GENERATING', flag: false });
-  announce('Puzzle search cancelled.');
+  };
 }
 
 function _isInProgress(state) {
@@ -333,9 +257,8 @@ gameState.on('changed', ({ action, changed }) => {
   // explicit choice, so a stale async load can never overwrite it. Handled
   // before the won-board exit below: a finished game can change tier too.
   if (action.type === 'CHANGE_DIFFICULTY') {
-    setItem(DIFF_KEY, action.difficulty);
-    preferredTier = action.difficulty;
-    _startNewPuzzle(action.difficulty, 'difficulty-select');
+    foreground.chooseTier(action.difficulty);
+    foreground.startNew(action.difficulty, _afterNewPuzzle('difficulty-select'));
     return;
   }
 
@@ -387,25 +310,28 @@ function _saveState() {
 }
 
 // ── Step 10: prime next puzzle ─────────────────────────────────────────────
-puzzleProvider.primeNext(_generationTier(gameState.getState()));
+puzzleProvider.primeNext(foreground.generationTier(gameState.getState()));
 
 // ── Step 11: loaded puzzles — share links and developer load-from-string ───
+// One load worker, shared with the developer tools.
+const loadProvider = createLoadProvider();
+const confirm = opts => new Promise(resolve => {
+  openDialog({
+    ...opts,
+    onConfirm: () => resolve(true),
+    onCancel: () => resolve(false),
+  });
+});
+
 const loader = createPuzzleLoader({
   gameState,
-  rateGivens: createLoadProvider().rateGivens,
-  confirm: opts => new Promise(resolve => {
-    openDialog({
-      ...opts,
-      onConfirm: () => resolve(true),
-      onCancel: () => resolve(false),
-    });
-  }),
+  rateGivens: loadProvider.rateGivens,
+  confirm,
   // The loaded puzzle wins over anything still on its way: drop the in-flight
   // foreground generation (its late result fails the staleness check in
-  // _requestForeground) and any dialog offering a different puzzle.
+  // foreground.request) and any dialog offering a different puzzle.
   beforeReplace() {
-    _genAbort?.abort();
-    _genAbort = null;
+    foreground.abort('replaced');
     closeDialog();
   },
 });
@@ -432,6 +358,12 @@ if (sharedPuzzle !== null) {
 if (devMode) {
   import('./dev/devPanel.js').then(dev => dev.mount({
     gameState,
-    loadPuzzle: text => loader.load(text, { source: 'string' }),
+    loadPuzzle: (text, opts) => loader.load(text, { source: 'string', ...opts }),
+    dev: devBoot,
+    confirm,
+    generateSeeded: foreground.generateSeeded,
+    getGenerationTier: () => foreground.generationTier(gameState.getState()),
+    beforeReplace: () => { foreground.abort('replaced'); closeDialog(); },
+    checkPuzzles: loadProvider.checkPuzzles,
   }));
 }

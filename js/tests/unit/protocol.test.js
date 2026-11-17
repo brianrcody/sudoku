@@ -11,6 +11,8 @@ import {
   makeGenError,
   makeLoadRequest,
   makeLoadResult,
+  makeCheckRequest,
+  makeCheckResult,
 } from '/js/worker/protocol.js';
 
 describe('protocol.js', function () {
@@ -43,6 +45,7 @@ describe('protocol.js', function () {
     expect(env.tier).to.equal('kiddie');
     expect(env.seed).to.equal(42);
     expect(env.background).to.equal(false);
+    expect(env.seeded).to.equal(false);
   });
 
   it('WP2: makeGenRequest defaults background to false when omitted', function () {
@@ -107,5 +110,42 @@ describe('protocol.js', function () {
     const result = { ok: false, reason: 'multiple' };
     expect(makeLoadResult({ id: 'load-1', result }))
       .to.deep.equal({ type: 'LOAD_RESULT', id: 'load-1', result });
+  });
+
+  // WP4–WP6: seed plumbing and puzzle checks (debug instrumentation, Phase 2)
+  it('WP4: makeGenRequest marks a request as not seeded when seeded is omitted', function () {
+    expect(makeGenRequest({ id: 'r9', tier: 'hard', seed: 5, budget: 3 })).to.deep.equal({
+      type: MSG.GEN_REQUEST, id: 'r9', tier: 'hard', seed: 5, background: false, budget: 3, seeded: false,
+    });
+  });
+
+  it('WP4: makeGenRequest carries seeded=true', function () {
+    expect(makeGenRequest({ id: 'r10', tier: 'hard', seed: 5, seeded: true })).to.deep.equal({
+      type: MSG.GEN_REQUEST, id: 'r10', tier: 'hard', seed: 5, background: false, budget: undefined, seeded: true,
+    });
+  });
+
+  it('WP5: makeGenResult carries elapsedMs on the envelope, not on the puzzle', function () {
+    const fakePuzzle = { id: 'e1', difficulty: 'easy', givens: new Uint8Array(81), solution: new Uint8Array(81), solveTrace: [] };
+    const env = makeGenResult({ id: 'r11', puzzle: fakePuzzle, elapsedMs: 12 });
+    expect(env.elapsedMs).to.equal(12);
+    expect(env.puzzle).to.not.have.property('elapsedMs');
+  });
+
+  it('WP6: MSG exports the check message types', function () {
+    expect(MSG.CHECK_REQUEST).to.equal('CHECK_REQUEST');
+    expect(MSG.CHECK_RESULT).to.equal('CHECK_RESULT');
+  });
+
+  it('WP6: makeCheckRequest produces a CHECK_REQUEST envelope carrying the puzzle list', function () {
+    const puzzles = [{ givens: new Uint8Array(81), solution: new Uint8Array(81) }];
+    expect(makeCheckRequest({ id: 'check-1', puzzles }))
+      .to.deep.equal({ type: 'CHECK_REQUEST', id: 'check-1', puzzles });
+  });
+
+  it('WP6: makeCheckResult produces a CHECK_RESULT envelope carrying one result per puzzle', function () {
+    const results = [{ ok: true }, { ok: false, reason: 'solution-mismatch' }];
+    expect(makeCheckResult({ id: 'check-1', results }))
+      .to.deep.equal({ type: 'CHECK_RESULT', id: 'check-1', results });
   });
 });
