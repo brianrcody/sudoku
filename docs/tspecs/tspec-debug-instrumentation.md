@@ -528,7 +528,7 @@ that models `dialog.js` replacement: opening a second resolves the first with `f
 | DP71 | U | 6 | API last | — | `window.sudokuDev` absent until the panel DOM exists, then present |
 | DBG-G1 | I | 6 | Seeded run, Kiddie | `sudokuDev.generate('kiddie', 1, { replace: true })` | Ok; puzzle `id` `2fe4fb4f` (PD1 pin); pre-generation storage keys unchanged; `DIFF_KEY` unchanged; `gen.seedBy 'developer'` |
 | DBG-G2 | I | 6 | Reproducible through the worker | Same call twice across a reload | Deep-equal puzzle and `gen` |
-| DBG-G3 | I | 6 | Lower-tier fallback | `('easy', 26)` | `fallback: true`, `tier 'hard'`, §7.3 message; loaded without a dialog |
+| DBG-G3 | I | 6 | Lower-tier fallback | `('easy', 26, { budget: 30 })` | `fallback: true`, `tier 'hard'`, §7.3 message; loaded without a dialog |
 | DBG-G4 ×2 | I | 6 | Top-tier fallback, `refuse` / `accept` | `('nightmare', 1, { budget: 3 })` without and with `acceptFallback` | `needs-accept-fallback`, busy cleared, game unchanged; loads Easy, `DIFF_KEY` becomes `easy` |
 | DBG-G5 ×3 | I | 6 | Unrated (§9.5) | `('expert', 223, { budget: 1, replace: true })`; `('nightmare', 223, { budget: 1 })`; the same with `acceptFallback` | `tier 'unrated'`, selector "Unrated", Hint "–", Coach disabled, `DIFF_KEY` unchanged; `needs-accept-fallback` with "…can't be rated…"; loads Unrated, `DIFF_KEY` unchanged |
 | DBG-G6 ×3 | I | 6 | Cancelled / replaced | Nightmare seeded run with the real budget; then (a) busy-card Cancel, (b) New Puzzle, (c) load from string | `cancelled` "Generation cancelled.", prior state exact; `cancelled` "Generation replaced by another request." for (b) and (c) |
@@ -785,7 +785,7 @@ The same driver stream is fed to twin rigs: U with capacity 10⁶ and C with cap
 | Case | Run | Expected |
 |---|---|---|
 | One seed per tier | `generateForTier(tier, { rng: mulberry32(s), seed: s, seeded: true, budget })` twice for Kiddie 1, Easy 42, Medium 7, Hard 2024, Expert 99 (budget 40), Diabolical 1 (budget 3), Nightmare 5 (budget 3) | Deep-equal givens, solution, difficulty, `id`, `gen` |
-| Real-budget exhaustion | `('easy', 26)` | Falls back to Hard (≈ 240 ms); deterministic. Re-pin if a generator change invalidates it, as with PD1 |
+| Budget exhaustion | `('easy', 26, budget 30)` | Falls back to Hard (≈ 240 ms); deterministic. Re-pin if a generator change invalidates it, as with PD1 |
 | Override exhaustion | `('nightmare', 1, 3)`, `('diabolical', 1, 3)` | Easy, twice |
 | Unrated | `('expert', 223, 1)` | `unrated`, twice |
 | Random vs seeded | `seeded` false then true | Every field equal except `seedBy` |

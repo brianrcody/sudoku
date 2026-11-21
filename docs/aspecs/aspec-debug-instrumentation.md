@@ -1773,8 +1773,9 @@ it under that directory, and assert on `state.text`, `state.pencilMarks`, and
   position advances hundreds of times. The sweep uses fixed puzzles and never generates;
   it is not a source of generator seeds.
 - **Seed reproducibility.** For each tier, one seed generated twice gives deep-equal
-  puzzles and `gen`. Include `('easy', 26)`, which exhausts the real budget of 30 and
-  falls back to Hard in ≈ 240 ms (measured against the current generator; if a generator
+  puzzles and `gen`. Include `('easy', 26, budget 30)`, which exhausts its budget and
+  falls back to Hard in ≈ 240 ms (30 was Easy's real budget until 2026-11-21, when it
+  rose to 60 and no practical seed exhausts it) (measured against the current generator; if a generator
   change invalidates it the test must be re-pinned, as with the existing fixed-seed
   test), and `('nightmare', 1, budget 3)`, which falls back to Easy.
 

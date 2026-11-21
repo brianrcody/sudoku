@@ -177,9 +177,9 @@ describe('pipeline.js — seeded-generation determinism (PR4)', function () {
     });
   }
 
-  it('PR4: easy seed 26 exhausts the real budget and falls back to Hard, identically twice', () => {
-    const first = seeded('easy', 26);
-    const second = seeded('easy', 26);
+  it('PR4: easy seed 26 with budget 30 falls back to Hard, identically twice', () => {
+    const first = seeded('easy', 26, 30);
+    const second = seeded('easy', 26, 30);
 
     expect(first.difficulty).to.equal('hard');
     expect(first.gen.fallback).to.be.true;

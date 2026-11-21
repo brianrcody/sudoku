@@ -235,11 +235,25 @@ takes about 10 seconds by design.
 - **The Reviewer did not re-run** after the fix list was implemented. Blocker B1 was
   withdrawn by decision D-36 and the fixes are covered by tests.
 
-### 3.4 Occasional timing overrun in `PERF-NEW-*`
+### 3.4 Occasional timing overrun in `PERF-NEW-*` — resolved 2026-11-21
 
-The six `PERF-NEW-*` tests no longer hang (fixed in Phase 2). A rare genuine overrun
-remains possible: a Medium run that falls back takes 0.6–1.8 s against a 1.5 s budget (2
-of 300 seeds exceeded it). See §4.1; fixing the fallback rate removes this too.
+The six `PERF-NEW-*` tests no longer hang (fixed in Phase 2). The remaining overrun was
+not the fallback itself but the fixed wall-clock bound: a generation's attempt count is
+geometric, so any fixed bound fails on its tail. Raising the budgets (§4.1) moved the
+tail rather than removing it; in a 300-seed Chromium sweep with the new budgets, Medium
+p99 is 1.1 s and max 1.45 s, Hard p99 1.5 s and max 1.8 s.
+
+**Fix:** `PERF-NEW-*` now asserts `elapsed < 500 ms + attempts × PER_ATTEMPT_MS[tier]`,
+reading `attempts` from `puzzle.gen`. The ceilings are about 3× the per-attempt cost
+measured in headless Chromium (Kiddie 6.1 ms, Easy 7.5, Medium 10.7, Hard 15.4, Expert
+22.1, Nightmare 20.0); full-suite runs measure about 1.2× that. The test is deterministic
+given the attempts a run took and still catches regressions in per-attempt cost and in
+UI / worker overhead.
+
+**Decision (Product Director, 2026-11-21):** the CLAUDE.md 1 s target does not apply to
+cold puzzle generation. A slow run is the expected tail of a random process, not a
+failure; generation is judged per attempt, and every other action keeps the 1 s target.
+User-facing latency is addressed by the cache (§4.4), not by the test.
 
 ### 3.5 Frozen fixture
 
@@ -255,7 +269,16 @@ or unknown-origin puzzle.
 
 ## 4. Outside this feature
 
-### 4.1 Medium requests fall back to another tier about 7% of the time
+### 4.1 Medium requests fall back to another tier about 7% of the time — resolved 2026-11-21
+
+**Resolution:** `ATTEMPT_BUDGET` raised to Easy 60 (from 30), Medium 200 (from 60) and
+Hard 200 (from 150), so every tier now falls back less than 0.01% of the time. Measured
+per-attempt accept rates (3,000 Node attempts each): Kiddie 99.6%, Easy 15.5%, Medium
+4.9%, Hard 4.6%, Expert 21%, Nightmare 4.6%. At the old budgets, Medium missed about
+4.8% of the time, Easy 0.64% and Hard 0.09%. No practical seed now exhausts Easy's real
+budget, so PR4 and DBG-G3 pin `budget: 30` to keep exercising the fallback from seed 26.
+
+The original finding, kept for the record:
 
 Found while diagnosing the flaky performance test. In a 300-seed sweep, 22 Medium runs
 exhausted the attempt budget (`ATTEMPT_BUDGET.medium` is 60 in `js/config.js`) and
@@ -292,6 +315,22 @@ used is in the appendix so it is not lost. With `window.sudokuDev` available, mu
 what callers passed to it is now one API call. Also outstanding from the original plan:
 a persistent console logger, now largely superseded by the session recorder's error
 capture and the `[dev:*]` log categories.
+
+### 4.4 The pre-generation cache refills only at boot
+
+Backlog; added 2026-11-21 for a future session. `primeNext` is called once, in
+`js/main.js` step 10, for the boot tier only (aspec-game-state §boot, unchanged since v1).
+After the first New Puzzle or difficulty change, every request is a cold generation, so
+the generator's latency tail (§3.4) reaches the player: Medium p90 about 0.6 s, p99 about
+1.1 s; Nightmare p90 about 0.9 s, p99 about 1.9 s.
+
+**Direction:** refill the current tier's cache entry after each one is consumed. That is
+the main win. Priming every tier costs more: Diabolical averages about 200 attempts per
+puzzle (≈ 4 s), and a foreground request aborts background work, discarding its
+progress. The cache already persists to localStorage, so tiers filled in one session
+carry into the next. **Accepted limit:** the cache holds one puzzle per tier, so
+pressing New Puzzle again quickly still waits on a cold generation; the Product Director
+accepts that cost.
 
 ---
 

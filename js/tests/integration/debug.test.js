@@ -373,7 +373,7 @@ describe('integration/debug: Phase 6 — the developer API', function () {
   it('DBG-G3: an Easy run that exhausts its budget loads the Hard puzzle it found, without a dialog', async () => {
     await openDev();
 
-    const result = plain(await devApi().generate('easy', 26));
+    const result = plain(await devApi().generate('easy', 26, { budget: 30 }));
 
     expect(result).to.include({
       ok: true, requestedTier: 'easy', tier: 'hard', fallback: true,

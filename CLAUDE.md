@@ -175,7 +175,11 @@ freely, but stop and confirm with the user before any `git commit` and before an
 - The Orchestrator schedules these checkpoints explicitly
 
 ### Performance
-- All user-facing actions complete in **under 1 second**
+- All user-facing actions complete in **under 1 second**, except cold puzzle generation
+- Cold generation is judged per attempt, not in total: its attempt count is random, so a
+  slow run is the expected tail, not a failure (decision 2026-11-21; see
+  `docs/misc/debug-instrumentation-open-items.md` §3.4). User-facing generation latency
+  is addressed by the pre-generation cache.
 - Thresholds are adjustable as we learn more about the domain
 
 ### Iteration Exit Criteria

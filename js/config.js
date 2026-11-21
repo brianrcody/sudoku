@@ -106,15 +106,16 @@ export const GIVEN_COUNT_TARGET = {
 
 /**
  * Max puzzle attempts before the honest-fallback path (see fspec-003 §5.4).
- * Diabolical's accept rate is ~0.49%/attempt; 2000 attempts puts the miss
- * probability below 0.01%.
+ * Budgets target a miss probability below 0.01%. Diabolical's accept rate is
+ * ~0.49%/attempt (2000 attempts); Medium's is only ~4.9%/attempt, since most
+ * candidates at its given count rate Easy (200 attempts).
  * @type {Object<string, number>}
  */
 export const ATTEMPT_BUDGET = {
   kiddie: 20,
-  easy: 30,
-  medium: 60,
-  hard: 150,
+  easy: 60,
+  medium: 200,
+  hard: 200,
   expert: 300,
   diabolical: 2000,
   nightmare: 300,
