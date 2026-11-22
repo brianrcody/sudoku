@@ -49,6 +49,35 @@ gameState.getState().puzzle.solveTrace
 
 The **Share** button gives you the givens too: the copied link ends in `?p=<81 digits>`.
 
+### Driving the app from a script
+
+`scripts/devdrive.mjs` runs the app in a headed Chrome you can watch and play in, while a
+script (or an agent) drives the same tab over CDP. This is the setup for working through
+a bug together.
+
+```sh
+node scripts/devdrive.mjs up       # server on :8080 (no-store), Chrome on :9222, at ?dev=1
+node scripts/devdrive.mjs -e 'await dev.load("<81 cells>"); await dev.runSolver();
+  await dev.applyStep(17); return dev.coach()'
+node scripts/devdrive.mjs run my-repro.mjs   # default export: async ({page, dev, shot, …}) => any
+node scripts/devdrive.mjs down
+```
+
+- Chrome uses a throwaway profile, so your real statistics and settings are untouched.
+- The server sends `Cache-Control: no-store`, so after an edit the page and the generator
+  worker never run a mix of old and new modules.
+- The `dev` helpers click the real controls, so a bug found by hand is reproduced through
+  the same path. They are `load` (a share link, confirming the "Load shared puzzle?"
+  prompt), `openTool`, `runSolver`, `applyStep`, `overlay`, `coach`, `summary` and `cellRef`.
+- **Step numbers are the panel's 1-based numbers.** The step buttons' `data-step`
+  attribute is 0-based; the helpers convert, so code that uses the selector directly
+  must too.
+- A snippet's return value prints as JSON, followed by any console errors, page errors
+  and failed requests. Screenshots (`shot(name)`) and logs go to `sudoku-devdrive/` under
+  the OS temp directory.
+- For reads, `window.sudokuDev` (documented in the README) is usually all you need:
+  `return page.evaluate(() => sudokuDev.inspect())`.
+
 ---
 
 ## 2. Which tool answers which question

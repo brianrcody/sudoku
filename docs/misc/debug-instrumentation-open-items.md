@@ -306,15 +306,16 @@ could briefly run different versions, and the worker protocol gained fields in t
 feature. **To check before shipping:** the `Cache-Control` / `ETag` behaviour for `.js`
 on the host, and whether a cache-busting query on the module entry points is wanted.
 
-### 4.3 The live-debugging driver script is not in the repository
+### 4.3 The live-debugging driver script is not in the repository — resolved 2026-11-22
 
-The workflow this feature was built for drives a debug Chrome over CDP with a small
-script that has only ever lived in a session scratchpad. Moving it into `scripts/` was
-the planned next step before the feature began and has not been done. The script as last
-used is in the appendix so it is not lost. With `window.sudokuDev` available, much of
-what callers passed to it is now one API call. Also outstanding from the original plan:
-a persistent console logger, now largely superseded by the session recorder's error
-capture and the `[dev:*]` log categories.
+**Resolution:** the driver is now `scripts/devdrive.mjs`, with helpers under
+`scripts/devdrive/`. `up` and `down` start and stop a no-store static server and the
+debug Chrome. `run` and `-e` run a script against the app tab. Panel helpers (`load`,
+`runSolver`, `applyStep`, `overlay`, `coach`, `summary`) click the real controls and take
+the panel's 1-based step numbers. It was checked by replaying the 2026-11-22 inspector and
+coach session end to end. Usage is in `dev-mode-workflows.md` §1. The appendix that kept
+the old script is removed. The persistent console logger stays superseded by the session
+recorder's error capture.
 
 ### 4.4 The pre-generation cache refills only at boot
 
@@ -331,66 +332,3 @@ progress. The cache already persists to localStorage, so tiers filled in one ses
 carry into the next. **Accepted limit:** the cache holds one puzzle per tier, so
 pressing New Puzzle again quickly still waits on a cold generation; the Product Director
 accepts that cost.
-
----
-
-## Appendix: the driver script
-
-Start a server with `python3 -m http.server 8080 --bind 127.0.0.1` in the project root
-and Chrome with `--remote-debugging-port=9222 --user-data-dir=<a throwaway directory>`
-at `http://localhost:8080/?dev=1`. Then `node drive.mjs <file.mjs>` or
-`node drive.mjs -e '<async function body>'`.
-
-```js
-// Attach to the running debug Chrome over CDP and run a snippet against the app tab.
-// Usage: node drive.mjs <file.mjs>   (file's default export: async ({page, context, browser, shot}) => any)
-//        node drive.mjs -e '<async function body with page/context/browser/shot in scope>'
-import { chromium } from '/home/brc/Documents/websites/sudoku2/node_modules/playwright/index.mjs';
-import { pathToFileURL } from 'node:url';
-import path from 'node:path';
-
-const SHOTS = path.join(import.meta.dirname, 'shots');
-const browser = await chromium.connectOverCDP('http://127.0.0.1:9222');
-const context = browser.contexts()[0];
-const page = context.pages().find(p => p.url().startsWith('http://localhost:8080')) ?? context.pages()[0];
-
-// python's http.server sends no Cache-Control, so Chrome heuristically caches modules and can
-// serve a stale file next to fresh ones after an edit. Always bypass the cache while driving.
-const _cdp = await context.newCDPSession(page);
-await _cdp.send('Network.enable');
-await _cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
-// The page-level switch does not reach the generator Web Worker, which is a separate target
-// and would keep running cached modules; empty the HTTP cache as well.
-await _cdp.send('Network.clearBrowserCache');
-
-const logs = [];
-page.on('console', m => logs.push(`[console.${m.type()}] ${m.text()}`));
-page.on('pageerror', e => logs.push(`[pageerror] ${e.stack || e.message}`));
-page.on('requestfailed', r => logs.push(`[requestfailed] ${r.url()} ${r.failure()?.errorText}`));
-
-const shot = async (name, opts = {}) => {
-  const file = path.join(SHOTS, `${name}.png`);
-  await page.screenshot({ path: file, ...opts });
-  return file;
-};
-
-const env = { page, context, browser, shot };
-let fn;
-if (process.argv[2] === '-e') {
-  fn = new Function('env', `const {page, context, browser, shot} = env; return (async () => { ${process.argv[3]} })();`);
-} else {
-  fn = (await import(pathToFileURL(path.resolve(process.argv[2])).href)).default;
-}
-
-try {
-  const result = await fn(env);
-  if (result !== undefined) console.log(typeof result === 'string' ? result : JSON.stringify(result, null, 2));
-} catch (e) {
-  console.log('[driver error]', e.stack || e);
-  process.exitCode = 1;
-} finally {
-  if (logs.length) console.log('--- page events ---\n' + logs.join('\n'));
-  // Disconnect only; the browser keeps running.
-  await browser.close();
-}
-```

@@ -169,6 +169,11 @@ rejection message for a document the app would reject. `state` has the shape of
 **`format-v1-baseline.json` is never edited or re-recorded**: it is the format-compatibility
 anchor that every future build must read.
 
+**Live debugging.** `node scripts/devdrive.mjs up` starts a no-store server on :8080 and
+a headed debug Chrome on :9222 at `?dev=1`. `run <file>` and `-e '<snippet>'` then drive
+that tab, and `down` stops both. Usage and the panel helpers are in
+`docs/misc/dev-mode-workflows.md` §1.
+
 ## Architecture
 
 All puzzle logic runs in a Web Worker to keep the main thread responsive during
