@@ -529,6 +529,9 @@ describe('coach/analyzer — rank 13: WXYZ-Wing', function () {
 describe('coach/analyzer — rank 14: Finned X-Wing', function () {
   techniqueTests('Finned X-Wing', 14, 'elimination', rank14, function (step) {
     expect(step.digits).to.have.length(1);
+    // The fish digit is the one eliminated; a missed rename leaves it null.
+    expect(step.digits[0]).to.equal(step.eliminations[0].digit);
+    expect(step.supportingText).to.not.match(/\bnull\b|undefined/);
     expect(step.roles.cause.length).to.be.above(2);
     expect(step.roles.fin.length).to.be.above(0);
     expect(step.roles.elimTarget.length).to.be.above(0);
@@ -549,6 +552,9 @@ describe('coach/analyzer — rank 14: Finned X-Wing', function () {
 describe('coach/analyzer — rank 15: Finned Swordfish', function () {
   techniqueTests('Finned Swordfish', 15, 'elimination', rank15, function (step) {
     expect(step.digits).to.have.length(1);
+    // The fish digit is the one eliminated; a missed rename leaves it null.
+    expect(step.digits[0]).to.equal(step.eliminations[0].digit);
+    expect(step.supportingText).to.not.match(/\bnull\b|undefined/);
     expect(step.roles.fin.length).to.be.above(0);
     expect(step.roles.elimTarget.length).to.be.above(0);
     expect(step.unit).to.equal(null);

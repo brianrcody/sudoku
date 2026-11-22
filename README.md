@@ -82,7 +82,7 @@ and `css/dev.css` are loaded on demand).
 | Tool | What it does |
 |---|---|
 | Load puzzle from string | Paste 81 cells (`1`–`9`; `0` or `.` for empty; whitespace ignored) and load them, bypassing the generator. Same validation, rating, and Unrated handling as a share link |
-| Solver step inspector | Runs the logical solver on the current board (givens plus your digits) and lists every step. Select a step (click or arrow keys) to highlight its placement, elimination, and pattern cells. Double-click, Enter, or Space sets the board to the solver's position after that step and trims your pencil marks by what the solver has ruled out; Restore board undoes both. Reports a stall explicitly |
+| Solver step inspector | Runs the logical solver on the current board (givens plus your digits) and lists every step. Select a step (click or arrow keys) to highlight its placement, elimination, and pattern cells. Double-click, Enter, or Space sets the board to the solver's position after that step and trims your pencil marks by what the solver has ruled out (cells you never marked get the solver's candidates); Restore board undoes both. Reports a stall explicitly |
 | Candidate overlay | Shows computed candidates in every empty cell in place of pencil marks. Candidates you haven't marked are underlined; marks that aren't candidates are struck through. Your marks are never changed |
 | Coach step data | The `CoachStep` object handed to the coach renderer, as JSON, with a copy button |
 | Generation diagnostics | Requested vs. achieved tier, fallback, attempts, rejections (unsolvable / wrong tier, by tier), and the technique profile of the solve; the puzzle's seed with Copy seed, and a *Generate from seed* control (tier + seed) |

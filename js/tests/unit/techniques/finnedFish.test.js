@@ -21,7 +21,7 @@ describe('finnedFish', function () {
     ]);
     expect(result.fins).to.deep.equal([70]); // r7c7
     expect(result.baseCells).to.have.length(4);
-    expect(result.digit).to.equal(4);
+    expect(result.fishDigit).to.equal(4);
   });
 
   it('FXW2: a two-fin pattern in one box fires', function () {

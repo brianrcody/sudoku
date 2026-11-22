@@ -353,7 +353,7 @@ Every per-technique mapper receives:
   - Rank 17 (Multi-Coloring): `step.colorChains` — `Array<{ digit, groupA: int[], groupB: int[] }>`
   - Rank 18 (XY-Chain): `step.chain` — `{ cells: int[], digit: int }`
   - Rank 19 (Forcing Chain): `step.chain` — `{ nodes: Array<{ cell, digit, strong }> }`
-  - Ranks 12–15, 20, 21 (V3): per-technique pattern extras (`pivot`/`wings`/`z`, `cells`, `baseCells`/`fins`/`digit`, `urType`/`urCells`/`urDigits`/`urExtra`, `alsA`/`alsB`/`x`) — see `aspec-harder-tiers.md` §3 and §8
+  - Ranks 12–15, 20, 21 (V3): per-technique pattern extras (`pivot`/`wings`/`z`, `cells`, `baseCells`/`fins`/`fishDigit`, `urType`/`urCells`/`urDigits`/`urExtra`, `alsA`/`alsB`/`x`) — see `aspec-harder-tiers.md` §3 and §8
 - `workingBoard` — the `Uint8Array(81)` constructed in §5.
 - `candidates` — `Uint16Array(81)` from `solveLogically`'s return value (the candidates as they were *just before* the technique fired, since the trace is recorded pre-application; see `aspec-solver.md` §7.2).
 

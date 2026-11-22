@@ -202,6 +202,21 @@ describe('logical.js', function () {
     // Always passes (just verifies contract when elim-only steps exist).
   });
 
+  // L10b: regression — a technique's pattern digit must not leak into step.digit.
+  // Finned X-Wing once passed its fish digit through as `digit`, which made its
+  // elimination step look like a placement (inspector, hint provider).
+  it('L10b: elimination steps keep digit===null; Finned X-Wing reports fishDigit', function () {
+    const givens = Uint8Array.from(
+      '003006000006051080209040000000600100000105820000000070500900060060370000907000408', Number);
+    const { trace } = solveLogically(givens.slice());
+    for (const step of trace) {
+      if (step.eliminations.length > 0) expect(step.digit, step.technique).to.be.null;
+    }
+    const finned = trace.find(s => s.technique === 'Finned X-Wing');
+    expect(finned.fishDigit).to.equal(1);
+    expect(finned.eliminations).to.deep.equal([{ cellIndex: 7, digit: 1 }]);
+  });
+
   // L11: hardestRank 0 when board already solved
   it('L11: hardestRank===0 and trace===[] on fully solved board', function () {
     const full = kiddieFixture.solution.slice();

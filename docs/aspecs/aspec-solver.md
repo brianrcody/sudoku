@@ -158,7 +158,7 @@ solveLogically(board: Uint8Array(81), { techniqueLimit?: int }) →
     },
   }
   ```
-  `eliminations` is always present (empty array for placement steps). Pattern fields are absent for ranks 1–11; all consumers that use only the four base fields are unaffected. The V3 techniques (ranks 12–15, 20, 21) carry their own extras — `pivot`/`wings`/`z`, `cells`, `baseCells`/`fins`/`digit`, `urType`/`urCells`/`urDigits`/`urExtra`, `alsA`/`alsB`/`x` — shapes in `aspec-harder-tiers.md` §3.
+  `eliminations` is always present (empty array for placement steps). Pattern fields are absent for ranks 1–11; all consumers that use only the four base fields are unaffected. The V3 techniques (ranks 12–15, 20, 21) carry their own extras — `pivot`/`wings`/`z`, `cells`, `baseCells`/`fins`/`fishDigit`, `urType`/`urCells`/`urDigits`/`urExtra`, `alsA`/`alsB`/`x` — shapes in `aspec-harder-tiers.md` §3.
 - `hardestRank` — the highest 1-based rank technique that was required to make progress (0 if no technique was needed).
 
 Exports:

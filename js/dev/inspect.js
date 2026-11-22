@@ -144,18 +144,35 @@ export function boardAtStep(base, steps, upTo) {
 
 /**
  * The player's pencil marks as the solver's progress leaves them after a
- * given step: `base` minus everything steps 0…`upTo` rule out. A placement
+ * given step: `basePencil` minus everything steps 0…`upTo` rule out. A placement
  * clears the filled cell and removes its digit from the cell's peers, as a
- * real move does; an elimination removes its candidates. Marks are only ever
- * removed, so a cell the player never marked stays empty.
+ * real move does; an elimination removes its candidates.
  *
- * @param {Uint16Array} base - Pencil bitsets before any step was applied.
+ * A cell the player never marked, and that is still empty at this step, gets
+ * the solver's candidates instead (`candidatesAtStep`). An unmarked cell
+ * means "unrestricted" to the coach, so leaving it empty would discard the
+ * eliminations the steps made there. A marked cell trimmed to nothing stays
+ * empty: refilling it would hide that the player's marks were wrong.
+ *
+ * @param {Uint16Array} basePencil - Pencil bitsets before any step was applied.
+ * @param {Uint8Array} baseBoard - The board the inspector was run on.
  * @param {InspectorStep[]} steps
  * @param {number} upTo - Index of the last step to include.
- * @returns {Uint16Array} A new array; `base` is not modified.
+ * @returns {Uint16Array} A new array; neither input is modified.
  */
-export function pencilAtStep(base, steps, upTo) {
-  const pencil = base.slice();
+export function pencilAtStep(basePencil, baseBoard, steps, upTo) {
+  const pencil = _trimPencil(basePencil, steps, upTo);
+  const board = boardAtStep(baseBoard, steps, upTo);
+  const candidates = candidatesAtStep(baseBoard, steps, upTo);
+  for (let i = 0; i < 81; i++) {
+    if (basePencil[i] === 0 && board[i] === 0) pencil[i] = candidates[i];
+  }
+  return pencil;
+}
+
+/** `basePencil` minus everything steps 0…`upTo` rule out. */
+function _trimPencil(basePencil, steps, upTo) {
+  const pencil = basePencil.slice();
   for (const { placement, eliminations } of steps.slice(0, upTo + 1)) {
     if (placement) {
       const mask = ~(1 << (placement.digit - 1));

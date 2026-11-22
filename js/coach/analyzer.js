@@ -1418,10 +1418,10 @@ function finnedFishPartial(step, baseName) {
       scB: [],
       fin: fins,
     },
-    digits: [step.digit],
+    digits: [step.fishDigit],
     unit: null,
     arrows,
-    supportingText: `*${step.digit}* almost forms ${baseName === 'X-Wing' ? 'an' : 'a'} ${baseName} — except for the *fin*. Either the ${baseName} holds, or the fin is *${step.digit}*. Both ways, *${step.digit}* can't appear in cells covered by both.`,
+    supportingText: `*${step.fishDigit}* almost forms ${baseName === 'X-Wing' ? 'an' : 'a'} ${baseName} — except for the *fin*. Either the ${baseName} holds, or the fin is *${step.fishDigit}*. Both ways, *${step.fishDigit}* can't appear in cells covered by both.`,
     complexity: { acknowledged: false, note: null, endpoints: null },
   };
 }

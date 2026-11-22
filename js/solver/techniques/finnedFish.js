@@ -135,7 +135,7 @@ function finnedFish(state, size, baseUnits, coverUnits, technique) {
               technique,
               baseCells,
               fins: finCells,
-              digit: d,
+              fishDigit: d,
             };
           }
         }

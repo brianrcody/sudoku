@@ -178,7 +178,7 @@ function sweepDriver(seed, rig, clock) {
       return {
         type: 'DEV_SET_BOARD',
         pen: boardAtStep(state.pen, inspection.steps, upTo),
-        pencil: pencilAtStep(state.pencil, inspection.steps, upTo),
+        pencil: pencilAtStep(state.pencil, state.pen, inspection.steps, upTo),
       };
     }
     if (roll < 0.8) {

@@ -76,7 +76,7 @@ Eliminations: d from cells that are (a) in a cover unit of the pattern, (b) in t
 box, (c) not base-pattern cells or fins. Both orientations (rows/cols). Exports
 `finnedXWing` (size 2) and `finnedSwordfish` (size 3); sashimi degenerate cases are
 permitted (a base unit may have as few as 1 cover-set candidate when fins exist).
-Extra fields: `baseCells`, `fins`, `digit`.
+Extra fields: `baseCells`, `fins`, `fishDigit` (not `digit`, which would overwrite the step's `digit: null`).
 
 ### 3.4 `uniqueRectangle.js` — rank 20
 Scan row pairs × column pairs spanning exactly two boxes, all four cells unfilled.
@@ -185,7 +185,7 @@ No structural change: `statsProvider`/`statistics.js` are keyed by
 
 ## 7. `logical.js` pass-through
 Extend the elimination-step pass-through whitelist with the new pattern fields:
-`pivot, wings, z, cells, baseCells, fins, digit, urType, urCells, urDigits, urExtra,
+`pivot, wings, z, cells, baseCells, fins, fishDigit, urType, urCells, urDigits, urExtra,
 alsA, alsB, x`. (Same mechanism as the existing `colorChain/chain` fields.)
 
 ## 8. Coach — Sealed-Schema Amendment + New Mappers

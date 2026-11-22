@@ -7,6 +7,7 @@
  */
 
 import { mount } from '../../dev/devPanel.js';
+import { runInspector, pencilAtStep } from '../../dev/inspect.js';
 import { mount as mountGrid, setCellDecorator } from '../../ui/grid.js';
 import { mount as mountSrLive } from '../../ui/srLive.js';
 import { KIDDIE, KIDDIE_SOLUTION, HARD, toGivens } from '../fixtures/puzzles/loadable.js';
@@ -671,9 +672,14 @@ describe('dev/devPanel.js', () => {
         $('dev-inspect-restore').click();
         expect(Array.from(lastSet().pencil)).to.deep.equal(Array.from(state.pencil));
 
-        gs.getState().pencil = new Uint16Array(81);
+        // A fresh, empty snapshot: every unmarked empty cell gets the solver's
+        // candidates rather than the old full marks trimmed.
+        const empty = new Uint16Array(81);
+        gs.getState().pencil = empty;
         key(list[0], 'Enter');
-        expect(lastSet().pencil.some(m => m !== 0)).to.be.false;
+        const base = gs.getState().pen;
+        expect(Array.from(lastSet().pencil)).to.deep.equal(
+          Array.from(pencilAtStep(empty, base, runInspector(base).steps, 0)));
       });
 
       it('DP67: an active coach session is ended before the marks are snapshotted, once', async () => {

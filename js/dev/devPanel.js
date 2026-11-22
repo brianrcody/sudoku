@@ -361,7 +361,8 @@ function _selectStep(index) {
 /**
  * Set the board to the solver's position after step `index`: the board the
  * solver started from plus every digit placed up to and including that step,
- * with the player's pencil marks trimmed by everything those steps rule out.
+ * with the player's pencil marks trimmed by everything those steps rule out
+ * and the solver's candidates in any cell the player never marked.
  * Works in both directions, so an earlier step undoes later ones.
  */
 function _applyStep(index) {
@@ -375,7 +376,7 @@ function _applyStep(index) {
   _gameState.dispatch({
     type: 'DEV_SET_BOARD',
     pen: boardAtStep(_base, _inspection.steps, index),
-    pencil: pencilAtStep(_basePencil, _inspection.steps, index),
+    pencil: pencilAtStep(_basePencil, _base, _inspection.steps, index),
   });
   _markSteps();
   _setBoardStatus(`Board set to step ${index + 1} of ${_inspection.steps.length}.`);

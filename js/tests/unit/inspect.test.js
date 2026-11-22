@@ -146,7 +146,7 @@ describe('dev/inspect.js', () => {
     it('IN14e: pencilAtStep clears a placed cell and removes its digit from peers only', () => {
       const base = new Uint16Array(81).fill(0b111111111);
       const steps = [{ placement: { cellIndex: 0, digit: 5 }, eliminations: [] }];
-      const pencil = pencilAtStep(base, steps, 0);
+      const pencil = pencilAtStep(base, new Uint8Array(81), steps, 0);
       const five = 1 << 4;
       expect(pencil[0]).to.equal(0);
       for (const peer of [1, 8, 9, 72, 10, 20]) expect(pencil[peer] & five, `peer ${peer}`).to.equal(0);
@@ -155,17 +155,57 @@ describe('dev/inspect.js', () => {
       expect(base[0]).to.equal(0b111111111);
     });
 
-    it('IN14f: pencilAtStep removes eliminated candidates, stops at the step asked for, and never adds marks', () => {
+    it('IN14f: pencilAtStep removes eliminated candidates from marked cells and stops at the step asked for', () => {
       const base = new Uint16Array(81);
       base[3] = 0b000001111;
       base[4] = 0b000000110;
       const steps = [
-        { placement: null, eliminations: [{ cellIndex: 3, digit: 1 }, { cellIndex: 4, digit: 2 }, { cellIndex: 5, digit: 9 }] },
+        { placement: null, eliminations: [{ cellIndex: 3, digit: 1 }, { cellIndex: 4, digit: 2 }] },
         { placement: null, eliminations: [{ cellIndex: 3, digit: 4 }] },
       ];
-      const first = pencilAtStep(base, steps, 0);
-      expect([first[3], first[4], first[5]]).to.deep.equal([0b000001110, 0b000000100, 0]);
-      expect(pencilAtStep(base, steps, 1)[3]).to.equal(0b000000110);
+      const board = new Uint8Array(81);
+      const first = pencilAtStep(base, board, steps, 0);
+      expect([first[3], first[4]]).to.deep.equal([0b000001110, 0b000000100]);
+      expect(pencilAtStep(base, board, steps, 1)[3]).to.equal(0b000000110);
+    });
+
+    it('IN14h: pencilAtStep gives unmarked empty cells the solver candidates; filled and emptied cells stay empty', () => {
+      const board = toGivens(HARD);
+      const { steps } = runInspector(board);
+      // An elimination step touching two cells: one left unmarked, one marked with
+      // only the digit the step removes.
+      const e = steps.findIndex(s => new Set(s.eliminations.map(x => x.cellIndex)).size >= 2);
+      expect(e, 'HARD has an elimination step over two cells').to.be.at.least(0);
+      const [unmarked, marked] = [...new Map(steps[e].eliminations.map(x => [x.cellIndex, x])).values()];
+      const placed = steps[0].placement.cellIndex;
+      const given = board.findIndex(v => v !== 0);
+      const base = new Uint16Array(81);
+      base[marked.cellIndex] = 1 << (marked.digit - 1);
+      const before = Array.from(base);
+
+      const pencil = pencilAtStep(base, board, steps, e);
+      const candidates = candidatesAtStep(board, steps, e);
+      const boardAt = boardAtStep(board, steps, e);
+      expect(pencil[unmarked.cellIndex]).to.equal(candidates[unmarked.cellIndex]);
+      expect(pencil[unmarked.cellIndex] & (1 << (unmarked.digit - 1))).to.equal(0);
+      expect(pencil[marked.cellIndex], 'emptied marked cell').to.equal(0);
+      expect(pencil[placed], 'cell placed by a step').to.equal(0);
+      expect(pencil[given], 'given').to.equal(0);
+      for (let i = 0; i < 81; i++) {
+        if (base[i] === 0 && boardAt[i] === 0) expect(pencil[i], `cell ${i}`).to.equal(candidates[i]);
+      }
+      expect(Array.from(base)).to.deep.equal(before);
+    });
+
+    it('IN14i: a Finned X-Wing step is an elimination, not a placement', () => {
+      const board = Uint8Array.from(
+        '003006000006051080209040000000600100000105820000000070500900060060370000907000408', Number);
+      const { steps } = runInspector(board);
+      const fin = steps.find(s => s.technique === 'Finned X-Wing');
+      expect(fin.placement).to.be.null;
+      expect(fin.text).to.equal('Finned X-Wing — eliminate 1 from r1c8');
+      expect(fin.cells.place).to.deep.equal([]);
+      expect(boardAtStep(board, steps, fin.index)[7]).to.equal(0);
     });
 
     it('IN14g: candidatesAtStep replays placements and eliminations onto fresh candidates', () => {

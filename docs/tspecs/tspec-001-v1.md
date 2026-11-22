@@ -238,6 +238,7 @@ XYC1 length-4 chain; XYC2 length-6 chain; XYC3 non-fire; AIC1 short AIC; AIC2 lo
 | L8 | techniqueLimit=Infinity (default) | U | Default branch | any fixture | same as no limit |
 | L9 | Restart-from-rank-0 behavior | U | Progress-break branch | fixture where LC unblocks NS | trace order shows NS steps after LC |
 | L10 | Trace includes elimination-only steps with digit:null | U | Elim-only branch | LC-solvable fixture | trace[k].digit === null for LC step |
+| L10b | No pattern field overwrites an elimination step's digit (regression, 2026-11-22: Finned X-Wing's fish digit leaked into `digit`) | U | Passthrough | Nightmare puzzle with a Finned X-Wing step | every step with eliminations has digit === null; the finned step carries `fishDigit` |
 | L11 | hardestRank 0 when board already solved | U | Trivial branch | full grid | hardestRank=0, trace=[] |
 | L12 | Perf on Death March <1 s | U | Flag | fixture | elapsed <1000 ms |
 

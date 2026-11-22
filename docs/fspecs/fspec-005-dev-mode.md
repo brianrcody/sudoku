@@ -155,8 +155,11 @@ leaves the board as it is.
   first set to a step are the baseline; at step *n* the board shows that baseline minus
   everything steps 1 to *n* rule out: an elimination step removes its candidates, and a
   placement clears the filled cell and removes its digit from the cell's row, column, and
-  box, as a real move does. Marks are only ever removed — a cell the player never marked
-  stays empty. Coach-revealed marks are not part of the baseline.
+  box, as a real move does. A cell with no marks in the baseline that is still empty at
+  step *n* shows the solver's candidates after step *n* instead, so the coach, which treats
+  an unmarked cell as unrestricted, sees the same position the solver does. A marked cell
+  whose marks are all ruled out stays empty rather than being refilled, so wrong marks
+  stay visible. Coach-revealed marks are not part of the baseline.
 - This works in both directions: choosing an earlier step removes the digits of the later
   ones and brings back the marks they removed.
 - Pencil marks changed by hand while the board is set to a step are not kept: the next
@@ -285,4 +288,6 @@ board from the inspector. (Stepping the board from the inspector was out of scop
 rspec-005 and was added at the Product Director's request on 2026-11-14; see §5.4. The
 same request extended it to pencil marks and the candidate overlay, which rspec-005
 describes as untouched by the inspector and as basic elimination only; §5.4 and §6 here
-supersede it on both points.)
+supersede it on both points. On 2026-11-22 the Product Director approved filling unmarked
+cells with the solver's candidates when the board is set to a step, after the coach was
+found ignoring the inspector's eliminations on an unmarked board.)

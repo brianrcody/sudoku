@@ -19,7 +19,7 @@ import { initialCandidates, applyPlacement, applyElimination } from './candidate
 const PASSTHROUGH_FIELDS = [
   'colorChain', 'colorChains', 'chain',
   'pivot', 'wings', 'z', 'cells',
-  'baseCells', 'fins', 'digit',
+  'baseCells', 'fins', 'fishDigit',
   'urType', 'urCells', 'urDigits', 'urExtra',
   'alsA', 'alsB', 'x',
 ];

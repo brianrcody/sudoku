@@ -131,9 +131,14 @@ You want to know whether a technique fires, when, and on which cells.
    Your pencil marks follow along: each step shows the marks you had when you first set
    the board to a step, minus whatever the solver has ruled out by then (eliminations, and
    placed digits from their row, column, and box). Going back brings marks back, and
-   *Restore board* returns them exactly. Marks are only removed, never added, so pencil
-   in full candidates first if you want to watch eliminations happen. Marks you change by
-   hand while stepping are dropped at the next step.
+   *Restore board* returns them exactly. A cell you never marked shows the solver's
+   candidates at that step, so the coach sees the solver's eliminations even if you have
+   not pencilled anything; a marked cell whose marks are all ruled out stays empty. Marks you change by
+   hand while stepping are dropped at the next step. Those filled-in candidates are real
+   pencil marks: if you make a move and the inspector goes stale, they stay (and are saved
+   with the game), and the overlay, now back to plain row/column/box elimination, shows the
+   digits the solver had eliminated as *computed, not marked*. That is expected, not an
+   overlay bug; *Restore board* (before the move) or Erase all pencil clears them.
    The **candidate overlay** follows too: while the board is set to a step it shows the
    solver's candidates after that step, so with the overlay on you can watch eliminations
    without pencilling anything in.
@@ -337,7 +342,7 @@ to use for manual UX testing and for demos.
 | Tool | Input | Output | Changes the game? |
 |---|---|---|---|
 | Load puzzle from string | 81 cells, `0`/`.` empty, whitespace ignored | Outcome line; new puzzle on success | Yes — replaces the puzzle (asks if you have progress) |
-| Solver step inspector | Current givens + pen digits | Ordered steps; summary; grid highlight on selection | Selecting moves the board cursor; set-to-step replaces your digits and trims your pencil marks (Restore board undoes both) |
+| Solver step inspector | Current givens + pen digits | Ordered steps; summary; grid highlight on selection | Selecting moves the board cursor; set-to-step replaces your digits, trims your pencil marks, and gives cells you never marked the solver's candidates (Restore board undoes all of it) |
 | Candidate overlay | Current board + your pencil marks | Computed candidates with divergence marked | No |
 | Coach step data | The active coach session | `CoachStep` as JSON; clipboard copy | No |
 | Generation diagnostics | The current puzzle | Generation-run table | No |

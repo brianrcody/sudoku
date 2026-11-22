@@ -38,7 +38,7 @@ off; unrecognized value with saved on / off; parameter among others; non-`true` 
 | IN2–IN4 | `formatStep` | placement; single-digit elimination; multi-digit clauses in digit order |
 | IN5–IN12 | `stepCells` | placement; de-duplicated eliminations; scalar and array cell keys; digit keys ignored; nested chain nodes; XY-Chain cells; colour groups; null field; role precedence |
 | IN14b–IN14c | `placement` on steps; `boardAtStep` | placement vs elimination; cumulative digits; elimination adds none; last step full; input untouched |
-| IN14d–IN14g | `eliminations` on steps; `pencilAtStep`; `candidatesAtStep` (replays placements and eliminations; input untouched) | placement clears its cell and its digit from peers only; eliminations removed; stops at the step asked for; never adds marks; input untouched |
+| IN14d–IN14i | `eliminations` on steps; `pencilAtStep`; `candidatesAtStep` (replays placements and eliminations; input untouched); finned-fish classification | placement clears its cell and its digit from peers only; eliminations removed from marked cells; stops at the step asked for; unmarked empty cells get the solver's candidates; filled cells and fully trimmed marked cells stay empty; input untouched; a Finned X-Wing step is an elimination (IN14i) |
 | IN13–IN19 | `runInspector`, `summarize` | solved with rank + tier; ordering; input untouched; stall at 0 steps; already full; singular wording; one-step solve |
 | IN20–IN25b | `candidateDiff` | supplied candidates override computed; filled → null; unmarked → all agree; exact; missing; extra; pencil untouched |
 | IN26–IN29 | `overlayLabel` | plain; missing; extra; no candidates |
@@ -93,7 +93,7 @@ off; unrecognized value with saved on / off; parameter among others; non-`true` 
 | `stepCells` | placement; core key; taken | IN5/IN6; IN7; IN12 |
 | `runInspector`/`summarize` | full; plural ×2; solved | IN17; IN18; IN13/IN16 |
 | `candidateDiff` | filled; unmarked; candidates supplied vs defaulted | IN20; IN21 vs IN22; IN25b vs IN20–IN25 |
-| `pencilAtStep` / `candidatesAtStep` | placement vs elimination step | IN14e vs IN14f; IN14g |
+| `pencilAtStep` / `candidatesAtStep` | placement vs elimination step; unmarked-and-empty vs marked or filled cell | IN14e vs IN14f; IN14h; IN14g |
 | `overlayLabel` | none; missing; extra | IN26–IN29 |
 | `techniqueProfile` | count tie-break | IN30 |
 | `describeGeneration` | no puzzle; loaded ×2; no gen; stored trace; breakdown; fallback | IN32–IN34 |
