@@ -1,0 +1,2728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sudoku — Hamburger Menu Mockup v1</title>
+<!--
+  Hamburger menu mockup v1 (exploratory; rspec-008, no fspec yet).
+  Main question: rspec-008 Q1, where statistics live. Option A keeps the panel on screen;
+  Option B moves it behind a "Statistics…" menu item that opens a dialog. Switch with
+  the "Mockup controls" strip fixed at the bottom of the window; it is not app chrome.
+
+  ARIA pattern: menu button + role="menu" (APG "Menu Button"), not disclosure + list.
+  The panel holds checkable items: a theme choice (menuitemradio) and the Left-handed
+  toggle (menuitemcheckbox). Menu roles expose those checked states directly, where
+  a disclosure would need nested form controls. The trade is that we must provide
+  roving focus with arrow keys, Home/End and type-ahead; this file implements all of it.
+    - Button: aria-haspopup="menu", aria-expanded, aria-controls. Enter, Space and
+      ArrowDown open the menu and focus the first item; ArrowUp focuses the last.
+    - Sections are role="group", labelled by their visible headings (aria-hidden
+      headings referenced by aria-labelledby, so they are not read twice).
+    - Disabled Share is aria-disabled="true". It stays focusable, per APG, so it can
+      be found and its state heard.
+    - Escape closes the menu and focuses the button. Tab closes it and lets focus move
+      on from the button. A click outside closes it; if the click lands on nothing
+      focusable, focus goes back to the button.
+    - Action items (Statistics, Share, Reset) close the menu. Setting items (Theme,
+      Left-handed) leave it open so the change can be seen and undone in place
+      (APG allows either for checkable items).
+
+  Fidelity: the app CSS block below is copied verbatim from css/themes.css, base.css,
+  grid.css, controls.css and stats.css at dd12413. The only changes are that viewport
+  media queries become container queries on .app-frame and vw becomes cqw, so that
+  the "Narrow frame" mock control can show the ≤720px layout without resizing the
+  window. Real window resizing works too. The implementation keeps media queries.
+  Everything after "rspec-008 additions" is new.
+-->
+<style>
+/* ──── copied from css/themes.css ──── */
+/* ── Default / Minimalist theme values ───────────────────────────────── */
+:root,
+body.theme-minimalist {
+  --bg:            #f7f6f2;
+  --surface:       #ffffff;
+  --border:        #c8c4bb;
+  --border-strong: #2e2b25;
+  --text:          #1c1a16;
+  --text-muted:    #7a7570;
+  --text-given:    #1c1a16;
+  --given-bg:      #eceae4;
+  --accent:        #2c5282;
+  --accent-light:  #dbeafe;
+  --conflict:      #b91c1c;
+  --conflict-bg:   #fef2f2;
+  --pencil:        #5a6778;
+  --btn-bg:        #f0ede6;
+  --btn-hover:     #e4e0d7;
+  --btn-border:    #c8c4bb;
+  --active-mode:   #2c5282;
+  --win:           #15803d;
+  --stats-row-sep: #f0ede6;
+  --header-bg:     var(--surface);
+  --modal-bg:      var(--surface);
+  --win-banner-bg: rgba(255,255,255,0.92);
+  --primary-hover: #1e3a6e;
+  --coach:               #7c3aed;
+  --coach-light:         #ede9fe;
+  --coach-mid:           #c4b5fd;
+  --pencil-on-coach:       #ffffff;
+  --pencil-on-coach-light: var(--pencil);
+}
+
+/* ── Coffee Shop ──────────────────────────────────────────────────────── */
+body.theme-coffee {
+  --bg:            #3b2a1a;
+  --surface:       #f5ede0;
+  --border:        #c9a97a;
+  --border-strong: #7c4f22;
+  --text:          #2b1d0e;
+  --text-muted:    #8c6642;
+  --text-given:    #2b1d0e;
+  --given-bg:      #e8d5b8;
+  --accent:        #8b4513;
+  --accent-light:  #fde8cc;
+  --conflict:      #c0392b;
+  --conflict-bg:   #fdf0ee;
+  --pencil:        #7a5c3a;
+  --btn-bg:        #ecdfc8;
+  --btn-hover:     #e0cead;
+  --btn-border:    #c9a97a;
+  --active-mode:   #8b4513;
+  --win:           #a06b1a;
+  --stats-row-sep: #ecdfc8;
+  --header-bg:     #2b1d0e;
+  --modal-bg:      #f5ede0;
+  --win-banner-bg: rgba(245,237,224,0.93);
+  --primary-hover: #6b3410;
+  --coach:               #c2410c;
+  --coach-light:         #ffedd5;
+  --coach-mid:           #fb923c;
+  --pencil-on-coach:       #ffffff;
+  --pencil-on-coach-light: var(--pencil);
+}
+
+/* ── School ───────────────────────────────────────────────────────────── */
+body.theme-school {
+  --bg:            #f8f5e6;
+  --surface:       #fdfaf0;
+  --border:        #b8c4d4;
+  --border-strong: #4a5568;
+  --text:          #2d3748;
+  --text-muted:    #718096;
+  --text-given:    #1a202c;
+  --given-bg:      #edf0f5;
+  --accent:        #4a5568;
+  --accent-light:  #e2e8f0;
+  --conflict:      #c53030;
+  --conflict-bg:   #fff5f5;
+  --pencil:        #718096;
+  --btn-bg:        #edf2f7;
+  --btn-hover:     #e2e8f0;
+  --btn-border:    #b8c4d4;
+  --active-mode:   #4a5568;
+  --win:           #276749;
+  --stats-row-sep: #edf2f7;
+  --header-bg:     #fdfaf0;
+  --modal-bg:      #fdfaf0;
+  --win-banner-bg: rgba(253,250,240,0.93);
+  --primary-hover: #2d3748;
+  --coach:               #1d4ed8;
+  --coach-light:         #dbeafe;
+  --coach-mid:           #93c5fd;
+  --pencil-on-coach:       #ffffff;
+  --pencil-on-coach-light: var(--pencil);
+}
+
+/* ── Mountain ─────────────────────────────────────────────────────────── */
+body.theme-mountain {
+  --bg:            #e8f0f7;
+  --surface:       #f7fafc;
+  --border:        #adc6de;
+  --border-strong: #1a3a52;
+  --text:          #0f2233;
+  --text-muted:    #4d7a99;
+  --text-given:    #1a4d2e;
+  --given-bg:      #dce8f2;
+  --accent:        #1a6b8a;
+  --accent-light:  #cfe8f3;
+  --conflict:      #b91c1c;
+  --conflict-bg:   #fef2f2;
+  --pencil:        #2d6e4e;
+  --btn-bg:        #dce8f2;
+  --btn-hover:     #c8dcea;
+  --btn-border:    #adc6de;
+  --active-mode:   #1a6b8a;
+  --win:           #1a6b4e;
+  --stats-row-sep: #dce8f2;
+  --header-bg:     #1a3a52;
+  --modal-bg:      #f7fafc;
+  --win-banner-bg: rgba(247,250,252,0.93);
+  --primary-hover: #145a75;
+  --coach:               #0f766e;
+  --coach-light:         #ccfbf1;
+  --coach-mid:           #5eead4;
+  --pencil-on-coach:       #ffffff;
+  --pencil-on-coach-light: var(--pencil);
+}
+
+/* ── Digital Terminal ─────────────────────────────────────────────────── */
+body.theme-terminal {
+  --bg:            #0d0d0d;
+  --surface:       #111111;
+  --border:        #1f4a1f;
+  --border-strong: #39ff14;
+  --text:          #b0ffb0;
+  --text-muted:    #3d7a3d;
+  --text-given:    #39ff14;
+  --given-bg:      #0a1a0a;
+  --accent:        #39ff14;
+  --accent-light:  #0a2a0a;
+  --conflict:      #ff4444;
+  --conflict-bg:   #1a0505;
+  --pencil:        #3d7a3d;
+  --btn-bg:        #0f1f0f;
+  --btn-hover:     #162b16;
+  --btn-border:    #1f4a1f;
+  --active-mode:   #39ff14;
+  --win:           #39ff14;
+  --stats-row-sep: #0f1f0f;
+  --header-bg:     #090909;
+  --modal-bg:      #111111;
+  --win-banner-bg: rgba(11,11,11,0.95);
+  --primary-hover: #22cc00;
+  --coach:               #0e7490;
+  --coach-mid:           #155e75;
+  --coach-light:         #0a1f28;
+  --pencil-on-coach:       #b0ffb0;
+  --pencil-on-coach-light: #b0ffb0;
+}
+
+/* ──── copied from css/base.css ──── */
+/* ── Reset & base typography ──────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif);
+  font-size: 15px;
+  line-height: 1.4;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* Terminal: monospace throughout */
+body.theme-terminal {
+  font-family: "Courier New", Courier, monospace;
+}
+
+/* ── Visually hidden utility (a11y) ────────────────────────────────────── */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Screen reader live region ────────────────────────────────────────── */
+#sr-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--header-bg);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body.theme-terminal header {
+  border-bottom: 1px solid var(--accent);
+  box-shadow: 0 1px 0 0 var(--accent);
+}
+
+body.theme-terminal header h1 {
+  color: var(--accent);
+  text-shadow: 0 0 8px rgba(57,255,20,0.4);
+  letter-spacing: 0.15em;
+}
+
+body.theme-mountain header {
+  color: #e8f0f7;
+  border-bottom-color: #2d5878;
+}
+
+body.theme-mountain header h1 {
+  color: #f7fafc;
+  letter-spacing: 0.06em;
+}
+
+body.theme-coffee header {
+  color: #f5ede0;
+  border-bottom-color: #7c4f22;
+}
+
+body.theme-coffee header h1 {
+  color: #f5ede0;
+}
+
+body.theme-school header {
+  border-bottom: 2px solid #b8c4d4;
+}
+
+/* ── Header right-side group: handedness switch + theme control ─────── */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* ── Theme control (header right) ────────────────────────────────────── */
+.theme-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+body.theme-mountain .theme-control {
+  color: #adc6de;
+}
+
+body.theme-coffee .theme-control {
+  color: #c9a97a;
+}
+
+.theme-control label {
+  white-space: nowrap;
+}
+
+/* ── Main layout ──────────────────────────────────────────────────────── */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 32px;
+  gap: 24px;
+}
+
+body.theme-coffee main {
+  background: linear-gradient(160deg, #3b2a1a 0%, #4a3020 50%, #3b2a1a 100%);
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+footer {
+  text-align: center;
+  padding: 20px 16px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+footer a {
+  color: inherit;
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
+body.theme-school main {
+  background-color: #f8f5e6;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 27px,
+    #a8b8cc 27px,
+    #a8b8cc 28px
+  );
+  background-position: 0 14px;
+}
+
+body.theme-mountain main {
+  background: linear-gradient(175deg, #d4e8f5 0%, #e8f0f7 40%, #f0f5fa 100%);
+}
+
+body.theme-terminal main {
+  background: #0d0d0d;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.15) 2px,
+    rgba(0,0,0,0.15) 4px
+  );
+}
+
+/* ── Game area layout ─────────────────────────────────────────────────── */
+.game-area {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 32px;
+  width: 100%;
+  max-width: 860px;
+  justify-content: center;
+}
+
+.left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 220px;
+  flex-shrink: 0;
+}
+
+/* Left-hand mode swaps the columns on wide viewports only. The query is the exact
+   complement of the mobile breakpoint below, so this higher-specificity rule never
+   overrides the stacked layout. */
+@container app (width > 720px) {
+  html[data-hand="left"] .game-area {
+    flex-direction: row-reverse;
+  }
+}
+
+/* ── Responsive: mobile ───────────────────────────────────────────────── */
+@container app (width <= 720px) {
+  header {
+    padding: 12px 16px;
+  }
+
+  header h1 {
+    font-size: 16px;
+  }
+
+  main {
+    padding: 16px 12px 28px;
+    gap: 16px;
+  }
+
+  .game-area {
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .left-col {
+    width: 100%;
+    align-items: center;
+  }
+
+  .right-col {
+    width: 100%;
+    max-width: 414px;
+  }
+}
+
+/* ──── copied from css/grid.css ──── */
+/* ── Difficulty row ───────────────────────────────────────────────────── */
+.difficulty-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.difficulty-row label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+body.theme-terminal .difficulty-row label {
+  letter-spacing: 0.1em;
+}
+
+#difficulty-select {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 28px 6px 10px;
+  border: 1px solid var(--btn-border);
+  border-radius: 5px;
+  background-color: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  font-family: inherit;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+body.theme-coffee #difficulty-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238c6642'/%3E%3C/svg%3E");
+}
+
+body.theme-school #difficulty-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23718096'/%3E%3C/svg%3E");
+}
+
+body.theme-terminal #difficulty-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2339ff14'/%3E%3C/svg%3E");
+  border-color: var(--accent);
+}
+
+body.theme-mountain #difficulty-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234d7a99'/%3E%3C/svg%3E");
+}
+
+#difficulty-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Grid wrapper & grid ──────────────────────────────────────────────── */
+.grid-wrapper {
+  position: relative;
+}
+
+.sudoku-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  border: 2.5px solid var(--border-strong);
+  border-radius: 3px;
+  overflow: hidden;
+  width: 414px;
+  height: 414px;
+  background: var(--surface);
+  user-select: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+body.theme-terminal .sudoku-grid {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(57,255,20,0.2), inset 0 0 4px rgba(57,255,20,0.05);
+  border-radius: 0;
+}
+
+body.theme-coffee .sudoku-grid {
+  box-shadow: 0 4px 16px rgba(59,42,26,0.4);
+}
+
+body.theme-school .sudoku-grid {
+  box-shadow: 2px 2px 8px rgba(74,85,104,0.12);
+}
+
+body.theme-mountain .sudoku-grid {
+  box-shadow: 0 2px 16px rgba(26,58,82,0.15);
+}
+
+/* ── Cells ────────────────────────────────────────────────────────────── */
+.cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 22px;
+  font-weight: 500;
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--text);
+  background: var(--surface);
+  transition: background 0.08s;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.theme-terminal .cell {
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+body.theme-school .cell {
+  font-family: Georgia, serif;
+}
+
+body.theme-coffee .cell {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+/* Last column: no right border */
+.cell:nth-child(9n) {
+  border-right: none;
+}
+
+/* Box dividers: right side of columns 3, 6 */
+.cell[data-col="3"],
+.cell[data-col="6"] {
+  border-right: 2.5px solid var(--border-strong);
+}
+
+/* Box dividers: bottom of rows 3, 6 */
+.cell[data-row="3"],
+.cell[data-row="6"] {
+  border-bottom: 2.5px solid var(--border-strong);
+}
+
+/* Last row: no bottom border */
+.cell[data-row="9"] {
+  border-bottom: none;
+}
+
+/* ── Cell states ──────────────────────────────────────────────────────── */
+.cell.given {
+  background: var(--given-bg);
+  color: var(--text-given);
+  font-weight: 700;
+  cursor: default;
+}
+
+body.theme-terminal .cell.given {
+  text-shadow: 0 0 6px rgba(57,255,20,0.5);
+}
+
+body.theme-school .cell.given {
+  color: #1a202c;
+  font-weight: 700;
+}
+
+.cell.pen {
+  color: var(--accent);
+}
+
+body.theme-school .cell.pen {
+  color: #4a5568;
+  font-style: italic;
+  font-weight: 400;
+}
+
+body.theme-terminal .cell.pen {
+  color: #b0ffb0;
+  text-shadow: 0 0 4px rgba(176,255,176,0.3);
+}
+
+body.theme-coffee .cell.pen {
+  color: #8b4513;
+}
+
+body.theme-mountain .cell.pen {
+  color: #1f6b45;
+}
+
+.cell.selected {
+  background: var(--accent-light) !important;
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+body.theme-terminal .cell.selected {
+  box-shadow: inset 0 0 8px rgba(57,255,20,0.25);
+}
+
+.cell.conflict {
+  background: var(--conflict-bg) !important;
+  color: var(--conflict) !important;
+}
+
+.cell.conflict.selected {
+  outline-color: var(--conflict);
+}
+
+body.theme-terminal .cell.conflict {
+  text-shadow: 0 0 6px rgba(255,68,68,0.6);
+}
+
+/* Incorrect highlight (Check results) */
+.cell.incorrect {
+  color: var(--conflict) !important;
+}
+
+.cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+/* ── Pencil marks ─────────────────────────────────────────────────────── */
+.pencil-marks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+}
+
+.pencil-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-weight: 500;
+  color: var(--pencil);
+  line-height: 1;
+}
+
+body.theme-terminal .pencil-mark {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 8px;
+}
+
+body.theme-school .pencil-mark {
+  font-style: italic;
+  font-size: 8px;
+  color: #718096;
+}
+
+body.theme-mountain .pencil-mark {
+  color: #2d6e4e;
+}
+
+.pencil-mark.empty {
+  visibility: hidden;
+}
+
+/* ── Coach-revealed pencil marks ─────────────────────────────────────── */
+.pencil-mark.coach-reveal {
+  color: var(--coach);
+  font-weight: 700;
+}
+
+/* ── Coached cell states ──────────────────────────────────────────────── */
+.cell.coached-cause {
+  background: var(--coach-light) !important;
+  box-shadow: inset 0 0 0 2px var(--coach-mid);
+  z-index: 2;
+}
+
+.cell.coached-target {
+  background: var(--coach-light) !important;
+  box-shadow: inset 0 0 0 2px var(--coach);
+  z-index: 2;
+}
+
+.cell.coached-elim-target {
+  outline: 2px dashed var(--coach);
+  outline-offset: -2px;
+  z-index: 2;
+  /* No background override */
+}
+
+.cell.coached-elim-target.selected,
+.cell.coached-sc-b.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.cell.coached-unit-member {
+  background: var(--coach-light) !important;
+  /* No outline override */
+}
+
+.cell.coached-sc-a {
+  background: var(--coach) !important;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 2px var(--coach);
+  z-index: 2;
+}
+
+.cell.coached-sc-a .pencil-mark {
+  color: var(--pencil-on-coach);
+}
+
+.cell.coached-sc-b {
+  background: var(--coach-light) !important;
+  outline: 2.5px dashed var(--coach);
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+.cell.coached-sc-b .pencil-mark {
+  color: var(--pencil-on-coach-light);
+}
+
+/* Finned-fish fin cell (vspec-003 §6): mid fill, dotted ring, "fin" tag. */
+.cell.coached-fin {
+  position: relative;
+  background: var(--coach-mid) !important;
+  outline: 2px dotted var(--coach);
+  outline-offset: -3px;
+  z-index: 2;
+}
+
+.cell.coached-fin::after {
+  content: "fin";
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--coach);
+  pointer-events: none;
+}
+
+.cell.coached-fin.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Focus ring overrides — coached cells use the coach accent color */
+.cell.coached-target:not(.selected):focus-visible,
+.cell.coached-cause:not(.selected):focus-visible {
+  outline-color: var(--coach);
+}
+
+/* ── Coach SVG overlay ────────────────────────────────────────────────── */
+#coach-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 414px;
+  height: 414px;
+  pointer-events: none;
+  z-index: 5;
+  display: none;
+  color: var(--coach);
+}
+
+#coach-overlay.visible {
+  display: block;
+}
+
+/* ── Win banner ───────────────────────────────────────────────────────── */
+.win-banner {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: var(--win-banner-bg);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 3px;
+  z-index: 10;
+}
+
+body.theme-terminal .win-banner {
+  border-radius: 0;
+}
+
+.win-banner.show {
+  display: flex;
+  pointer-events: auto;
+}
+
+.win-banner .win-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--win);
+  letter-spacing: 0.02em;
+}
+
+body.theme-terminal .win-banner .win-title {
+  text-shadow: 0 0 16px rgba(57,255,20,0.6);
+  letter-spacing: 0.1em;
+}
+
+.win-banner .win-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@container app (width <= 720px) {
+  .sudoku-grid {
+    width: min(calc(100cqw - 32px), 414px);
+    height: min(calc(100cqw - 32px), 414px);
+  }
+
+  #coach-overlay {
+    width: min(calc(100cqw - 32px), 414px);
+    height: min(calc(100cqw - 32px), 414px);
+  }
+
+  .cell {
+    font-size: clamp(14px, 4.5cqw, 22px);
+  }
+
+  .pencil-mark {
+    font-size: clamp(6px, 2cqw, 9px);
+  }
+}
+
+@container app (width <= 375px) {
+  .sudoku-grid {
+    width: calc(100cqw - 32px);
+    height: calc(100cqw - 32px);
+  }
+
+  #coach-overlay {
+    width: calc(100cqw - 32px);
+    height: calc(100cqw - 32px);
+  }
+}
+
+/* ──── copied from css/controls.css ──── */
+/* ── Number pad ───────────────────────────────────────────────────────── */
+.numpad {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.numpad-digits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.numpad-utils {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.numpad-bottom-row1 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.numpad-bottom-row2 {
+  width: 100%;
+}
+
+.numpad-bottom-row2 .btn-check {
+  width: 100%;
+}
+
+.numpad-undo-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+/* ── Base button ──────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border: 1px solid var(--btn-border);
+  border-radius: 5px;
+  background: var(--btn-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: var(--btn-hover);
+  border-color: var(--border);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Terminal */
+body.theme-terminal .btn {
+  border-radius: 0;
+  border-color: var(--border);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+body.theme-terminal .btn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 6px rgba(57,255,20,0.2);
+}
+
+/* Coffee */
+body.theme-coffee .btn {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(59,42,26,0.15);
+}
+
+/* School */
+body.theme-school .btn {
+  border-radius: 3px;
+}
+
+/* Mountain */
+body.theme-mountain .btn {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(26,58,82,0.1);
+}
+
+/* ── Digit buttons ────────────────────────────────────────────────────── */
+.btn-digit {
+  font-size: 20px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  padding: 12px 6px;
+}
+
+body.theme-terminal .btn-digit {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.theme-school .btn-digit {
+  font-family: Georgia, serif;
+  font-style: italic;
+}
+
+/* ── Mode toggle button ───────────────────────────────────────────────── */
+.btn-mode {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-mode.mode-pen {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.btn-mode.mode-pencil {
+  background: var(--surface);
+  border-color: var(--pencil);
+  color: var(--pencil);
+  font-weight: 600;
+}
+
+body.theme-terminal .btn-mode.mode-pen {
+  box-shadow: 0 0 8px rgba(57,255,20,0.25);
+}
+
+.btn-mode .mode-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.btn-mode .mode-main {
+  font-size: 13px;
+}
+
+body.theme-terminal .btn-mode .mode-main {
+  font-size: 12px;
+}
+
+.btn-mode .mode-sub {
+  font-size: 10px;
+  opacity: 0.7;
+  font-family: inherit;
+}
+
+/* ── Hint button ──────────────────────────────────────────────────────── */
+.btn-hint {
+  position: relative;
+}
+
+.hint-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--surface);
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  line-height: 1;
+  transition: background 0.2s, color 0.2s;
+}
+
+body.theme-terminal .hint-badge {
+  border-radius: 0;
+  color: #000;
+}
+
+.btn:disabled .hint-badge {
+  background: var(--text-muted);
+}
+
+/* ── Coach button ─────────────────────────────────────────────────────── */
+.btn-coach {
+  /* No additional rules — inherits .btn appearance in idle state */
+}
+
+.btn-coach.coaching {
+  background: var(--coach-light);
+  border-color: var(--coach);
+  color: var(--coach);
+  font-weight: 600;
+  box-shadow: 0 0 0 2px var(--coach-light), 0 0 0 3px var(--coach);
+  animation: coach-pulse 2s ease-in-out infinite;
+}
+
+@keyframes coach-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--coach-light), 0 0 0 3px var(--coach); }
+  50%       { box-shadow: 0 0 0 4px var(--coach-light), 0 0 0 5px var(--coach-mid); }
+}
+
+/* ── Explanation panel ────────────────────────────────────────────────── */
+.coach-panel-wrap {
+  overflow: hidden;
+  max-height: 0;
+  transition: none;
+}
+
+.coach-panel-wrap.open {
+  max-height: 220px;
+  transition: max-height 0.15s ease-out;
+}
+
+.coach-panel {
+  margin-top: 10px;
+  border: 1.5px solid var(--coach);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 14px 16px;
+  width: 414px;
+}
+
+body.theme-terminal .coach-panel {
+  border-radius: 0;
+}
+
+.coach-panel-technique {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--coach);
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+}
+
+.coach-panel-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+.coach-panel-text em {
+  color: var(--coach);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.coach-panel-text.coach-panel-note {
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
+/* ── Recap / error toast ──────────────────────────────────────────────── */
+.coach-recap {
+  display: none;
+  margin-top: 10px;
+  width: 414px;
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--coach);
+  background: var(--surface);
+  animation: fadein 0.15s ease;
+}
+
+.coach-recap.visible {
+  display: block;
+}
+
+.coach-recap.error {
+  border-left-color: var(--conflict);
+}
+
+.coach-recap.error .coach-recap-line1 {
+  color: var(--conflict);
+}
+
+.coach-recap-line1 {
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.coach-recap-line2 {
+  color: var(--text-muted);
+}
+
+@keyframes fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+body.theme-terminal .coach-recap {
+  border-radius: 0;
+}
+
+/* ── Action row ───────────────────────────────────────────────────────── */
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* Share takes its own full-width row beneath New Puzzle / Reset (vspec-006 §2). */
+#btn-share {
+  grid-column: 1 / -1;
+}
+
+/* ── Notice card (vspec-006 §3) ───────────────────────────────────────── */
+/* The width lives on the root: in the stacked layout the board column centres
+   its children, and a percentage max-width on the card itself would resolve
+   against a shrink-to-fit parent. */
+#notice-root {
+  width: 414px;
+  max-width: 100%;
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  animation: fadein 0.15s ease;
+}
+
+.notice-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notice-progress .notice-message {
+  color: var(--text-muted);
+}
+
+.notice-error {
+  border-left-color: var(--conflict);
+}
+
+.notice-error .notice-message {
+  font-weight: 600;
+}
+
+.notice-field {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 8px;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 12px;
+  color: var(--text);
+  /* Not --bg: in Coffee that is the dark page backdrop, and --text is dark. */
+  background: var(--given-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 4px;
+}
+
+.notice-field:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.notice-dismiss {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+body.theme-terminal .notice,
+body.theme-terminal .notice-field {
+  border-radius: 0;
+}
+
+/* ── Primary button (dialog confirm) ─────────────────────────────────── */
+.btn-primary {
+  background: var(--accent);
+  color: var(--surface);
+  border-color: var(--accent);
+}
+
+body.theme-terminal .btn-primary {
+  color: #000;
+  font-weight: 700;
+}
+
+body.theme-school .btn-primary {
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+body.theme-terminal .btn-primary:hover {
+  box-shadow: 0 0 10px rgba(57,255,20,0.4);
+}
+
+/* ── Confirmation dialog / modal ──────────────────────────────────────── */
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+body.theme-terminal .modal-backdrop {
+  background: rgba(0,0,0,0.75);
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal {
+  background: var(--modal-bg);
+  border-radius: 10px;
+  padding: 28px 28px 22px;
+  max-width: 340px;
+  width: 90%;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  border: 1px solid var(--border);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+body.theme-terminal .modal {
+  border-radius: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 24px rgba(57,255,20,0.2);
+}
+
+body.theme-coffee .modal {
+  box-shadow: 0 8px 40px rgba(59,42,26,0.4);
+}
+
+.modal h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.modal p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 22px;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ── Theme select (header) ────────────────────────────────────────────── */
+#theme-select {
+  font-size: 13px;
+  padding: 4px 24px 4px 8px;
+  border: 1px solid var(--btn-border);
+  border-radius: 4px;
+  background-color: var(--btn-bg);
+  color: var(--text);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  font-family: inherit;
+}
+
+body.theme-coffee #theme-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238c6642'/%3E%3C/svg%3E");
+}
+
+body.theme-school #theme-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23718096'/%3E%3C/svg%3E");
+}
+
+body.theme-terminal #theme-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2339ff14'/%3E%3C/svg%3E");
+  border-color: var(--accent);
+}
+
+body.theme-mountain .theme-control #theme-select {
+  background-color: #2d5878;
+  color: #e8f0f7;
+  border-color: #4d7a99;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23adc6de'/%3E%3C/svg%3E");
+}
+
+body.theme-coffee .theme-control #theme-select {
+  background-color: #3b2a1a;
+  color: #f5ede0;
+  border-color: #7c4f22;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c9a97a'/%3E%3C/svg%3E");
+}
+
+#theme-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Dark headers: the theme accent is near-invisible against them. */
+body.theme-coffee .theme-control #theme-select:focus {
+  outline-color: #c9a97a;
+}
+
+body.theme-mountain .theme-control #theme-select:focus {
+  outline-color: #adc6de;
+}
+
+/* ── Handedness switch (vspec-004) ────────────────────────────────────── */
+.hand-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.1s;
+}
+
+.header-controls .hand-switch:hover {
+  color: inherit;
+}
+
+.hand-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hand-switch-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  border: 1px solid var(--text-muted);
+  border-radius: 9px;
+  background: var(--btn-bg);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.hand-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform 0.15s, background 0.15s;
+}
+
+.hand-switch[aria-checked="true"] .hand-switch-track {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.hand-switch[aria-checked="true"] .hand-switch-thumb {
+  transform: translateX(14px);
+  background: var(--surface);
+}
+
+/* Dark headers: theme accents lack contrast against the header, so use the header's muted tone */
+body.theme-coffee .hand-switch { color: #c9a97a; }
+body.theme-coffee .hand-switch:focus-visible { outline-color: #c9a97a; }
+body.theme-coffee .hand-switch-track { border-color: #c9a97a; background: #3b2a1a; }
+body.theme-coffee .hand-switch-thumb { background: #c9a97a; }
+body.theme-coffee .hand-switch[aria-checked="true"] .hand-switch-track { background: #c9a97a; }
+body.theme-coffee .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #2b1d0e; }
+
+body.theme-mountain .hand-switch { color: #adc6de; }
+body.theme-mountain .hand-switch:focus-visible { outline-color: #adc6de; }
+body.theme-mountain .hand-switch-track { border-color: #adc6de; background: #2d5878; }
+body.theme-mountain .hand-switch-thumb { background: #adc6de; }
+body.theme-mountain .hand-switch[aria-checked="true"] .hand-switch-track { background: #adc6de; }
+body.theme-mountain .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #1a3a52; }
+
+body.theme-terminal .hand-switch-track { border-color: var(--accent); border-radius: 0; }
+body.theme-terminal .hand-switch-thumb { border-radius: 0; }
+body.theme-terminal .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #000; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hand-switch-track,
+  .hand-switch-thumb {
+    transition: none;
+  }
+}
+
+@container app (width <= 720px) {
+  .hand-switch {
+    display: none;
+  }
+}
+
+/* ── Generation busy / progress card (vspec-003 §4) ───────────────────── */
+.busy-card {
+  margin-top: 10px;
+  width: 414px;
+  max-width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 22px 24px;
+  text-align: center;
+}
+
+body.theme-terminal .busy-card {
+  border-radius: 0;
+}
+
+.busy-spinner {
+  width: 22px;
+  height: 22px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  border: 3px solid var(--accent-light);
+  border-top-color: var(--accent);
+  animation: busy-spin 0.9s linear infinite;
+}
+
+@keyframes busy-spin {
+  to { transform: rotate(360deg); }
+}
+
+.busy-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.busy-progress {
+  font-size: 13px;
+  color: var(--text-muted);
+  min-height: 18px;
+  margin-bottom: 16px;
+}
+
+.busy-cancel {
+  margin-top: 0;
+}
+
+/* ──── copied from css/stats.css ──── */
+/* ── Statistics panel ─────────────────────────────────────────────────── */
+.stats-panel {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  overflow: hidden;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+body.theme-terminal .stats-panel {
+  border-radius: 0;
+}
+
+body.theme-terminal .stats-panel:hover,
+body.theme-terminal .stats-panel:focus-within {
+  border-color: var(--accent);
+}
+
+.stats-heading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+body.theme-terminal .stats-heading {
+  color: var(--accent);
+  letter-spacing: 0.15em;
+  font-size: 10px;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.stats-table th {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: right;
+  padding: 6px 12px 4px;
+}
+
+.stats-table th:first-child {
+  text-align: left;
+}
+
+.stats-table td {
+  padding: 5px 12px;
+  text-align: right;
+  border-top: 1px solid var(--stats-row-sep);
+}
+
+.stats-table td:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+/* Active difficulty row */
+.stats-table tr.active-diff td {
+  background: var(--accent-light);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+body.theme-terminal .stats-table tr.active-diff td {
+  text-shadow: 0 0 4px rgba(57,255,20,0.3);
+}
+
+.stats-table tr.active-diff td:first-child::after {
+  content: " \25CF"; /* bullet */
+  font-size: 8px;
+  vertical-align: middle;
+}
+
+body.theme-terminal .stats-table tr.active-diff td:first-child::after {
+  content: " >";
+  font-size: 10px;
+}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   rspec-008 additions
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* Mockup frame: the container that stands in for the viewport. */
+.app-frame {
+  container: app / inline-size;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+/* ── Header: title + menu button (R1) ──────────────────────────────────── */
+header {
+  position: relative;
+  z-index: 50;
+}
+
+.menu-wrap {
+  position: relative;
+}
+
+.menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.menu-button svg { display: block; }
+
+.menu-button:hover,
+.menu-button[aria-expanded="true"] {
+  background: var(--btn-hover);
+  border-color: var(--btn-border);
+}
+
+.menu-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Dark headers (Coffee, Mountain): same rule as the old header switch (vspec-004 §2.4),
+   header muted tone instead of the theme accent. */
+body.theme-coffee .menu-button:hover,
+body.theme-coffee .menu-button[aria-expanded="true"] {
+  background: #3b2a1a;
+  border-color: #7c4f22;
+}
+body.theme-coffee .menu-button:focus-visible { outline-color: #c9a97a; }
+
+body.theme-mountain .menu-button:hover,
+body.theme-mountain .menu-button[aria-expanded="true"] {
+  background: #2d5878;
+  border-color: #4d7a99;
+}
+body.theme-mountain .menu-button:focus-visible { outline-color: #adc6de; }
+
+body.theme-terminal .menu-button {
+  border-radius: 0;
+  color: var(--accent);
+}
+body.theme-terminal .menu-button:hover,
+body.theme-terminal .menu-button[aria-expanded="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 6px rgba(57,255,20,0.2);
+}
+
+/* Left-hand mode (wide only, like the column swap): the button moves to the left
+   edge with the title beside it. DOM order is unchanged, so the title is read first. */
+@container app (width > 720px) {
+  html[data-hand="left"] header {
+    justify-content: flex-start;
+    gap: 12px;
+  }
+  html[data-hand="left"] .menu-wrap {
+    order: -1;
+  }
+  html[data-hand="left"] .app-menu {
+    right: auto;
+    left: 0;
+  }
+}
+
+/* ── Menu panel ───────────────────────────────────────────────────────── */
+.app-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 248px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding: 6px 0;
+  background: var(--modal-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: normal;
+  animation: menu-in 0.12s ease-out;
+}
+
+.app-menu[hidden] { display: none; }
+
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-menu { animation: none; }
+}
+
+body.theme-coffee .app-menu   { box-shadow: 0 8px 28px rgba(59,42,26,0.45); }
+body.theme-mountain .app-menu { box-shadow: 0 8px 28px rgba(26,58,82,0.25); }
+body.theme-terminal .app-menu {
+  border-radius: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 18px rgba(57,255,20,0.2);
+}
+
+.menu-section + .menu-section {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+/* Section heading: same treatment as the Difficulty label and stats column heads. */
+.menu-heading {
+  padding: 6px 14px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.menu-subheading {
+  padding: 8px 14px 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+body.theme-terminal .menu-heading {
+  color: var(--accent);
+  letter-spacing: 0.15em;
+  font-size: 10px;
+}
+
+body.theme-terminal .menu-subheading {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+}
+
+.mi {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 0 14px;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  transition: background 0.08s;
+}
+
+.mi-label { flex: 1; }
+
+/* Pointer hover moves focus to the item (APG), so hover and keyboard focus share
+   one highlight; keyboard focus adds the inset ring. */
+.mi:focus {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.mi:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.mi[aria-disabled="true"] {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.mi[aria-disabled="true"]:focus {
+  background: var(--btn-hover);
+  color: var(--text);
+}
+
+.mi-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.mi:focus .mi-hint { color: inherit; opacity: 0.8; }
+
+body.theme-terminal .mi {
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+
+body.theme-terminal .mi:focus {
+  text-shadow: 0 0 4px rgba(57,255,20,0.3);
+}
+
+/* Theme items: radio indicator. */
+.mi-radio {
+  position: relative;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 50%;
+}
+
+.mi[aria-checked="true"] .mi-radio {
+  border-color: var(--accent);
+}
+
+.mi[aria-checked="true"] .mi-radio::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+body.theme-terminal .mi-radio,
+body.theme-terminal .mi[aria-checked="true"] .mi-radio::after {
+  border-radius: 0;
+}
+
+/* Theme swatch: the theme's own page background and accent, fixed per item. */
+.mi-swatch {
+  flex-shrink: 0;
+  width: 18px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(0,0,0,0.25);
+}
+body.theme-terminal .mi-swatch { border-radius: 0; }
+
+/* Left-handed item: switch graphic, the vspec-004 track and thumb on the menu surface. */
+.mi-switch-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  border: 1px solid var(--text-muted);
+  border-radius: 9px;
+  background: var(--btn-bg);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.mi-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform 0.15s, background 0.15s;
+}
+
+.mi[aria-checked="true"] .mi-switch-track {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.mi[aria-checked="true"] .mi-switch-thumb {
+  transform: translateX(14px);
+  background: var(--surface);
+}
+
+body.theme-terminal .mi-switch-track,
+body.theme-terminal .mi-switch-thumb { border-radius: 0; }
+body.theme-terminal .mi[aria-checked="true"] .mi-switch-thumb { background: #000; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mi-switch-track, .mi-switch-thumb { transition: none; }
+}
+
+/* Option A/B: Statistics item exists only in Option B. */
+body:not(.opt-b) .mi-stats { display: none; }
+body.opt-b #stats-root { display: none; }
+
+/* ── Narrow (≤720px) ──────────────────────────────────────────────────── */
+@container app (width <= 720px) {
+  /* R6: the Left-handed entry goes where the header switch used to go. */
+  .mi-hand-section { display: none; }
+
+  /* Dropdown stays (see report); it widens and gets 44px touch rows. */
+  .app-menu {
+    width: min(300px, calc(100cqw - 24px));
+    right: -4px;
+  }
+  .mi { min-height: 44px; }
+}
+
+/* ── Next-game cluster: Difficulty + New Puzzle (R2) ──────────────────── */
+/* Select and button share one border, so they read as one control group. */
+.next-game {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.next-game #difficulty-select {
+  height: 34px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  position: relative;
+}
+
+.next-game .btn.btn-new {
+  height: 34px;
+  margin-left: -1px;
+  padding: 0 14px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-color: var(--btn-border);
+  box-shadow: none;
+}
+
+/* Focus ring sits above the shared border. */
+.next-game #difficulty-select:focus,
+.next-game .btn-new:focus-visible,
+.next-game .btn-new:hover {
+  z-index: 1;
+  position: relative;
+}
+
+body.theme-coffee .next-game,
+body.theme-mountain .next-game {
+  border-radius: 6px;
+}
+body.theme-coffee .next-game   { box-shadow: 0 1px 3px rgba(59,42,26,0.15); }
+body.theme-mountain .next-game { box-shadow: 0 1px 3px rgba(26,58,82,0.1); }
+
+body.theme-terminal .next-game .btn-new {
+  border-color: var(--accent);
+}
+
+/* ── Statistics dialog (Option B) ─────────────────────────────────────── */
+.modal.modal-stats {
+  max-width: 340px;
+}
+
+.modal-stats h2 { margin-bottom: 14px; }
+
+.modal-stats .stats-panel {
+  margin-bottom: 20px;
+}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   Mockup-only chrome (not part of the design)
+   ═════════════════════════════════════════════════════════════════════════ */
+body { padding-bottom: 64px; }
+
+body.mock-narrow { background: #8a8a8a; }
+body.mock-narrow .app-frame {
+  width: 390px;
+  margin: 0 auto;
+  box-shadow: 0 0 0 1px #555, 0 6px 30px rgba(0,0,0,0.35);
+}
+
+.mock-strip {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 200;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  padding: 8px 14px;
+  background: #1f2328;
+  color: #e6e6e6;
+  font: 12px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  text-transform: none;
+  letter-spacing: normal;
+  border-top: 2px dashed #f0b429;
+}
+
+.mock-strip strong { color: #f0b429; font-weight: 700; }
+.mock-strip fieldset { border: 0; display: flex; gap: 10px; align-items: center; }
+.mock-strip legend { float: left; margin-right: 6px; color: #aab; }
+.mock-strip label { display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
+.mock-strip button {
+  font: inherit;
+  padding: 3px 8px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #2d333b;
+  color: #e6e6e6;
+  cursor: pointer;
+}
+.mock-strip button:hover { background: #3a414a; }
+.mock-strip :focus-visible { outline: 2px solid #f0b429; outline-offset: 2px; }
+
+.mock-notes {
+  position: fixed;
+  right: 14px;
+  bottom: 56px;
+  z-index: 199;
+  width: min(460px, calc(100vw - 28px));
+  max-height: 60vh;
+  overflow: auto;
+  padding: 14px 16px;
+  background: #1f2328;
+  color: #e6e6e6;
+  border: 1px solid #f0b429;
+  border-radius: 6px;
+  font: 12.5px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.mock-notes h2 { font-size: 13px; color: #f0b429; margin: 8px 0 4px; }
+.mock-notes h2:first-child { margin-top: 0; }
+.mock-notes p, .mock-notes li { margin-bottom: 4px; }
+.mock-notes ul { padding-left: 18px; }
+</style>
+</head>
+<body class="theme-minimalist">
+
+<div class="app-frame" id="app-frame">
+
+  <div id="sr-live" aria-live="assertive" aria-atomic="true" role="status"></div>
+
+  <!-- Header: title, then the menu button (R1, R9) -->
+  <header>
+    <h1>Sudoku</h1>
+    <div class="menu-wrap" id="menu-wrap">
+      <button type="button" class="menu-button" id="menu-btn"
+              aria-haspopup="menu" aria-expanded="false" aria-controls="app-menu"
+              aria-label="Menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+          <rect x="2" y="4"  width="16" height="2" rx="1" fill="currentColor"/>
+          <rect x="2" y="9"  width="16" height="2" rx="1" fill="currentColor"/>
+          <rect x="2" y="14" width="16" height="2" rx="1" fill="currentColor"/>
+        </svg>
+      </button>
+
+      <div class="app-menu" id="app-menu" role="menu" aria-label="Menu" hidden>
+
+        <div class="menu-section" role="none">
+          <div class="menu-heading" id="mh-game" aria-hidden="true">Game</div>
+          <div role="group" aria-labelledby="mh-game">
+            <div class="mi mi-stats" role="menuitem" tabindex="-1" id="mi-stats"
+                 aria-haspopup="dialog">
+              <span class="mi-label">Statistics…</span>
+            </div>
+            <div class="mi" role="menuitem" tabindex="-1" id="mi-share">
+              <span class="mi-label">Share puzzle</span>
+              <span class="mi-hint">Copy link</span>
+            </div>
+            <div class="mi" role="menuitem" tabindex="-1" id="mi-reset"
+                 aria-haspopup="dialog">
+              <span class="mi-label">Reset puzzle…</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="menu-section" role="none">
+          <div class="menu-heading" id="mh-settings" aria-hidden="true">Settings</div>
+          <div class="menu-subheading" id="mh-theme" aria-hidden="true">Theme</div>
+          <div role="group" aria-labelledby="mh-settings mh-theme" id="theme-group">
+            <div class="mi" role="menuitemradio" tabindex="-1" aria-checked="true" data-theme="minimalist">
+              <span class="mi-radio" aria-hidden="true"></span>
+              <span class="mi-label">Minimalist</span>
+              <span class="mi-swatch" aria-hidden="true" style="background:linear-gradient(135deg,#f7f6f2 55%,#2c5282 55%)"></span>
+            </div>
+            <div class="mi" role="menuitemradio" tabindex="-1" aria-checked="false" data-theme="coffee">
+              <span class="mi-radio" aria-hidden="true"></span>
+              <span class="mi-label">Coffee Shop</span>
+              <span class="mi-swatch" aria-hidden="true" style="background:linear-gradient(135deg,#3b2a1a 55%,#c9a97a 55%)"></span>
+            </div>
+            <div class="mi" role="menuitemradio" tabindex="-1" aria-checked="false" data-theme="school">
+              <span class="mi-radio" aria-hidden="true"></span>
+              <span class="mi-label">School</span>
+              <span class="mi-swatch" aria-hidden="true" style="background:linear-gradient(135deg,#f8f5e6 55%,#4a5568 55%)"></span>
+            </div>
+            <div class="mi" role="menuitemradio" tabindex="-1" aria-checked="false" data-theme="terminal">
+              <span class="mi-radio" aria-hidden="true"></span>
+              <span class="mi-label">Digital Terminal</span>
+              <span class="mi-swatch" aria-hidden="true" style="background:linear-gradient(135deg,#0d0d0d 55%,#39ff14 55%)"></span>
+            </div>
+            <div class="mi" role="menuitemradio" tabindex="-1" aria-checked="false" data-theme="mountain">
+              <span class="mi-radio" aria-hidden="true"></span>
+              <span class="mi-label">Mountain</span>
+              <span class="mi-swatch" aria-hidden="true" style="background:linear-gradient(135deg,#1a3a52 55%,#d4e8f5 55%)"></span>
+            </div>
+          </div>
+          <!-- R6: hidden at ≤720px, like the header switch it replaces -->
+          <div class="mi-hand-section" role="group" aria-labelledby="mh-settings">
+            <div class="mi" role="menuitemcheckbox" tabindex="-1" aria-checked="false" id="mi-hand">
+              <span class="mi-label">Left-handed</span>
+              <span class="mi-switch-track" aria-hidden="true"><span class="mi-switch-thumb"></span></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="app-root" class="game-area">
+
+      <div class="left-col">
+
+        <!-- Next-game cluster (R2) -->
+        <div id="controls-root">
+          <div class="difficulty-row">
+            <label for="difficulty-select">Difficulty</label>
+            <div class="next-game" role="group" aria-label="Next game">
+              <select id="difficulty-select" aria-label="Select difficulty level">
+                <option value="kiddie">Kiddie</option>
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+                <option value="expert">Expert</option>
+                <option value="diabolical">Diabolical</option>
+                <option value="nightmare">Nightmare</option>
+              </select>
+              <button type="button" class="btn btn-new" id="btn-new" aria-label="Start new puzzle">New Puzzle</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-wrapper">
+          <div id="win-banner-root" style="position:absolute;inset:0;z-index:10;pointer-events:none;">
+            <div class="win-banner" id="win-banner" role="status">
+              <div class="win-title">Puzzle Complete!</div>
+              <div class="win-sub">Well done.</div>
+            </div>
+          </div>
+          <div id="grid-root">
+            <div class="sudoku-grid" role="grid" aria-label="Sudoku puzzle" tabindex="0" id="grid"></div>
+          </div>
+        </div>
+
+        <div id="notice-root" hidden></div>
+
+      </div>
+
+      <div class="right-col">
+
+        <!-- Number pad: unchanged (R5) -->
+        <div id="numpad-root">
+          <div class="numpad" role="toolbar" aria-label="Number pad">
+            <div class="numpad-digits" id="numpad-digits"></div>
+            <div class="numpad-utils">
+              <button class="btn" id="btn-clear" aria-label="Clear selected cell">Clear</button>
+              <button class="btn btn-mode mode-pen" id="btn-mode" aria-label="Switch to Pencil mode" aria-pressed="false">
+                <span class="mode-label">
+                  <span class="mode-main">Pen</span>
+                  <span class="mode-sub">tap for pencil</span>
+                </span>
+              </button>
+            </div>
+            <div class="numpad-undo-row">
+              <button class="btn btn-erase-all" id="btn-erase-all" aria-label="Erase all pencil marks">Erase all pencil</button>
+              <button class="btn btn-undo" id="btn-undo" aria-label="Undo last move">Undo</button>
+            </div>
+            <div class="numpad-bottom-row1">
+              <button class="btn btn-hint" id="btn-hint" aria-label="Hint, 3 remaining">
+                Hint <span class="hint-badge">3</span>
+              </button>
+              <button class="btn btn-coach" id="btn-coach" aria-label="Coach">Coach</button>
+            </div>
+            <div class="numpad-bottom-row2">
+              <button class="btn btn-check" id="btn-check" aria-label="Check answers">Check</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action row removed (R5). Option A: statistics stay here. -->
+        <div id="stats-root">
+          <div class="stats-panel">
+            <div class="stats-heading">Statistics</div>
+            <table class="stats-table" aria-label="Game statistics by difficulty">
+              <thead><tr><th scope="col">Level</th><th scope="col">Tried</th><th scope="col">Won</th></tr></thead>
+              <tbody class="stats-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 <a href="https://briancody.org">Brian Cody</a></p>
+  </footer>
+</div>
+
+<!-- Confirmation dialog: same markup and behavior as js/ui/dialog.js -->
+<div id="dialog-root">
+  <div class="modal-backdrop" id="modal-backdrop" role="dialog" aria-modal="true"
+       aria-labelledby="modal-title" aria-describedby="modal-body">
+    <div class="modal">
+      <h2 id="modal-title"></h2>
+      <p id="modal-body"></p>
+      <div class="modal-actions">
+        <button class="btn" id="modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="modal-confirm"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Option B: statistics dialog. Same modal shell; the table is the panel's table. -->
+<div id="stats-dialog-root">
+  <div class="modal-backdrop" id="stats-backdrop" role="dialog" aria-modal="true"
+       aria-labelledby="stats-dialog-title">
+    <div class="modal modal-stats">
+      <h2 id="stats-dialog-title">Statistics</h2>
+      <div class="stats-panel">
+        <table class="stats-table" aria-label="Game statistics by difficulty">
+          <thead><tr><th scope="col">Level</th><th scope="col">Tried</th><th scope="col">Won</th></tr></thead>
+          <tbody class="stats-tbody"></tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="stats-close">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Mockup-only controls ═══ -->
+<aside class="mock-notes" id="mock-notes" hidden aria-label="Mockup notes">
+  <h2>What to look at</h2>
+  <p><b>Q1.</b> Switch Option A / B and compare the right column with and without the
+  panel, on wide and narrow frames. In B, open the menu and choose Statistics….</p>
+  <h2>Interactions</h2>
+  <ul>
+    <li>Menu: click, or focus the button and press Enter, Space, ↓ or ↑. Then ↑/↓, Home/End,
+      letter keys, Enter/Space. Esc or Tab closes it.</li>
+    <li>Theme and Left-handed apply at once and leave the menu open. Statistics, Share and
+      Reset close it.</li>
+    <li>Reset… opens the existing confirmation. Cancel or confirm returns focus to the menu button.</li>
+    <li>Share: tick "No puzzle" to see it disabled. It stays focusable and reads as dimmed.</li>
+    <li>New Puzzle confirms because the board is in progress. "Show win" puts focus on it (R3).</li>
+    <li>Narrow frame: Left-handed leaves the menu (R6). The menu stays a dropdown with
+      44px rows, and the button stays at the right because handedness has no effect when stacked.</li>
+  </ul>
+</aside>
+
+<div class="mock-strip" role="region" aria-label="Mockup controls">
+  <strong>Mockup controls</strong>
+  <fieldset>
+    <legend>Q1 Statistics:</legend>
+    <label><input type="radio" name="opt" value="a" checked> A: on screen</label>
+    <label><input type="radio" name="opt" value="b"> B: menu → dialog</label>
+  </fieldset>
+  <label><input type="checkbox" id="mock-hand"> Left-handed</label>
+  <label><input type="checkbox" id="mock-narrow"> Narrow frame (390px)</label>
+  <label><input type="checkbox" id="mock-nopuzzle"> No puzzle (Share disabled)</label>
+  <button type="button" id="mock-win">Show win</button>
+  <button type="button" id="mock-notes-btn" aria-expanded="false" aria-controls="mock-notes">Notes</button>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ── Sample board (static) ───────────────────────────────────────────────
+  const GIVENS = [
+    '53..7....', '6..195...', '.98....6.', '8...6...3', '4..8.3..1',
+    '7...2...6', '.6....28.', '...419..5', '....8..79',
+  ];
+  const SOLUTION = [
+    '534678912', '672195348', '198342567', '859761423', '426853791',
+    '713924856', '961537284', '287419635', '345286179',
+  ];
+  const PEN = [[0, 2], [0, 3], [1, 1], [2, 0], [4, 1], [4, 2], [6, 0], [7, 1]];
+  const PENCIL = { '2,3': [3, 4], '0,8': [1, 2], '3,1': [1, 5], '5,1': [1, 5] };
+  const SELECTED = '2,3';
+
+  const STATS = [
+    ['Kiddie', 4, 4], ['Easy', 12, 11], ['Medium', 23, 18], ['Hard', 9, 5],
+    ['Expert', 3, 1], ['Diabolical', 1, 0], ['Nightmare', 0, 0],
+  ];
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+  const srLive = $('#sr-live');
+  function announce(text) {
+    srLive.textContent = '';
+    setTimeout(() => { srLive.textContent = text; }, 30);
+  }
+
+  const gridEl = $('#grid');
+  let penOn = true;
+
+  function renderGrid() {
+    gridEl.innerHTML = '';
+    const penSet = new Set(PEN.map(([r, c]) => `${r},${c}`));
+    for (let r = 0; r < 9; r++) {
+      const row = document.createElement('div');
+      row.setAttribute('role', 'row');
+      row.style.display = 'contents';
+      for (let c = 0; c < 9; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.setAttribute('role', 'gridcell');
+        cell.dataset.row = r + 1;
+        cell.dataset.col = c + 1;
+        const key = `${r},${c}`;
+        const g = GIVENS[r][c];
+        if (g !== '.') {
+          cell.classList.add('given');
+          cell.textContent = g;
+        } else if (penOn && penSet.has(key)) {
+          cell.classList.add('pen');
+          cell.textContent = SOLUTION[r][c];
+        } else if (penOn && PENCIL[key]) {
+          const pm = document.createElement('div');
+          pm.className = 'pencil-marks';
+          for (let d = 1; d <= 9; d++) {
+            const m = document.createElement('span');
+            m.className = 'pencil-mark';
+            m.textContent = PENCIL[key].includes(d) ? d : '';
+            pm.appendChild(m);
+          }
+          cell.appendChild(pm);
+        }
+        if (key === SELECTED) cell.classList.add('selected');
+        row.appendChild(cell);
+      }
+      gridEl.appendChild(row);
+    }
+  }
+
+  function renderStats() {
+    $$('.stats-tbody').forEach(tbody => {
+      tbody.innerHTML = STATS.map(([label, tried, won]) =>
+        `<tr${label === 'Medium' ? ' class="active-diff"' : ''}
+             aria-label="${label}: ${tried} attempted, ${won} won">
+           <td>${label}</td><td>${tried}</td><td>${won}</td></tr>`).join('');
+    });
+  }
+
+  const digits = $('#numpad-digits');
+  for (let d = 1; d <= 9; d++) {
+    const b = document.createElement('button');
+    b.className = 'btn btn-digit';
+    b.textContent = d;
+    b.setAttribute('aria-label', `Enter ${d}`);
+    digits.appendChild(b);
+  }
+  $$('#numpad-root button').forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
+
+  renderGrid();
+  renderStats();
+
+  // ── Modal dialogs (behavior of js/ui/dialog.js) ─────────────────────────
+  let openModal = null;
+
+  function showModal(backdrop, focusables, initial, returnFocus, onClose) {
+    backdrop.classList.add('open');
+    openModal = { backdrop, focusables, returnFocus, onClose };
+    initial.focus();
+  }
+
+  function closeModal() {
+    if (!openModal) return;
+    const { backdrop, returnFocus, onClose } = openModal;
+    backdrop.classList.remove('open');
+    openModal = null;
+    if (onClose) onClose();
+    if (returnFocus) returnFocus.focus();
+  }
+
+  document.addEventListener('keydown', e => {
+    if (!openModal) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeModal(); return; }
+    if (e.key === 'Tab') {
+      const f = openModal.focusables;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+
+  const confirmBackdrop = $('#modal-backdrop');
+  const cancelBtn = $('#modal-cancel');
+  const confirmBtn = $('#modal-confirm');
+  let pendingConfirm = null;
+
+  function confirmDialog({ title, body, confirmLabel, onConfirm, returnFocus }) {
+    $('#modal-title').textContent = title;
+    $('#modal-body').textContent = body;
+    confirmBtn.textContent = confirmLabel;
+    pendingConfirm = onConfirm;
+    showModal(confirmBackdrop, [cancelBtn, confirmBtn], cancelBtn, returnFocus);
+  }
+
+  cancelBtn.addEventListener('click', closeModal);
+  confirmBtn.addEventListener('click', () => {
+    const fn = pendingConfirm;
+    closeModal();
+    if (fn) fn();
+  });
+
+  const statsBackdrop = $('#stats-backdrop');
+  const statsClose = $('#stats-close');
+  statsClose.addEventListener('click', closeModal);
+
+  [confirmBackdrop, statsBackdrop].forEach(bd =>
+    bd.addEventListener('mousedown', e => { if (e.target === bd) e.preventDefault(); }));
+
+  // ── Menu button + menu ──────────────────────────────────────────────────
+  const menuBtn = $('#menu-btn');
+  const menu = $('#app-menu');
+  const menuWrap = $('#menu-wrap');
+
+  const visibleItems = () => $$('.mi', menu).filter(el => el.offsetParent !== null);
+
+  function openMenu(focus = 'first') {
+    menu.hidden = false;
+    menuBtn.setAttribute('aria-expanded', 'true');
+    const items = visibleItems();
+    (focus === 'last' ? items[items.length - 1] : items[0]).focus();
+  }
+
+  function closeMenu(returnFocus = true) {
+    if (menu.hidden) return;
+    menu.hidden = true;
+    menuBtn.setAttribute('aria-expanded', 'false');
+    if (returnFocus) menuBtn.focus();
+  }
+
+  menuBtn.addEventListener('click', () => {
+    if (menu.hidden) openMenu('first'); else closeMenu();
+  });
+
+  menuBtn.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); openMenu('first'); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); openMenu('last'); }
+  });
+
+  menu.addEventListener('keydown', e => {
+    const items = visibleItems();
+    const i = items.indexOf(document.activeElement);
+    const move = j => items[(j + items.length) % items.length].focus();
+    switch (e.key) {
+      case 'ArrowDown': e.preventDefault(); move(i + 1); break;
+      case 'ArrowUp':   e.preventDefault(); move(i - 1); break;
+      case 'Home':      e.preventDefault(); move(0); break;
+      case 'End':       e.preventDefault(); move(items.length - 1); break;
+      case 'Escape':    e.preventDefault(); closeMenu(); break;
+      case 'Tab':       closeMenu(); break; // focus is on the button; Tab moves on from there
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (i >= 0) activate(items[i]);
+        break;
+      default:
+        if (e.key.length === 1 && /\S/.test(e.key)) {
+          const ch = e.key.toLowerCase();
+          const order = items.slice(i + 1).concat(items.slice(0, i + 1));
+          const hit = order.find(el => $('.mi-label', el).textContent.trim().toLowerCase().startsWith(ch));
+          if (hit) hit.focus();
+        }
+    }
+  });
+
+  menu.addEventListener('pointermove', e => {
+    const item = e.target.closest('.mi');
+    if (item && document.activeElement !== item) item.focus({ preventScroll: true });
+  });
+
+  menu.addEventListener('click', e => {
+    const item = e.target.closest('.mi');
+    if (item) activate(item);
+  });
+
+  document.addEventListener('pointerdown', e => {
+    if (menu.hidden || menuWrap.contains(e.target)) return;
+    closeMenu(false);
+    // If the click did not land on something focusable, put focus back on the button.
+    setTimeout(() => {
+      const a = document.activeElement;
+      if (!a || a === document.body || menu.contains(a)) menuBtn.focus({ preventScroll: true });
+    }, 0);
+  });
+
+  function activate(item) {
+    if (item.getAttribute('aria-disabled') === 'true') return;
+
+    if (item.dataset.theme) { setTheme(item.dataset.theme); return; }
+    if (item.id === 'mi-hand') { setHand(item.getAttribute('aria-checked') !== 'true'); return; }
+
+    closeMenu();
+    if (item.id === 'mi-stats') {
+      showModal(statsBackdrop, [statsClose], statsClose, menuBtn);
+    } else if (item.id === 'mi-share') {
+      share();
+    } else if (item.id === 'mi-reset') {
+      confirmDialog({
+        title: 'Reset puzzle?',
+        body: 'Your entries will be cleared.',
+        confirmLabel: 'Reset',
+        returnFocus: menuBtn,
+        onConfirm: () => { penOn = false; renderGrid(); announce('Puzzle reset.'); },
+      });
+    }
+  }
+
+  // ── Settings ────────────────────────────────────────────────────────────
+  const THEME_NAMES = {
+    minimalist: 'Minimalist', coffee: 'Coffee Shop', school: 'School',
+    terminal: 'Digital Terminal', mountain: 'Mountain',
+  };
+
+  function setTheme(t) {
+    document.body.classList.remove(...Object.keys(THEME_NAMES).map(k => 'theme-' + k));
+    document.body.classList.add('theme-' + t);
+    document.documentElement.setAttribute('data-theme', t);
+    $$('[data-theme]', menu).forEach(el =>
+      el.setAttribute('aria-checked', String(el.dataset.theme === t)));
+    announce(`Theme: ${THEME_NAMES[t]}`);
+  }
+
+  const mockHand = $('#mock-hand');
+  function setHand(left) {
+    if (left) document.documentElement.setAttribute('data-hand', 'left');
+    else document.documentElement.removeAttribute('data-hand');
+    $('#mi-hand').setAttribute('aria-checked', String(left));
+    mockHand.checked = left;
+  }
+  mockHand.addEventListener('change', () => setHand(mockHand.checked));
+
+  // ── Share (behavior of js/ui/share.js + notice.js) ──────────────────────
+  const noticeRoot = $('#notice-root');
+  let noticeTimer = 0;
+
+  function share() {
+    clearTimeout(noticeTimer);
+    noticeRoot.innerHTML = `
+      <div class="notice notice-info">
+        <div class="notice-body"><div class="notice-message">Link copied to clipboard.</div></div>
+        <button type="button" class="btn notice-dismiss" aria-label="Dismiss message">✕</button>
+      </div>`;
+    noticeRoot.hidden = false;
+    $('.notice-dismiss', noticeRoot).addEventListener('click', hideNotice);
+    noticeTimer = setTimeout(hideNotice, 4000);
+    announce('Link copied to clipboard.');
+  }
+
+  function hideNotice() {
+    clearTimeout(noticeTimer);
+    noticeRoot.hidden = true;
+    noticeRoot.innerHTML = '';
+  }
+
+  $('#mock-nopuzzle').addEventListener('change', e => {
+    const share = $('#mi-share');
+    if (e.target.checked) share.setAttribute('aria-disabled', 'true');
+    else share.removeAttribute('aria-disabled');
+  });
+
+  // ── Next-game cluster ───────────────────────────────────────────────────
+  const banner = $('#win-banner');
+  const btnNew = $('#btn-new');
+  const diffSel = $('#difficulty-select');
+  let won = false;
+  let currentDiff = diffSel.value;
+
+  const inProgress = () => penOn && !won;
+
+  function startNew() {
+    won = false;
+    banner.classList.remove('show');
+    penOn = false;
+    renderGrid();
+    announce('New puzzle loaded.');
+  }
+
+  btnNew.addEventListener('click', () => {
+    if (!inProgress()) { startNew(); btnNew.focus(); return; }
+    confirmDialog({
+      title: 'Start a new puzzle?',
+      body: 'Your current progress will be lost.',
+      confirmLabel: 'New Puzzle',
+      returnFocus: btnNew,
+      onConfirm: startNew,
+    });
+  });
+
+  diffSel.addEventListener('change', () => {
+    const next = diffSel.value;
+    if (!inProgress()) { currentDiff = next; startNew(); return; }
+    diffSel.value = currentDiff;
+    const nextLabel = diffSel.querySelector(`option[value="${next}"]`).textContent;
+    confirmDialog({
+      title: `Start a new ${nextLabel} puzzle?`,
+      body: 'Your current progress will be lost.',
+      confirmLabel: 'New Puzzle',
+      returnFocus: diffSel,
+      onConfirm: () => { diffSel.value = next; currentDiff = next; startNew(); },
+    });
+  });
+
+  $('#mock-win').addEventListener('click', () => {
+    won = true;
+    banner.classList.add('show');
+    btnNew.focus();
+    announce('Puzzle complete! Well done.');
+  });
+
+  // ── Remaining mockup controls ───────────────────────────────────────────
+  $$('input[name="opt"]').forEach(r => r.addEventListener('change', () => {
+    document.body.classList.toggle('opt-b', r.value === 'b' && r.checked);
+  }));
+
+  $('#mock-narrow').addEventListener('change', e => {
+    document.body.classList.toggle('mock-narrow', e.target.checked);
+  });
+
+  const notesBtn = $('#mock-notes-btn');
+  notesBtn.addEventListener('click', () => {
+    const notes = $('#mock-notes');
+    notes.hidden = !notes.hidden;
+    notesBtn.setAttribute('aria-expanded', String(!notes.hidden));
+  });
+})();
+</script>
+</body>
+</html>

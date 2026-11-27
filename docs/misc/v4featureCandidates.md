@@ -24,7 +24,11 @@ Encode the puzzle's given cells into a URL parameter. A "Share" action generates
 copies the link to clipboard. Recipients start from the same givens with no progress.
 Zero server infrastructure required.
 
-### Hamburger Menu UI Consolidation
+### Hamburger Menu UI Consolidation — In progress
+
+> Scope widened 2026-11-27: New Puzzle moves beside Difficulty, Reset moves into the
+> menu, the action row goes away, and Stats placement is open. Spec:
+> `rspec-008-hamburger-menu`. Exploratory mockup: `docs/mockups/hamburger-menu-v1.html`.
 
 A hamburger menu (top-right in right-hand mode, top-left in left-hand mode) consolidates
 settings and actions that currently live ad-hoc in the UI: theme selection, handedness
