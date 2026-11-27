@@ -548,7 +548,7 @@ export function outcomeMessage(report) {
   if (report.stopped !== null) {
     const { at, message } = report.stopped;
     return {
-      text: `Replay stopped at action ${count(at)} of ${count(report.total)}: ${message}. The board shows the position before that action.`,
+      text: `Replay stopped at action ${at} of ${count(report.total)}: ${message}. The board shows the position before that action.`,
       error: true,
     };
   }

@@ -112,7 +112,14 @@ leave it. A session document edited by hand, or a console dispatch, can reach it
 
 ## 2. Wording and consistency
 
-### 2.1 Thousands separator on a position in the "stopped" message
+### 2.1 Thousands separator on a position in the "stopped" message — resolved 2026-11-26
+
+**Resolution (Product Director):** positions stay plain. `outcomeMessage` writes `at`
+without a separator; the total keeps it. Pinned by a new `replay.test.js` case
+("action 1234 of 5,000"); fspec D-35 f now says positions are not counts.
+
+The original finding:
+
 
 `outcomeMessage` in `js/dev/replay.js` line 551 writes
 `Replay stopped at action ${count(at)} of ${count(report.total)}`. fspec D-35 f applies
@@ -122,7 +129,15 @@ inconsistent with the other position formats. No test pins it either way.
 **Options:** write `at` plain; or declare that both numbers of an "N of M" pair take
 separators (the Implementor's reading) and record that in the fspec.
 
-### 2.2 The aspec text trails the code
+### 2.2 The aspec text trails the code — resolved 2026-11-26
+
+**Resolution:** every point below is now in `aspec-debug-instrumentation.md`. The §2.3
+table was rewritten from the modules' actual imports, which also removed three stale
+entries (`devBoot.js` → `sessionCodec.js`, `devApi.js` → `sessionCodec.js` / `inspect.js`,
+`sessionCodec.js` → `util/grid.js`). The browser figures are a new table in §16.3.
+
+The original finding:
+
 
 The implementation is correct against the fspec; these are places where
 `aspec-debug-instrumentation.md` was not updated as decisions were made. A single
@@ -150,7 +165,15 @@ the Implementors' reports:
   longest comparison slice about 215 ms (estimated under 100); recorder cost per action
   about 0.24 ms (estimated under 0.1).
 
-### 2.3 `docs/misc/dev-mode-workflows.md` is stale
+### 2.3 `docs/misc/dev-mode-workflows.md` is stale — resolved 2026-11-26
+
+**Resolution:** the "never change the board" claim is replaced by a list of what does;
+the console one-liners use `sudokuDev`; new workflows §3.10–3.15 cover recording,
+seeds, replay and the report, bisecting, fixtures and the console API; the tool reference
+and limits cover the new tools. The README's `js/dev/` tree entry lists every module.
+
+The original finding:
+
 
 Line 29 says the tools never change the board except Load from string. That stopped
 being true with the inspector's set-board-to-step, and is further from true now: the
@@ -162,7 +185,14 @@ turn a session into a regression fixture, use `window.sudokuDev` from the consol
 `README.md` has a current "Debug instrumentation" section; its architecture tree line
 for `js/dev/` (around line 190) still names only the old modules.
 
-### 2.4 Role files do not match how the roles are run
+### 2.4 Role files do not match how the roles are run — resolved 2026-11-26
+
+**Resolution (Product Director):** every role in `docs/agents/`, the Uber Developer
+included, runs on Opus (`claude-opus-5-5`). The Architect, QE Strategist and Reviewer are
+`general-purpose`. The Tech Stack sections are filled in.
+
+The original finding:
+
 
 `docs/agents/*.md` name `sonnet` or `opus` and, for the Architect, QE Strategist and
 Reviewer, the read-only `Plan` / `Explore` agent types. Those three must write a file, so

@@ -1,10 +1,10 @@
 # Role: QE Strategist
 
 ## Subagent Type
-`Plan`
+`general-purpose` — the role writes its output file, so a read-only type will not do
 
 ## Model
-`opus` (`claude-opus-4-6`) — coverage gap reasoning has high downstream cost
+`opus` (`claude-opus-5-5`)
 
 ## Purpose
 Analyze the implementation plan and produce a test strategy that achieves 100% branch
@@ -17,8 +17,21 @@ blueprint to implement from.
 - Functional spec (for behavior reference): `docs/fspecs/[feature].md`
 
 ## Tech Stack
-> **TBD** — to be filled in once the Architect defines the stack. Update this section to
-> reflect the test framework and coverage tooling chosen in the aspec.
+- **Runtime:** plain ES modules in the browser; no build step, no bundler, no transpilation.
+  The generator runs in a Web Worker (`js/worker/generator.worker.js`).
+- **Tests:** Mocha + Chai, run in headless Chromium by Playwright. `npm test` runs
+  `test-runner/run.js`, which serves the repo on `localhost:3001` and opens
+  `js/tests/setup.html`. Every test file must be registered there as a `<script type="module">`.
+- **Layout:** `js/tests/unit/`, `js/tests/integration/`, shared helpers in
+  `js/tests/helpers/`, fixtures in `js/tests/fixtures/`, fixture-capture tools in
+  `js/tests/tools/`.
+- **Coverage:** V8 coverage via Playwright's `page.coverage`, written to
+  `coverage/coverage.json` and reported with c8. Reproduce the report with the URL-rewrite
+  step in `docs/misc/CodeCoverageV2.md` §6, then
+  `npx c8 report --reporter=text --include='js/**' --exclude='js/tests/**'`.
+  Worker-context code is not collected; cover it with direct-import tests.
+- **Live debugging:** `scripts/devdrive.mjs` drives the app in a headed Chrome over CDP
+  (`docs/misc/dev-mode-workflows.md` §1).
 
 ## Instructions
 

@@ -4,7 +4,7 @@
 `general-purpose`
 
 ## Model
-`sonnet` (`claude-sonnet-4-6`)
+`opus` (`claude-opus-5-5`)
 
 ## Purpose
 Translate the functional spec into a visual design — the look, feel, and layout of the

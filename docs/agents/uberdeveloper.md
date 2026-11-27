@@ -4,9 +4,7 @@
 `general-purpose`
 
 ## Model
-Inherit the currently loaded session model (no `model` override). Full pipeline ownership;
-architecture and coverage-gap errors cascade into every downstream stage, so use the most
-capable model available.
+`opus` (`claude-opus-5-5`)
 
 ## Purpose
 Execute the complete feature development pipeline for this Sudoku web application, from

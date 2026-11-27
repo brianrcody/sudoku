@@ -4,7 +4,7 @@
 `general-purpose`
 
 ## Model
-`sonnet` (`claude-sonnet-4-6`)
+`opus` (`claude-opus-5-5`)
 
 ## Purpose
 Turn the architectural implementation plan into working, production-ready code. Also produce
@@ -16,8 +16,21 @@ handing off to QE.
 - Functional spec (for behavior reference): `docs/fspecs/[feature].md`
 
 ## Tech Stack
-> **TBD** — to be filled in once the Architect defines the stack in the first aspec.
-> Update this section at that time.
+- **Runtime:** plain ES modules in the browser; no build step, no bundler, no transpilation.
+  The generator runs in a Web Worker (`js/worker/generator.worker.js`).
+- **Tests:** Mocha + Chai, run in headless Chromium by Playwright. `npm test` runs
+  `test-runner/run.js`, which serves the repo on `localhost:3001` and opens
+  `js/tests/setup.html`. Every test file must be registered there as a `<script type="module">`.
+- **Layout:** `js/tests/unit/`, `js/tests/integration/`, shared helpers in
+  `js/tests/helpers/`, fixtures in `js/tests/fixtures/`, fixture-capture tools in
+  `js/tests/tools/`.
+- **Coverage:** V8 coverage via Playwright's `page.coverage`, written to
+  `coverage/coverage.json` and reported with c8. Reproduce the report with the URL-rewrite
+  step in `docs/misc/CodeCoverageV2.md` §6, then
+  `npx c8 report --reporter=text --include='js/**' --exclude='js/tests/**'`.
+  Worker-context code is not collected; cover it with direct-import tests.
+- **Live debugging:** `scripts/devdrive.mjs` drives the app in a headed Chrome over CDP
+  (`docs/misc/dev-mode-workflows.md` §1).
 
 ## Instructions
 

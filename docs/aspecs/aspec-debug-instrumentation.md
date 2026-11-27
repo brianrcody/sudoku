@@ -130,17 +130,17 @@ No change to `index.html`.
 | Module | May import |
 |---|---|
 | `game/foreground.js` | `config.js` only. The provider, dialog, game state, preference storage, `announce`, and `diagnostics` are parameters. It touches no DOM and no storage directly |
-| `sessionCodec.js` | `config.js`, `util/grid.js`, `util/bitset.js`, `game/state.js` (`deriveCoachedCells` only), `game/conflicts.js`, `dev/inspect.js` (`cellRef`) |
+| `sessionCodec.js` | `config.js`, `util/bitset.js`, `game/state.js` (`deriveCoachedCells` only), `game/conflicts.js`, `dev/inspect.js` (`cellRef`) |
 | `machine.js` | `game/state.js`, `sessionCodec.js` |
 | `recorderStore.js` | `util/events.js`, `dev/devMode.js` (`RECORDER_DB`) |
 | `devLog.js` | `util/events.js`, `persist/storage.js` |
 | `recorder.js` | `sessionCodec.js`, `machine.js` |
-| `devBoot.js` | `recorder.js`, `recorderStore.js`, `devLog.js`, `sessionCodec.js`, `dev/devMode.js`, `util/events.js` |
+| `devBoot.js` | `recorder.js`, `recorderStore.js`, `devLog.js`, `dev/devMode.js`, `util/events.js` |
 | `replay.js` | `sessionCodec.js`, `machine.js`, `config.js`, `game/puzzleLoader.js` (`rejectionDetail`). The analyzer, hint provider, and puzzle check are injected |
-| `devSession.js` | `replay.js`, `sessionCodec.js`, `inspect.js`, `solver/candidates.js`, `coach/analyzer.js`, `providers/hintProvider.js`, `game/puzzleLoader.js` (`hasProgress`), `ui/srLive.js`, `util/clipboard.js`, `config.js` |
-| `devApi.js` | `devSession.js`, `sessionCodec.js`, `inspect.js` |
-| `recorderPanel.js` | `devSession.js` (through the instance passed in), `ui/srLive.js` |
-| `devPanel.js` | As today, plus `recorderPanel.js`, `devApi.js`, `devSession.js` |
+| `devSession.js` | `replay.js`, `sessionCodec.js` (`describeState`), `inspect.js`, `devLog.js` (`CATEGORIES`), `machine.js` (`createMachine`, the default `makeMachine`), `solver/candidates.js`, `solver/logical.js` (`tierForRank`), `generator/rater.js` (`rate`), `coach/analyzer.js`, `providers/hintProvider.js`, `game/puzzleLoader.js` (`hasProgress`), `ui/srLive.js`, `ui/dialog.js` (`close`, for a superseded replay's dialog, §11.3), `util/clipboard.js`, `util/events.js` (`diagnostics`), `config.js` |
+| `devApi.js` | `devSession.js` (`validateGenerateArgs`). Everything else goes through the session instance passed to `install` |
+| `recorderPanel.js` | `devSession.js` (through the instance passed in), `replay.js` (`count`, `formatReportLines`), `ui/srLive.js` |
+| `devPanel.js` | As today, plus `recorderPanel.js`, `devApi.js`, `devSession.js`, `config.js` (`DIFFICULTY_ORDER`, `TIER_LABELS`) |
 
 No module outside `js/dev/` and `js/tests/` imports any file in `js/dev/` other than
 `devMode.js`. `devMode.js` imports only `persist/storage.js`, as today.
@@ -181,7 +181,13 @@ The guarantee is enforced three ways:
    `_muteDepth > 0` comparison per `announce` call in `srLive.js`; one
    `action.type === 'DEV_RESTORE_POSITION'` comparison per `changed` emit in `coach.js`;
    one extra module fetch (`game/foreground.js`) at boot, offset by the same code leaving
-   `main.js`.
+   `main.js`. Off the per-action path: the reducer's clock and timeouts go through the
+   `timers` object (one property call where `setTimeout` / `Date.now` were called directly,
+   at each check-highlight schedule or clear); `puzzleLoader.load` evaluates
+   `confirmOnce ?? confirm` once per load; `loadProvider`'s `onmessage` compares the
+   message type against `LOAD_RESULT` and `CHECK_RESULT` once per worker reply;
+   `foreground.request` tests its `fallback` policy once per honest fallback and sets and
+   tests its `delivered` flag once per request.
 
 ## 4. Seams in Always-Loaded Modules
 
@@ -546,7 +552,9 @@ Report = {
   compared: number,                    // k
   counts: { coach: number, hint: number },
   divergences: Array<{ action: number, kind: "coach" | "hint", time: string,   // ISO, from the document
-                       differences: Array<{ part: string, recorded: any, current: any }> }>,
+                       differences: Array<{ part: string, recorded: any, current: any }>,
+                       technique?: string,   // coach only: the recorded technique, for the report line
+                       cell?: number }>,     // hint only: the cell the hint was asked for
   notCompared: Array<{ action: number, kind: "coach" | "hint", reason: string }>,   // action 0 = starting position
   errors: { recorded: ErrorItem[], raised: ErrorItem[] },
   notes: string[],
@@ -565,8 +573,9 @@ only the panel formats it as local `HH:MM:SS.mmm`.
 ```js
 export const RECORDER_CAPACITY = 5000;
 
-createRecorder({ store, log, capacity = RECORDER_CAPACITY, now = Date.now,
+createRecorder({ store, log, opened, capacity = RECORDER_CAPACITY, now = Date.now,
                  clock = () => performance.now() })
+  // opened: the store's open() promise; `ready` merges the saved history once it settles
   → {
     tap,                               // { begin(action), end(action) } — never throws
     noteHint(hint),                    // called by the wrapped hint provider
@@ -580,9 +589,14 @@ createRecorder({ store, log, capacity = RECORDER_CAPACITY, now = Date.now,
     replaceHistory(start, entries),    // replay hand-over
     silently(fn),                      // the next depth-0 action is not recorded
     errorsSince(mark), mark(),         // for the replay report
+    snapshot(),                        // { start, entries }: the store's snapshot collaborator
+    storageChanged(status),            // the store's onStatus collaborator; emits 'storage'
     on(event, fn),                     // 'change' (counts), 'storage' (status)
   }
 ```
+
+`boot()` in `devBoot.js` takes no `storage` default of its own: the logging switches'
+storage is defaulted in `createDevLog`, and `boot` passes its option through.
 
 ### 6.2 Tap behaviour
 
@@ -848,7 +862,7 @@ validator's schema, and the decoder, all in `sessionCodec.js` as one `KINDS` map
 
 A `CoachStep` validates when it has: `technique` string; `type` `"placement"` or
 `"elimination"`; `digits` array; `roles` with `target` (index or null) and the arrays
-`cause`, `elimTarget`, `unitMember`, `scA`, `scB`; `eliminations` array of
+`cause`, `elimTarget`, `unitMember`, `scA`, `scB`, `fin` (the renderer reads `fin` too); `eliminations` array of
 `{ cellIndex, digit }`; `autoReveal` with `required` and `cells` of
 `{ cellIndex, candidates }`; `supportingText` string; `complexity` object. These are the
 fields the reducer and `coach.js` read. Other fields pass through untouched.
@@ -1376,7 +1390,7 @@ panel, and therefore only for panel-initiated operations.
 | `coachStep()` | From `state.coachSession` |
 | `candidates()` | No puzzle → `no-puzzle`. `initialCandidates(state.pen)` → 81 digit lists, empty for filled cells |
 | `setPencilMarks(cell, digits)` | Checks in fspec §6.7 table order: `no-puzzle`, `game-won`, `busy`, `invalid-cell` (`/^r[1-9]c[1-9]$/`), `cell-filled`, `invalid-digits`. Then `dispatch({ type: 'DEV_SET_PENCIL', index, mask })`. Returns `cell`, `digits`, and `message: "Pencil marks set in *cell*."`. The message is announced when the marks changed; when they were already as requested the call still succeeds and returns the message, the dispatch is still made (and recorded as having changed nothing), and nothing is announced |
-| `fillPencilMarks()` | First three checks. `pencil = initialCandidates(pen)`; `cellsChanged` counted against the current marks before dispatch; `dispatch({ type: 'DEV_FILL_PENCIL', pencil })`. Returns `cellsChanged` and `message: "Pencil marks filled in *n* cells."` ("1 cell" for one), announced |
+| `fillPencilMarks()` | First three checks. `pencil = initialCandidates(pen)`; `dispatch({ type: 'DEV_FILL_PENCIL', pencil })`. `cellsChanged` is the number of the 81 cells whose marks differ after the dispatch from before it, so marks reverted by ending a coach session count (fspec D-34). Returns `cellsChanged` and `message: "Pencil marks filled in *n* cells."` ("1 cell" for one), with *n* thousands-separated. Announced unless `cellsChanged` is 0 (fspec §6.7) |
 | `exportSession()` | `recorder.exportDocument()` |
 | `copySession()` | Panel only. `copy(JSON.stringify(doc, null, 2))` → status text per fspec §4.2 |
 | `replay(input, { stopAfter }, intent, via)` | §11.3 |
@@ -1402,7 +1416,7 @@ Phases: `checking` → `confirming` → `applying` → `comparing`.
 | Arrival | Rule |
 |---|---|
 | API call, any replay in flight | `busy` |
-| Panel, earlier panel replay in `checking` or `confirming` | The earlier one is superseded: its promise resolves with the declined result, its dialog (if open) is replaced, and from that moment it emits no status, no report, and no announcement. The status line and report belong to the newer run |
+| Panel, earlier panel replay in `checking` or `confirming` | The earlier one is superseded: its promise resolves with the declined result, its dialog (if open) is closed explicitly through the injected `closeDialog` (default `ui/dialog.js` `close`), counting as declined, rather than left to be replaced by a newer dialog that may never open, and from that moment it emits no status, no report, and no announcement. The status line and report belong to the newer run |
 | Panel, earlier replay in `applying` or `comparing`, or an API replay in any phase | Waits for it to finish, then proceeds |
 
 Each run holds a token. After every `await` it checks that the token is still current; if
@@ -1523,6 +1537,13 @@ throws or rejects. `replay` passes `input` as given (object or text). `generate`
 ```js
 mount(panel: HTMLElement, { session, recorder, log })
 ```
+
+The panel root itself carries `data-keep-selection` (set in `devPanel.mount`, fspec D-35 e),
+so no control anywhere in the panel triggers the grid's outside-click `DESELECT`; without
+it, using the panel would record deselects, a cleared history would not stay empty, and a
+replay straight after Clear history would always ask. The per-element
+`data-keep-selection` attributes on Clear history, Replay, Restore board and the step list
+predate the root attribute and are now redundant; they are harmless and may be removed.
 
 Appended to the panel markup after `#dev-gen`:
 
@@ -1949,6 +1970,15 @@ Node 22.22 on the development machine, importing the app's modules unmodified.
 | Same tier, seed, and budget run twice (4 pairs) | Identical puzzle, `gen`, `id` |
 | Seeds exhausting the real budget | Easy: 2 in 206 (seed 26 → Hard, 237 ms). Kiddie: 0 in 4,000. Hard: 0 in 139. Nightmare: 0 in 122 |
 | `('nightmare', 1)` and `('diabolical', 1)` with budget 3 | Fall back to Easy; `('nightmare', 2)` to Medium |
+
+Measured in Chromium after implementation, against the estimates of §8.5 and §14.5. All three
+exceed the estimate and all stay far inside the 1-second bound:
+
+| Measurement | Estimate | Browser |
+|---|---|---|
+| Replay of 5,000 actions (apply and commit) | under 150 ms | 210–233 ms |
+| Longest comparison slice between yields | under 100 ms | about 215 ms |
+| Recorder cost per action (tap, fingerprint, store hand-off) | under 0.1 ms | about 0.24 ms |
 
 ### 16.4 Decisions
 

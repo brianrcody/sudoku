@@ -1,11 +1,13 @@
 # Developer Mode — Workflows
 
-**Date:** 2026-11-13
+**Date:** 2026-11-13; updated 2026-11-26 for debug instrumentation
 **Audience:** the developer, and agents debugging the solver, coach, or generator
-**Reference:** `fspec-005-dev-mode.md` (exact behavior), `aspec-dev-mode.md` (internals)
+**Reference:** `fspec-005-dev-mode.md` and `fspec-007-debug-instrumentation.md` (exact
+behavior), `aspec-dev-mode.md` and `aspec-debug-instrumentation.md` (internals)
 
-This is a how-to. It describes what the five tools let you do in practice, and which tool
-answers which question.
+This is a how-to. It describes what the six panel tools, the `window.sudokuDev` console
+API and the live-debugging driver let you do in practice, and which one answers which
+question.
 
 ---
 
@@ -21,31 +23,43 @@ panel) and a *Developer tools* panel appears to the right of the game (below it 
 window is narrower than 1400px). Each tool is a collapsed
 section; open the ones you need.
 
-Three things to know before you start:
+Four things to know before you start:
 
 1. **No statistics are recorded while developer mode is on.** You can play, solve, and
    load freely without polluting your cookie stats. If you turn it off mid-game, the
    attempt is recorded on your next digit.
-2. **The tools never change the board**, with one exception: *Load puzzle from string*
-   replaces the puzzle, and asks first if you have progress.
-3. **`window.gameState` is available in the console** in every mode. Several workflows
-   below use it to pull strings out of the app.
+2. **Some tools change the game.** *Load puzzle from string*, *Replay* and *Generate*
+   (from a seed) replace it, asking first if you have progress. The inspector's
+   set-board-to-step replaces your digits and trims your pencil marks until you press
+   *Restore board*. `sudokuDev.setPencilMarks` and `fillPencilMarks` edit pencil marks as
+   an undoable move. The table in §4 says what each tool touches.
+3. **Everything you do is recorded.** From page load, the session recorder keeps every
+   action and every uncaught error, across reloads, until you clear it or turn developer
+   mode off (§3.10).
+4. **`window.sudokuDev` is available in the console** in developer mode, and
+   `window.gameState` in every mode. Prefer `sudokuDev`: its calls return plain objects,
+   never throw, and never open a dialog or move focus.
 
 ### Useful console one-liners
 
 ```js
-// The current puzzle's givens, as a loadable string
-Array.from(gameState.getState().puzzle.givens).join('')
-
-// The current board — givens plus your digits — as a loadable string
-Array.from(gameState.getState().pen).join('')
-
-// The solution
-Array.from(gameState.getState().puzzle.solution).join('')
+sudokuDev.state().text              // the board as a ruled 9×9 grid
+sudokuDev.state().puzzle.givens     // the givens, as a loadable string
+sudokuDev.state().board             // givens plus your digits, as a loadable string
+sudokuDev.state().puzzle.solution   // the answer key
+sudokuDev.state().puzzle.seed       // the seed that generated it (null if not recorded)
+sudokuDev.inspect()                 // the solver's steps from the current board
+sudokuDev.coachStep()               // the active coach step, or { active: false }
+sudokuDev.candidates()              // computed candidates for every cell
 
 // The generator's solve trace (empty after a page reload; it isn't persisted)
 gameState.getState().puzzle.solveTrace
 ```
+
+Intent flags must be exactly `true`. A call that would replace the game or discard the
+recorded history fails with `needs-replace` or `needs-discard-history` and changes
+nothing, so `sudokuDev.load(s)` on a game with progress needs
+`sudokuDev.load(s, { replace: true })`.
 
 The **Share** button gives you the givens too: the copied link ends in `?p=<81 digits>`.
 
@@ -93,6 +107,12 @@ node scripts/devdrive.mjs down
 | "Why did the coach pick a different technique than the solver's first step?" | Inspector + Coach step data + Candidate overlay together (§3.4) |
 | "How hard is the generator working for this tier?" | Generation diagnostics |
 | "Did the fallback fire?" | Generation diagnostics |
+| "Which puzzle was this, exactly?" | Generation diagnostics: the seed (§3.11) |
+| "What did I do to get here?" | Session recorder: Copy session (§3.10) |
+| "Does the current code still behave as it did in this session?" | Session recorder: Replay and the divergence report (§3.12) |
+| "Which action broke it?" | Replay with *Stop after action* (§3.13) |
+| "How do I keep this bug fixed?" | A session fixture (§3.14) |
+| "How do I drive the app from a script or an agent?" | `window.sudokuDev` (§3.15) and `scripts/devdrive.mjs` (§1) |
 
 ---
 
@@ -126,16 +146,21 @@ the identical puzzle, re-rated on their side.
 A bug often depends on the position, not the starting puzzle. You can freeze a position
 into a puzzle:
 
-1. In the broken session, run `Array.from(gameState.getState().pen).join('')` in the
-   console and copy the result.
+1. In the broken session, run `sudokuDev.state().board` in the console and copy the
+   result.
 2. Load that string. The player's digits are now givens.
 
 This works because a correctly part-solved board still has exactly one solution. If the
 load is rejected with "no solution", **that is your answer**: the position contained a
 wrong digit, and the bug is likely downstream of that rather than in the solver.
 
-Pencil marks are not part of the string. If the bug depends on them, re-enter the relevant
-marks by hand after loading (see §3.4 for why that matters to the coach).
+Pencil marks are not part of the string. If the bug depends on them, re-enter them after
+loading, by hand or with `sudokuDev.setPencilMarks('r4c7', [1, 5])` per cell (see §3.4
+for why that matters to the coach). `sudokuDev.fillPencilMarks()` fills every empty cell
+with its computed candidates, a quick start when you want to remove a few by hand.
+
+If you still have the session, a replay (§3.12) reproduces the position *with* its marks,
+coach state and undo history, which a string cannot.
 
 ### 3.3 Verify technique detection
 
@@ -308,14 +333,19 @@ the rings on the same cells.
 **Tuning a budget or a given-count target** (`ATTEMPT_BUDGET`, `GIVEN_COUNT_TARGET` in
 `js/config.js`):
 
-1. Select the tier, press New Puzzle a number of times, note *Attempts* each time.
+1. Select the tier, press New Puzzle a number of times, note *Attempts* each time. For
+   numbers worth trusting, sweep seeds in Node instead:
+   `generateForTier(tier, { rng: mulberry32(seed), seed, budget })` (from
+   `js/generator/pipeline.js`; `puzzle.gen` holds the diagnostics) over a few hundred seeds gives the attempt distribution and the
+   fallback rate for a candidate budget or target.
 2. If the wrong-tier breakdown is dominated by *easier* tiers, the target leaves too many
    givens; if by *harder* tiers or "unsolvable", too few.
 3. Change the config, reload, repeat.
 
 Caveat: New Puzzle is normally served from the **background pre-generation cache**, so the
 puzzle you get was generated earlier. Its diagnostics are still its own — they travel with
-the cached puzzle — but don't read *Attempts* as "how long I just waited".
+the cached puzzle — but don't read *Attempts* as "how long I just waited". A seeded run
+(§3.11) bypasses the cache.
 
 **Confirming a rating.** *Achieved tier* is what the generator decided. Press Run solver
 in the inspector: the summary's tier should match. A mismatch would mean the rater and the
@@ -323,7 +353,12 @@ live solver disagree — a serious bug.
 
 **Checking the fallback path.** On Diabolical or Nightmare, a puzzle that arrived through
 the "No Diabolical puzzle found… Play Expert?" dialog shows *Fallback used: Yes* with
-*Attempts* equal to the budget.
+*Attempts* at least the budget (one more when no candidate was solvable). To reach the
+fallback on demand, shrink the budget for one seeded run; with a budget of 1, almost any
+seed exhausts it:
+`await sudokuDev.generate('diabolical', 1, { budget: 1, replace: true, acceptFallback: true })`.
+Without `acceptFallback: true` the call stops at `needs-accept-fallback` instead of
+loading the fallback puzzle.
 
 Diagnostics survive a reload. For a puzzle loaded from a link or string the section says
 so; for a game or cached puzzle saved before this feature existed it says no data was
@@ -364,6 +399,153 @@ that coach is unavailable.
 Leave developer mode on. Nothing you solve, abandon, or load is counted. This is the mode
 to use for manual UX testing and for demos.
 
+### 3.10 Record and export a session
+
+Nothing to switch on: from page load the recorder keeps every action issued to the game
+(player input, coach and hint requests with their results, timer actions, generation
+start and progress, developer-tool actions, a *page reloaded* entry on each load), and
+every uncaught error, unhandled rejection and listener exception. It saves to IndexedDB
+after every entry, so the history survives reloads and crashes.
+
+1. Reproduce the bug however you like, reloading if you need to.
+2. Open *Session recorder* and press **Copy session**. The clipboard now holds one JSON
+   session document. If the copy fails, the document appears in a text field, selected,
+   for you to copy by hand.
+3. Paste it into the bug note. It is the whole repro: starting position, every action
+   with its time, and the errors.
+
+The counts line shows what you have ("*A* actions, *E* errors recorded."). The history
+keeps a starting position plus the last 5,000 entries, folding older ones into the
+starting position, so a long session loses its beginning, not its end.
+
+**Start clean before a repro** with **Clear history**: it empties the history (asking
+first if it has entries) and leaves the game alone. The next document then holds only the
+repro. From the console: `sudokuDev.clearHistory({ discardHistory: true })`.
+
+With two tabs open, the later one owns the saved history; the earlier tab says so in the
+storage line. `?dev=0` deletes the history along with the developer setting.
+
+### 3.11 Reproduce a puzzle from its seed
+
+Every generated puzzle records its seed.
+
+1. Open *Generation diagnostics*. Note **Seed** and **Requested tier** (not *Achieved
+   tier*: a seed reproduces its puzzle only with the tier that was asked for). **Copy
+   seed** copies the number.
+2. Under the table, choose that tier, enter the seed, press **Generate**.
+
+You get the same puzzle and the same diagnostics, except *Seed chosen by*, which reads
+"Developer (seeded run)". From the console:
+`await sudokuDev.generate('medium', 123456789, { replace: true })`.
+
+A seed is a much smaller repro than a session when the bug is in the generator or the
+puzzle itself. It holds only for an unchanged generator and solver; after either changes,
+the same seed may give a different puzzle, without warning. Seeded runs neither take from
+nor store into the pre-generation cache.
+
+### 3.12 Replay a session and read the divergence report
+
+Replay answers "does the current code still do what it did then?". Use it to confirm a
+fix, or to check that a refactor changed nothing.
+
+1. Open *Session recorder*, paste the document into *Session document to replay*, press
+   **Replay**.
+2. The document is checked first. A bad one is rejected with a reason and nothing
+   changes. Otherwise you are asked, once, before your progress or a recorded history is
+   discarded.
+3. The actions are applied **as recorded**: a coach step or hint replays the recorded
+   result, not a fresh one. The board ends exactly where the session ended, with its
+   pencil marks, coach session, undo history and win state, and is playable.
+4. The report then recomputes every recorded coach step and hint from the position before
+   it, with the current code, and compares the two.
+
+Reading the report:
+
+| Part | Read it as |
+|---|---|
+| "No divergences: all *k* computed results match…" | The current solver, coach and hint code reproduce the session exactly |
+| "Action *n* — coach step at *time*: technique — recorded *X*, current *Y*." | The coach now picks a different technique there. Expand the item for both values as JSON |
+| "Action *n* — coach step (*X*) at *time*: differs in *parts*." | Same technique, different roles, arrows, text or eliminations: an analyzer change |
+| "Action *n* — hint on *cell*…" | The hint provider now gives a different cell, digit or technique |
+| Not compared | Neither a match nor a divergence: an Unrated puzzle, an action that changed nothing, or a coach session already running at the starting position |
+| Errors | Errors recorded in the replayed range, and any raised during this replay |
+
+A replay that hits an error stops with "Replay stopped at action *n* of *M*: …" and leaves
+the board at the position before that action.
+
+After a replay **the history is the replayed session**. Keep playing and *Copy session*
+exports one document covering both, so "replay to the bug, then try the fix by hand"
+gives a single repro.
+
+### 3.13 Bisect with "Stop after action"
+
+When a session ends in a broken position and you need the action that broke it:
+
+1. Replay the document with *Stop after action* set to about half its action count.
+2. Look at the board, or run the inspector or overlay on it. Still good? Replay again
+   with a later stop. Already broken? An earlier one.
+3. Narrow until you have *N* (good) and *N+1* (broken). Action *N+1* is the culprit;
+   find it in the document's `actions` array.
+
+Each replay takes well under a second, so this is quick by hand. From the console it is a
+loop:
+
+```js
+const doc = /* the session document, as an object */;
+const at = n => sudokuDev.replay(doc, { stopAfter: n, replace: true, discardHistory: true });
+await at(240); sudokuDev.state().text
+```
+
+A stop of 0 replays nothing past the starting position. A stop that would leave no puzzle
+on the board is rejected.
+
+### 3.14 Turn a session into a regression fixture
+
+1. Export the session (§3.10), trimmed to the repro if you can (Clear history first).
+2. Save it as `js/tests/fixtures/sessions/<name>.json`.
+3. Replay it in a test:
+
+```js
+import { replayFixture, loadSessionFixture } from '/js/tests/helpers/replayFixture.js';
+
+const { state, report } = await replayFixture(await loadSessionFixture('<name>.json'));
+expect(report.divergences).to.be.empty;
+```
+
+`replayFixture` runs the same checks and replay as the app, deterministically, with no
+confirmation and no storage. `state` has the shape of `sudokuDev.state()`, so you can
+assert the final board, marks or coach state; pass `{ stopAfter }` to assert a midpoint.
+The divergence assertion is what keeps a solver, coach or hint fix from regressing. Add
+the test to `js/tests/unit/session-fixtures.test.js`.
+
+For a fixture built from a scripted session rather than a hand-played one, add a scenario
+to `js/tests/tools/captureSessionFixtures.js` and run
+`node js/tests/tools/captureSessionFixtures.js <name>`. It never overwrites an existing
+file. **Never edit or re-record `format-v1-baseline.json`**: it is the anchor that proves
+every future build still reads format version 1, and its hash is pinned.
+
+### 3.15 Use `window.sudokuDev` from the console
+
+The API mirrors the panel and adds what the panel lacks. Every call returns
+`{ ok, reason?, message, … }`. The full table is in the README; fspec-007 §6 has the exact
+contract.
+
+| Task | Call |
+|---|---|
+| Read the whole position | `sudokuDev.state()` |
+| Load a puzzle | `await sudokuDev.load(s, { replace: true })` |
+| Set or fill pencil marks | `sudokuDev.setPencilMarks('r4c7', [1, 5])`, `sudokuDev.fillPencilMarks()` (both one Undo step) |
+| Export or replay a session | `sudokuDev.exportSession()`, `await sudokuDev.replay(doc, { stopAfter, replace: true, discardHistory: true })` |
+| Seeded generation, optionally with a smaller budget | `await sudokuDev.generate(tier, seed, { replace: true, budget })` |
+| Console logging | `sudokuDev.logging()`, `sudokuDev.setLogging('actions', true)` |
+
+**Console logging.** Three switches, also in the *Session recorder* panel, saved across
+reloads: `generation` (`[dev:gen]` lines for each request, cache hit or miss, progress
+and outcome; on), `swallowed` (`[dev:swallowed]` for every exception the app catches and
+ignores, with where; on), and `actions` (`[dev:action]` for each recorded action, what it
+changed and how long it took; off). Turn on `actions` while chasing a slow action or an
+action that silently does nothing.
+
 ---
 
 ## 4. Tool reference
@@ -374,7 +556,9 @@ to use for manual UX testing and for demos.
 | Solver step inspector | Current givens + pen digits | Ordered steps; summary; grid highlight on selection | Selecting moves the board cursor; set-to-step replaces your digits, trims your pencil marks, and gives cells you never marked the solver's candidates (Restore board undoes all of it) |
 | Candidate overlay | Current board + your pencil marks | Computed candidates with divergence marked | No |
 | Coach step data | The active coach session | `CoachStep` as JSON; clipboard copy | No |
-| Generation diagnostics | The current puzzle | Generation-run table | No |
+| Generation diagnostics | The current puzzle; a tier and seed | Generation-run table with seed; seeded generation | Generate replaces the puzzle (asks if you have progress) |
+| Session recorder | The recorded history; a session document | Counts; session document; replay report | Replay replaces the game and the history (asks first); Clear history empties the history only |
+| `window.sudokuDev` | Console calls | Plain result objects | `load`, `replay` and `generate` replace the game; the pencil-mark calls edit marks as one Undo step; the rest only read |
 
 ## 5. Limits
 
@@ -388,4 +572,11 @@ to use for manual UX testing and for demos.
   diagnostics panel recomputes the technique profile from the givens, so it still shows.
 - **The inspector and overlay run on the main thread.** Measured at 40–60 ms on the
   hardest boards; not a practical concern.
-- **Developer mode is per-browser.** It lives in `localStorage` (`sudoku.dev.v1`).
+- **Developer mode is per-browser.** It lives in `localStorage` (`sudoku.dev.v1`); the
+  logging switches in `sudoku.dev.logging.v1`; the history in IndexedDB
+  (`sudoku-dev-recorder`).
+- **Replay applies, it does not re-run.** A replayed session ends where it ended even if
+  the code has changed; only the divergence report shows the difference. A session that
+  depends on a generator change needs a seed (§3.11), not a replay.
+- **A corrupt pre-generation cache entry read at boot is not logged** (open item §1.1 in
+  `debug-instrumentation-open-items.md`). Later cache errors are.

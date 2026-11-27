@@ -1,10 +1,10 @@
 # Role: Architect
 
 ## Subagent Type
-`Plan`
+`general-purpose` — the role writes its output file, so a read-only type will not do
 
 ## Model
-`opus` (`claude-opus-4-6`) — highest leverage role; architecture errors cascade downstream
+`opus` (`claude-opus-5-5`)
 
 ## Purpose
 Translate the functional spec and visual design spec into a concrete implementation plan.

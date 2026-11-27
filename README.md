@@ -193,7 +193,13 @@ js/
 ├── game/                   # Game state machine; puzzleLoader.js (the one path for
 │                           #   share links and developer load-from-string)
 ├── dev/                    # Developer mode: devMode.js (flag, always loaded);
-│                           #   devPanel.js + inspect.js (lazy)
+│                           #   devBoot.js + recorder.js (early, dev mode only:
+│                           #   history, error capture, recorderStore.js for IndexedDB);
+│                           #   devLog.js (console logging switches);
+│                           #   devPanel.js + inspect.js + recorderPanel.js (lazy panel);
+│                           #   devSession.js (shared controller) + devApi.js
+│                           #   (window.sudokuDev); sessionCodec.js, replay.js and
+│                           #   machine.js (session documents, replay, headless game)
 ├── ui/                     # DOM rendering and event handling
 ├── persist/                # localStorage and cookie helpers
 ├── prng.js                 # mulberry32 seedable PRNG

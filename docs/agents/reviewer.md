@@ -1,10 +1,10 @@
 # Role: Reviewer
 
 ## Subagent Type
-`Explore`
+`general-purpose` — the role writes its output file, so a read-only type will not do
 
 ## Model
-`sonnet` (`claude-sonnet-4-6`)
+`opus` (`claude-opus-5-5`)
 
 ## Purpose
 Validate that the implementation faithfully matches the functional spec, visual design spec,

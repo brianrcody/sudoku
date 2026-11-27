@@ -4,7 +4,7 @@
 `general-purpose`
 
 ## Model
-`sonnet` (`claude-sonnet-4-6`)
+`opus` (`claude-opus-5-5`)
 
 ## Purpose
 Translate a requirements spec into a precise, complete functional specification that defines

@@ -999,6 +999,13 @@ describe('replay — outcomeMessage (RP37)', () => {
     });
   });
 
+  it('stopped: the position is written plain and the total takes a thousands separator', () => {
+    const r = report({ applied: 1233, total: 5000, stopped: { at: 1234, message: 'boom' } });
+
+    expect(outcomeMessage(r).text).to.equal(
+      'Replay stopped at action 1234 of 5,000: boom. The board shows the position before that action.');
+  });
+
   it('rejected: the rejection message is "This session can\'t be replayed." and the reason', async () => {
     const result = await prep('{');
 
