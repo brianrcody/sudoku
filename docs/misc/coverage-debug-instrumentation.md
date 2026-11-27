@@ -293,7 +293,7 @@ before step 1.5 creates `devBoot` and its log subscribes to `diagnostics`; the
 | File | Branch | Zero-hit branch lines | Status |
 |---|---|---|---|
 | `js/dev/*` (13 files) | 100% | — | `machine.js` functions 80%: the null statistics object's two methods are never called (not branches) |
-| `js/game/foreground.js` | 98.43% | 162 | Gap by instruction: the `delivered` arm of the catch is now reached only when the preference write or `openDialog` throws after delivery, which the post-review fix does not cover and which is not to be pinned |
+| `js/game/foreground.js` | 100% (2026-11-26) | — | Was 98.43% (line 162, the `delivered` arm, a gap by instruction). Closed by open item §1.2's fix and its tests: a throwing preference write, a throwing dialog, and an `onOutcome` that throws after delivery |
 | `js/main.js` | 95% | 242, 243, 291, 292 | Pre-existing (`_isInProgress` / `_saveState` guards) |
 | `js/game/state.js` | 99.13% | 95, 96, 455 | Pre-existing |
 | `js/providers/clientGenProvider.js` | 96.72% | 102, 204 | Pre-existing expressions (`\|\| 'Worker error'`, the stored-entry gate) |

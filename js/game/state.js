@@ -222,7 +222,8 @@ export function createGameState({ stats, hintProvider, statsSuppressed = () => f
     for (let i = 0; i < 81; i++) {
       const revealed = session.coachRevealedBits[i];
       if (revealed === 0) continue;
-      const snapshot = session.pencilSnapshot[i];
+      // A cell filled since the session began gets none of its snapshot back.
+      const snapshot = state.pen[i] === 0 ? session.pencilSnapshot[i] : 0;
       const current = state.pencil[i];
       state.pencil[i] = (snapshot & ~revealed) | (current & ~revealed);
     }

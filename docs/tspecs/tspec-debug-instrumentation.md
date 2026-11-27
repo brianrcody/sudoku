@@ -94,7 +94,7 @@ parameter is its own `it`.
 
 | ID | Type | Ph | Covers | Setup / input | Expected |
 |---|---|---|---|---|---|
-| SG0 | — | 0 | Golden trace capture (a script, not a test) | Check out HEAD in a separate worktree (`git worktree add`), serve it, and run the scripted sequence of SG1 against HEAD's `createGameState`; write `fixtures/state/golden-trace.json` | One record per `changed` emit: `action.type`, sorted `changed` keys, a canonical JSON snapshot of the state (typed arrays as arrays, sets sorted, `incorrectShownUntil` replaced by `incorrectShownUntil > 0`), plus per-call records of `stats.recordAttemptOnce` / `recordWin` and `hintProvider.nextHint` arguments |
+| SG0 | — | 0 | Golden trace capture (a script, not a test); re-capture rules since 2026-11-26 are in §5 item 1 | Check out HEAD in a separate worktree (`git worktree add`), serve it, and run the scripted sequence of SG1 against HEAD's `createGameState`; write `fixtures/state/golden-trace.json` | One record per `changed` emit: `action.type`, sorted `changed` keys, a canonical JSON snapshot of the state (typed arrays as arrays, sets sorted, `incorrectShownUntil` replaced by `incorrectShownUntil > 0`), plus per-call records of `stats.recordAttemptOnce` / `recordWin` and `hintProvider.nextHint` arguments |
 
 ### 2.2 Phase 1 — seams in always-loaded modules
 
@@ -629,7 +629,12 @@ statistics call. Four independent checks:
    emit order, changed keys, full state snapshots, statistics calls, and hint-provider
    calls. SG1 replays it against the new reducer with `tap: null` and default timers and
    requires byte-equal records. This is the PD1 technique ("pins captured before the
-   change") applied to the reducer.
+   change") applied to the reducer. That proof was
+   settled when Phase 1 was accepted. Since 2026-11-26 the trace is a regression net for
+   the reducer as a whole: `captureGoldenTrace.js` captures from the working tree and
+   lists every record that differs from the existing file, and a re-capture is made only
+   for a deliberate behaviour change, after every listed difference is explained by it.
+   The first such re-capture was open item §1.3's coach revert.
 2. **Tap and timers are transparent (SG2, SG3, PR5).** The same script with a no-op tap
    and with explicit real timers; PR5 runs a 2,000-action random stream on twin stores
    (tap null vs no-op tap) and compares every emit.

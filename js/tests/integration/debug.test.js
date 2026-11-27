@@ -1080,7 +1080,7 @@ describe('integration/debug: Phase 8 — end to end', function () {
 
     // Production defect: the pre-generation cache is read while puzzleProvider.js is
     // evaluated, before main.js boots the developer log, so this swallow is never logged.
-    it.skip('DBG-L3: a corrupt pre-generation entry at boot is logged as swallowed at pregen.load', async () => {
+    it('DBG-L3: a corrupt pre-generation entry at boot is logged as swallowed at pregen.load', async () => {
       localStorage.setItem(`${PREGEN_PREFIX}medium`, '{ corrupt');
       const { consoleSpy } = await openDev({ spy: true });
 

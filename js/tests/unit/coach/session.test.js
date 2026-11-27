@@ -391,6 +391,28 @@ describe('COACH_END', () => {
       expect(gs.getState().pencil[i]).to.equal(pencilBefore[i]);
     }
   });
+
+  it('Example E: revert leaves no marks on a revealed cell the player has since filled', () => {
+    // Open item §1.3: the snapshot's mark must not be restored onto a digit.
+    const gs = stateWithPuzzle();
+    gs.dispatch({ type: 'SELECT_CELL', index: 20 });
+    gs.dispatch({ type: 'SET_MODE', mode: 'pencil' });
+    gs.dispatch({ type: 'PENCIL_TOGGLE', digit: 3 });
+    const step = {
+      ...nakedSingleStep(0),
+      autoReveal: { required: true, cells: [{ cellIndex: 20, candidates: 4 | 2 | 16 }] },
+    };
+    gs.dispatch({ type: 'COACH_START', result: step });
+
+    gs.dispatch({ type: 'SELECT_CELL', index: 20 });
+    gs.dispatch({ type: 'SET_MODE', mode: 'pen' });
+    gs.dispatch({ type: 'PEN_ENTER', digit: 2, fromHint: true });
+    expect(gs.getState().coachSession).to.not.equal(null);
+    gs.dispatch({ type: 'COACH_END', reason: 'session-reset' });
+
+    expect(gs.getState().pen[20]).to.equal(2);
+    expect(gs.getState().pencil[20]).to.equal(0);
+  });
 });
 
 // ---------------------------------------------------------------------------

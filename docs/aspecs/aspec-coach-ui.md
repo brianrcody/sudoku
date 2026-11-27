@@ -556,7 +556,7 @@ For each cell `i`:
 ```js
 const revealed = coachRevealedBits[i];
 if (revealed === 0) continue;                         // nothing to revert in this cell
-const snapshot = pencilSnapshot[i];
+const snapshot = state.pen[i] === 0 ? pencilSnapshot[i] : 0;   // a filled cell gets no snapshot back
 const current = state.pencil[i];
 state.pencil[i] = (snapshot & ~revealed) | (current & ~revealed);
 ```
@@ -565,6 +565,7 @@ state.pencil[i] = (snapshot & ~revealed) | (current & ~revealed);
 - `snapshot & ~revealed` — the bits that were in the pre-coach pencil state, *minus* any bits the coach added. Since `coachRevealedBits` consists of bits not in the snapshot, this is identical to `snapshot` itself. Stating it via the mask documents intent.
 - `current & ~revealed` — the bits currently set, minus the bits the coach added. Any user changes (toggle-on of bits not revealed; toggle-off of bits revealed) are preserved.
 - Their bitwise-OR is the final restored pencil bits: original snapshot ∪ user changes, with all coach-added bits stripped.
+- A cell that holds a digit restores none of its snapshot: restoring it would put marks on a filled cell. The coach-added bits are still stripped from it (revised 2026-11-26, debug-instrumentation open item §1.3).
 
 **Worked examples:**
 

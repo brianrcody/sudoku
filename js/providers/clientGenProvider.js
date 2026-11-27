@@ -43,10 +43,19 @@ export function createClientGenProvider({
 
   let requestCounter = 0;
 
-  // Load pre-gen cache from localStorage on startup.
-  _loadFromStorage(cache);
+  // The localStorage mirror is read on first use, not at construction: the
+  // provider is built while main.js's imports are evaluated, before developer
+  // mode subscribes to `diagnostics`, so a corrupt entry read then is never
+  // logged (fspec-007 §8.1).
+  let loaded = false;
+  function ensureLoaded() {
+    if (loaded) return;
+    loaded = true;
+    _loadFromStorage(cache);
+  }
 
   worker.onmessage = function (event) {
+    ensureLoaded();
     const msg = event.data;
 
     if (msg.type === MSG.GEN_RESULT) {
@@ -122,6 +131,7 @@ export function createClientGenProvider({
    * @returns {Promise<{puzzle: Puzzle, fallback: boolean}>}
    */
   function requestPuzzle({ difficulty, signal, onProgress, seed: chosenSeed, budget }) {
+    ensureLoaded();
     const seeded = chosenSeed !== undefined;
     if (!seeded) {
       const cached = peekReady(difficulty);
@@ -166,6 +176,7 @@ export function createClientGenProvider({
    * @returns {Puzzle|null}
    */
   function peekReady(difficulty) {
+    ensureLoaded();
     return cache.get(difficulty) ?? null;
   }
 
@@ -173,6 +184,7 @@ export function createClientGenProvider({
    * @param {string} difficulty
    */
   function primeNext(difficulty) {
+    ensureLoaded();
     if (cache.has(difficulty)) return; // already cached
 
     const id = `bg-${++requestCounter}`;
@@ -191,7 +203,7 @@ export function createClientGenProvider({
 // ---------------------------------------------------------------------------
 
 /**
- * Deserialize stored cache into `cache` map at startup.
+ * Deserialize stored cache into `cache` map on the provider's first use.
  *
  * @param {Map<string, Puzzle>} cache
  */

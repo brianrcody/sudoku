@@ -33,10 +33,14 @@ function abortError() {
 /**
  * Builds a generator over recording fakes.
  *
- * @param {{ saved?: *, throwOn?: string }} [opts] - What the saved tier preference
- *   reads as; an action type whose dispatch throws (after it is recorded).
+ * @param {{ saved?: *, throwOn?: string, writeError?: Error, dialogThrows?: boolean, dialogError?: * }} [opts]
+ *   What the saved tier preference reads as; an action type whose dispatch throws
+ *   (after it is recorded); an error the preference write throws; whether the
+ *   dialog throws, and what.
  */
-function makeForeground({ saved = null, throwOn = null } = {}) {
+function makeForeground({
+  saved = null, throwOn = null, writeError = null, dialogThrows = false, dialogError,
+} = {}) {
   const log = {
     requests: [], dispatched: [], dialogs: [], announced: [], logged: [],
     written: [], events: [], order: [],
@@ -58,9 +62,18 @@ function makeForeground({ saved = null, throwOn = null } = {}) {
       log.requests.push({ args, resolve: d.resolve, reject: d.reject });
       return d.promise;
     },
-    openDialog: opts => { log.dialogs.push(opts); },
+    openDialog: opts => {
+      log.dialogs.push(opts);
+      if (dialogThrows) throw dialogError;
+    },
     announce: message => { log.announced.push(message); log.order.push('announce'); },
-    preference: { read: () => saved, write: tier => { log.written.push(tier); } },
+    preference: {
+      read: () => saved,
+      write: tier => {
+        log.written.push(tier);
+        if (writeError) throw writeError;
+      },
+    },
     diagnostics,
     logError: (...args) => { log.logged.push(args); },
   });
@@ -742,6 +755,119 @@ describe('game/foreground.js', () => {
         const { log } = await acceptFailing('unrated');
 
         expect(log.written).to.deep.equal([]);
+      });
+    });
+
+    describe('the preference write throws (open item §1.2)', () => {
+      const WRITE_ERROR = new Error('write refused');
+      const swallowed = log => log.events.filter(e => e.type === 'swallowed').map(e => e.payload);
+
+      async function deliver(policy) {
+        const { fg, log } = makeForeground({ saved: 'medium', writeError: WRITE_ERROR });
+        const t = { loaded: [], outcomes: [] };
+        fg.request('nightmare', p => t.loaded.push(p), { fallback: policy, onOutcome: o => t.outcomes.push(o) });
+        log.requests[0].resolve({ puzzle: puzzleOf('expert'), fallback: true });
+        await settle();
+        if (policy === 'ask') log.dialogs[0].onConfirm();
+        return { fg, log, t, outcomes: t.outcomes };
+      }
+
+      for (const policy of ['ask', 'accept']) {
+        describe(`with the '${policy}' policy`, () => {
+          it('still loads the puzzle and reports loaded', async () => {
+            const { t, outcomes } = await deliver(policy);
+
+            expect(t.loaded).to.deep.equal([puzzleOf('expert')]);
+            expect(outcomes).to.deep.equal([{ status: 'loaded', puzzle: puzzleOf('expert'), fallback: true }]);
+          });
+
+          it('reports the write as swallowed at foreground.chooseTier, and nothing as failed', async () => {
+            const { log } = await deliver(policy);
+
+            expect(swallowed(log)).to.deep.equal([{ where: 'foreground.chooseTier', error: WRITE_ERROR }]);
+            expect(failedEvents(log)).to.be.empty;
+            expect(log.logged).to.be.empty;
+          });
+
+          it('keeps the chosen tier as the preferred tier for the session', async () => {
+            const { fg } = await deliver(policy);
+
+            expect(fg.preferredTier()).to.equal('expert');
+          });
+        });
+      }
+    });
+
+    describe('the fallback dialog throws (open item §1.2)', () => {
+      const DIALOG_ERROR = new Error('dialog broke');
+
+      async function dialogFailing() {
+        const { fg, log } = makeForeground({ saved: 'medium', dialogThrows: true, dialogError: DIALOG_ERROR });
+        const t = track(fg, 'diabolical');
+        log.requests[0].resolve({ puzzle: puzzleOf('expert'), fallback: true });
+        await settle();
+        return { fg, log, t };
+      }
+
+      it('reports failed exactly once and loads nothing', async () => {
+        const { t } = await dialogFailing();
+
+        expect(t.outcomes).to.deep.equal([{ status: 'failed' }]);
+        expect(t.loaded).to.be.empty;
+      });
+
+      it('leaves the busy state cleared', async () => {
+        const { log } = await dialogFailing();
+
+        expect(log.dispatched.at(-1)).to.deep.equal({ type: 'SET_GENERATING', flag: false });
+        expect(generatingOff(log)).to.have.length(1);
+      });
+
+      it('logs once, emits one failed event, and writes no preference', async () => {
+        const { log } = await dialogFailing();
+
+        expect(log.logged).to.deep.equal([['[main] Failed to generate puzzle:', DIALOG_ERROR]]);
+        expect(failedEvents(log)).to.deep.equal([{ type: 'generation', payload: { event: 'failed', message: 'dialog broke' } }]);
+        expect(log.written).to.be.empty;
+      });
+
+      it('reports a failed event with no message when the thrown value is not an Error', async () => {
+        const { fg, log } = makeForeground({ dialogThrows: true, dialogError: undefined });
+        const t = track(fg, 'nightmare');
+        log.requests[0].resolve({ puzzle: puzzleOf('expert'), fallback: true });
+        await settle();
+
+        expect(failedEvents(log)).to.deep.equal([{ type: 'generation', payload: { event: 'failed', message: undefined } }]);
+        expect(t.outcomes).to.deep.equal([{ status: 'failed' }]);
+      });
+
+      it('lets a later request run normally', async () => {
+        const { fg, log } = await dialogFailing();
+        const next = track(fg, 'hard');
+
+        log.requests[1].resolve({ puzzle: puzzleOf('hard'), fallback: false });
+        await settle();
+
+        expect(next.outcomes).to.deep.equal([{ status: 'loaded', puzzle: puzzleOf('hard'), fallback: false }]);
+      });
+    });
+
+    describe('an onOutcome that throws after delivery', () => {
+      it('is logged and reported as a failed generation, with no second outcome', async () => {
+        const { fg, log } = makeForeground();
+        const failure = new Error('outcome handler broke');
+        const outcomes = [];
+        fg.request('nightmare', () => {}, {
+          fallback: 'refuse',
+          onOutcome: o => { outcomes.push(o); throw failure; },
+        });
+
+        log.requests[0].resolve({ puzzle: puzzleOf('expert'), fallback: true });
+        await settle();
+
+        expect(outcomes.map(o => o.status)).to.deep.equal(['needs-accept-fallback']);
+        expect(log.logged).to.deep.equal([['[main] Failed to generate puzzle:', failure]]);
+        expect(failedEvents(log)).to.deep.equal([{ type: 'generation', payload: { event: 'failed', message: 'outcome handler broke' } }]);
       });
     });
 

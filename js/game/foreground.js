@@ -117,9 +117,16 @@ export function createForegroundGenerator({
         onOutcome({ status: 'loaded', puzzle, fallback: loadedFallback });
       };
 
-      // The saved preference never becomes Unrated (fspec-007 §7.5).
+      // The saved preference never becomes Unrated (fspec-007 §7.5). A failed
+      // preference write loses only the preference; the puzzle still loads.
       const accept = () => {
-        if (!unrated) chooseTier(puzzle.difficulty);
+        if (!unrated) {
+          try {
+            chooseTier(puzzle.difficulty);
+          } catch (error) {
+            diagnostics.emit('swallowed', { where: 'foreground.chooseTier', error });
+          }
+        }
         load(true);
       };
 
@@ -139,14 +146,22 @@ export function createForegroundGenerator({
         const verdict = unrated
           ? "can't be rated, so hints and coach are unavailable"
           : `is rated ${actual}`;
-        openDialog({
-          title: `No ${requested} puzzle found`,
-          body: `The generator couldn't find a ${requested} puzzle this time. ` +
-                `The best it found ${verdict}. Play it?`,
-          confirmLabel: `Play ${actual}`,
-          onConfirm: accept,
-          onCancel: () => onOutcome({ status: 'fallback-declined' }),
-        });
+        // The busy state is already cleared, so a dialog that cannot open
+        // ends the request as failed.
+        try {
+          openDialog({
+            title: `No ${requested} puzzle found`,
+            body: `The generator couldn't find a ${requested} puzzle this time. ` +
+                  `The best it found ${verdict}. Play it?`,
+            confirmLabel: `Play ${actual}`,
+            onConfirm: accept,
+            onCancel: () => onOutcome({ status: 'fallback-declined' }),
+          });
+        } catch (err) {
+          logError('[main] Failed to generate puzzle:', err);
+          diagnostics.emit('generation', { event: 'failed', message: err?.message });
+          onOutcome({ status: 'failed' });
+        }
         return;
       }
 
@@ -226,8 +241,8 @@ export function createForegroundGenerator({
    * @param {string} tier
    */
   function chooseTier(tier) {
-    preference.write(tier);
     _preferred = tier;
+    preference.write(tier);
   }
 
   /** @returns {string} The tier the player last chose. */

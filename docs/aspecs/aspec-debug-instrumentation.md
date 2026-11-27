@@ -1028,7 +1028,7 @@ uniqueness without rating). Comparison is after it.
 | Stored with the puzzle | `pipeline.js` `finish()` | `gen: { requestedTier, seed: opts.seed, seedBy: opts.seeded ? 'developer' : 'random', budget, attempts, rejected, fallback }` |
 | Returned | `GEN_RESULT` (structured clone) | Unchanged envelope plus `elapsedMs` |
 | Saved game | `main.js` `_saveState` / restore | Already writes and reads `gen` whole — no change |
-| Pre-generation cache | `clientGenProvider._saveToStorage` / `_loadFromStorage` | Already writes and reads `gen` whole — no change. A cached puzzle therefore shows the seed of the run that made it |
+| Pre-generation cache | `clientGenProvider._saveToStorage` / `_loadFromStorage` | Already writes and reads `gen` whole — no change. A cached puzzle therefore shows the seed of the run that made it. `_loadFromStorage` runs on the provider's first use (any public method or worker message), not at construction, so a corrupt entry's `pregen.load` event reaches the developer log (revised 2026-11-26, open item §1.1) |
 | Session document | `PuzzleDoc.gen` | §5.1 |
 | Shown | `inspect.describeGeneration` | Two leading rows (§12.2) |
 | Old data | A saved game or cached puzzle written before this change has `gen` without `seed` | `seed === undefined` → `PuzzleDoc.gen.seed = null` → "Not recorded", "—" |
@@ -1115,12 +1115,16 @@ DOM, no storage, and no global. `HONEST_FALLBACK_TIERS` moves here from `main.js
 | Case | Behaviour |
 |---|---|
 | Not a fallback, or the requested tier is not an honest-fallback tier | `onLoaded(puzzle)`; `onOutcome({ status: 'loaded', puzzle, fallback })` |
-| Honest fallback, `opts.fallback === 'ask'` (default; every UI path) | Dispatch `SET_GENERATING` false; `openDialog` with `onConfirm: accept` and `onCancel: () => onOutcome({ status: 'fallback-declined' })`. Title, body, and label as today, or the Unrated wording of §9.5 |
+| Honest fallback, `opts.fallback === 'ask'` (default; every UI path) | Dispatch `SET_GENERATING` false; `openDialog` with `onConfirm: accept` and `onCancel: () => onOutcome({ status: 'fallback-declined' })`. Title, body, and label as today, or the Unrated wording of §9.5. If `openDialog` throws: `logError`, emit `generation` `failed`, `onOutcome({ status: 'failed' })` (revised 2026-11-26, open item §1.2) |
 | Honest fallback, `'accept'` (API `acceptFallback: true`) | `accept()` directly; no dialog |
 | Honest fallback, `'refuse'` (API without the flag) | Dispatch `SET_GENERATING` false; `onOutcome({ status: 'needs-accept-fallback', puzzle })`; nothing loads |
 
    `accept()` is: unless the puzzle is Unrated, `chooseTier(puzzle.difficulty)`; then
    `onLoaded(puzzle)`; then `onOutcome({ status: 'loaded', puzzle, fallback: true })`.
+   A throwing `chooseTier` is caught and emitted as `swallowed`
+   (`foreground.chooseTier`); the puzzle still loads, and only the saved preference is
+   lost. A throwing `onLoaded` ends the request as `failed` (revised 2026-11-26, open
+   item §1.2).
 
 5. On reject with `AbortError`: emit `swallowed` (`foreground.request`) and return; the
    outcome was already reported by `abort`.
@@ -1150,7 +1154,8 @@ SeededOutcome =
   | { status: 'replaced' } | { status: 'failed' }
 ```
 
-**`chooseTier(tier)`**: `preference.write(tier)`; `_preferred = tier`.
+**`chooseTier(tier)`**: `_preferred = tier`; `preference.write(tier)`. The in-memory
+choice is set first, so it holds for the session even if the write throws.
 **`generationTier(state)`**: the body of today's `_generationTier`.
 
 **What stays in `main.js`.**
@@ -1309,12 +1314,14 @@ Each `catch` binds its error and emits; nothing else in the block changes.
 | `pregen.load`, `pregen.save`, `pregen.clear` | `providers/clientGenProvider.js` |
 | `puzzleLoader.rateGivens` | `game/puzzleLoader.js` |
 | `foreground.request` | `game/foreground.js`, the `AbortError` branch. Phase 1 emits it from `main.js` as `main.requestForeground`; Phase 1B moves and renames it |
+| `foreground.chooseTier` | `game/foreground.js`, `accept()`: a failed tier-preference write (added 2026-11-26, open item §1.2) |
 | `recorder.open`, `recorder.write` | `dev/recorderStore.js` |
 
 The always-loaded code has thirteen silent sites, not ten: three in `storage.js`, one in
 `clipboard.js`, two in `statistics.js` (sharing one name), two in `cookieStatsStore.js`,
 three in `clientGenProvider.js`, one in `puzzleLoader.js`, and the `AbortError` branch.
-Phase 1 instrumented all thirteen. The two `recorder.*` sites are dev-only and arrive in
+Phase 1 instrumented all thirteen; `foreground.chooseTier`, added 2026-11-26, makes
+fourteen. The two `recorder.*` sites are dev-only and arrive in
 Phase 4. The hook
 is the `diagnostics` emitter of §4.1: no new file, no import cycle (`events.js` is a
 leaf), nothing executed outside `catch` blocks.

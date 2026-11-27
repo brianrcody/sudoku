@@ -18,7 +18,14 @@ Related records: `review-debug-instrumentation-v1.md` (the review and its dispos
 
 ## 1. Defects
 
-### 1.1 A corrupt pre-generation cache entry at boot is never logged
+### 1.1 A corrupt pre-generation cache entry at boot is never logged — resolved 2026-11-26
+
+**Resolution (Product Director chose option 1):** `clientGenProvider` reads its
+localStorage mirror on first use (any public method or worker message) instead of at
+construction. The first use comes after `devBoot` subscribes, so `pregen.load` reaches
+the developer log. DBG-L3 is no longer skipped. aspec §8 pre-generation row updated.
+
+The original finding:
 
 **Status:** confirmed defect; pinned by a skipped test.
 **Violates:** fspec-007 §8.1 — in developer mode every swallowed exception is logged,
@@ -59,7 +66,17 @@ Change it to `it` once fixed. It is the one pending test this feature added.
 impact is small: only a log line is missing, and the corrupt entry is still discarded
 correctly.
 
-### 1.2 The busy state can still stick if the preference write or the dialog throws
+### 1.2 The busy state can still stick if the preference write or the dialog throws — resolved 2026-11-26
+
+**Resolution (Product Director chose to degrade):** a throwing `chooseTier` in `accept()`
+is emitted as `swallowed` (`foreground.chooseTier`, a new site) and the puzzle still
+loads; `chooseTier` now sets the in-memory preference before writing, so it holds for the
+session. A throwing `openDialog` logs, emits `generation` `failed`, and reports `failed`
+(the busy state was already cleared). A new test drives an `onOutcome` that throws after
+delivery through the `delivered` arm. `foreground.js` is at 100% branch. aspec §9.4 and
+§10.2 updated.
+
+The original finding:
 
 **Status:** known gap, left deliberately; not reachable today.
 
@@ -82,7 +99,25 @@ behaviour either way.
 preference write a failed puzzle load (a behaviour decision); or leave it. If it is
 fixed, add the tests and the file reaches 100%.
 
-### 1.3 A pencil mark can be left on a filled cell when a coach session ends
+### 1.3 A pencil mark can be left on a filled cell when a coach session ends — resolved 2026-11-26
+
+**Resolution (Product Director):** `_revertPencil` restores no snapshot marks to a cell
+that holds a digit, and still strips the coach-added bits from it:
+`snapshot = pen[i] === 0 ? pencilSnapshot[i] : 0`. (Skipping filled cells outright was
+tried first and rejected: it left coach marks on a given cell, and on a cell the coach
+revealed into after it was filled.) aspec-coach-ui §5.4 updated.
+
+Consequences: the golden trace's script reaches this case with hand-built steps (records
+329 and 337), so the trace changed; all 29 differing records follow from this change.
+The Product Director relaxed the golden trace's rule at the same time: it had to come
+from `a4defe6` only to prove the Phase 1 seams changed nothing, which was settled when
+Phase 1 was accepted. The capture tool now captures from the working tree and lists the
+records that differ, and a re-capture needs every difference explained (tspec §5 item 1
+updated). devSession D-34's test, which pinned the old
+restore, now expects no mark; its count rule is unchanged. New test: coach session
+"Example E".
+
+The original finding:
 
 **Status:** oddity in pre-existing reducer code; believed unreachable in real play.
 
@@ -209,8 +244,8 @@ Director has not asked for the files to be updated.
 
 ### 3.1 Project-wide branch coverage is 96.98%, not 100%
 
-The project bar is 100%. Every file this feature created is at 100% except the one arm
-in §1.2. All other shortfall predates the feature:
+The project bar is 100%. Every file this feature created is at 100% (the §1.2 arm was closed
+2026-11-26). All other shortfall predates the feature:
 
 | File | Branch |
 |---|---|

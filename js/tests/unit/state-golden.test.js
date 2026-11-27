@@ -2,11 +2,13 @@
  * @fileoverview Normal-mode behaviour of js/game/state.js is unchanged by the
  * debug-instrumentation seams (tspec-debug-instrumentation SG1–SG3, PR5).
  *
- * The golden file was captured from the reducer at commit a4defe6, before the
- * seams, by js/tests/tools/captureGoldenTrace.js running the same script
- * (js/tests/helpers/goldenScript.js). Each test replays the script against the
- * current reducer and requires identical emits, state snapshots, statistics
- * calls, and hint-provider calls.
+ * The golden file is captured by js/tests/tools/captureGoldenTrace.js running
+ * the same script (js/tests/helpers/goldenScript.js). Its first capture came
+ * from a4defe6, before the seams, and proved they change nothing in normal
+ * mode; it is now re-captured from the working tree, after review, whenever
+ * reducer behaviour changes deliberately. Each test replays the script against
+ * the current reducer and requires identical emits, state snapshots,
+ * statistics calls, and hint-provider calls.
  */
 
 import { createGameState } from '../../game/state.js';

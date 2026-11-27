@@ -535,7 +535,7 @@ describe('dev/devSession.js', function () {
       expect(result.cellsChanged).to.equal(differing(before, r.gs.getState().pencil));
     });
 
-    it('D-34: marks restored by ending the session to a cell that now holds a digit are counted', async () => {
+    it('D-34: a cell filled during the session gets no marks back when the session ends; the count matches', async () => {
       const r = await rig();
       r.gs.dispatch(LOAD());
       r.gs.dispatch(sel(2));
@@ -549,7 +549,7 @@ describe('dev/devSession.js', function () {
 
       const after = r.gs.getState().pencil;
       expect(before[2], 'r1c3 before').to.equal(0);
-      expect(after[2], 'r1c3 after').to.equal(bit(1));
+      expect(after[2], 'r1c3 after').to.equal(0);
       expect(result.cellsChanged).to.equal(differing(before, after));
       expect(result.message).to.equal(`Pencil marks filled in ${differing(before, after)} cells.`);
     });
