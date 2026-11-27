@@ -118,3 +118,34 @@ a player preference rather than a fixed behavior.
 
 Explicit support for common colorblindness types (deuteranopia in particular conflicts
 with red/green error highlighting). Separate from general theme selection.
+
+---
+
+## Post-V4 Engineering — Point Release Candidate
+
+### Code Coverage to 100% Branch
+
+V4 shipped with project-wide coverage accepted below the 100% branch exit criterion
+(decision 2026-11-27). Measured at `35c25e5` plus the working-tree defect fixes: 2757
+passing, 0 failing, 10 pending; 98.32% statements, 97.01% branch. Every file in `js/dev/`
+is at 100% branch. All remaining gaps predate the debug-instrumentation feature.
+
+The bulk of the shortfall is in two files:
+
+| File | Branch | Stmts |
+|---|---|---|
+| `js/ui/coachOverlay.js` | 78.78% | 71.38% |
+| `js/coach/analyzer.js` | 87.2% | 92.22% |
+
+Smaller gaps: `ui/numpad.js` 76.31%, `ui/themes.js` 83.33%, `ui/stats.js` 85.71%,
+`ui/coach.js` 88.42%, `ui/srLive.js` 88.88%, `generator/fillGrid.js` 88.23%,
+`generator/rater.js` 80%, `ui/grid.js` 90.62%, `ui/winBanner.js` 90.9%,
+`ui/keyboard.js` 91.8%, `ui/dialog.js` 92.85%, `providers/hintProvider.js` 94.73%,
+`ui/controls.js` 94.87%, `main.js` 95%, and single-branch gaps in `state.js`,
+`pipeline.js`, `clientGenProvider.js`, `uniqueness.js`, `coloring.js`, `xyWing.js`,
+`events.js`.
+
+Scope for the point release: close each gap with a test, or record it as unreachable and
+remove the dead branch where that is safe (e.g. `pipeline.js:172`'s `?? tier`). Some
+`main.js` guards need integration tests; see `coverage-debug-instrumentation.md` Phase 1B.
+Reproduce the measurement with `CodeCoverageV2.md` §6.

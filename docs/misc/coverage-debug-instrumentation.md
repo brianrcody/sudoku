@@ -300,3 +300,12 @@ before step 1.5 creates `devBoot` and its log subscribes to `diagnostics`; the
 | `js/generator/pipeline.js` | 96.87% | 172 | Pre-existing, unreachable `?? tier` |
 | `js/util/events.js`, `js/ui/srLive.js`, `js/ui/dialog.js`, `js/ui/coach.js` | 96.66%, 88.88%, 92.85%, 88.42% | 53; 18; 110; 81, 92, 144, 197, 270, 352, 353, 369, 414 | Pre-existing; no added line uncovered |
 | `js/dev/inspect.js`, `devMode.js`, `devPanel.js`, `puzzleLoader.js`, `loadPuzzle.js`, `loadProvider.js`, `protocol.js`, `storage.js`, `clipboard.js`, `statistics.js`, `cookieStatsStore.js` | 100% | — | — |
+
+## Merge — 2026-11-27
+
+**Test run:** 2757 passing, 0 failing, 10 pending (`npm test`, 448 s), at `35c25e5` plus
+the review-v2 fixes (N1 badge test). No browser console errors or page errors.
+
+**Project-wide:** 98.32% statements, 97.01% branch. Every `js/dev/` file at 100% branch
+(functions 99.36%: `machine.js`'s null statistics object). The remaining shortfall is
+pre-existing and waived for V4 (open item 3.1).

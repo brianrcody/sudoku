@@ -214,6 +214,17 @@ describe('dev/devPanel.js', () => {
       expect($('dev-root').hasAttribute('data-keep-selection')).to.equal(true);
     });
 
+    it('D-35 e: activating the DEV badge with a cell selected keeps the selection and records no DESELECT', async () => {
+      await mountPanel({ state: { selected: EMPTY } });
+      $('dev-badge').addEventListener('click', e => e.preventDefault());  // keep the test page's URL
+
+      $('dev-badge').click();
+
+      expect(gs.dispatch.calls).to.deep.equal([]);
+      expect(gs.getState().selected).to.equal(EMPTY);
+      expect($('dev-badge').hasAttribute('data-keep-selection')).to.equal(true);
+    });
+
     it('DP5: the panel says statistics are off and how to leave dev mode', async () => {
       await mountPanel();
       const note = $('dev-root').querySelector('.dev-note').textContent;

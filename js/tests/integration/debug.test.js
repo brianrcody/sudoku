@@ -1278,6 +1278,20 @@ describe('integration/debug: Phase 8 — end to end', function () {
       expect(gsOf(frame).getState().selected).to.equal(cell);
     });
 
+    it('activating the DEV badge leaves the selected cell selected and records no DESELECT', async () => {
+      const { frame } = await openDev();
+      const cell = KIDDIE.indexOf('0');
+      gsOf(frame).dispatch({ type: 'SELECT_CELL', index: cell });
+      const deselects = [];
+      gsOf(frame).on('changed', ({ action }) => { if (action.type === 'DESELECT') deselects.push(action); });
+
+      $(frame, '#dev-badge').click();
+      await wait(0);
+
+      expect(deselects).to.deep.equal([]);
+      expect(gsOf(frame).getState().selected).to.equal(cell);
+    });
+
     for (const [mode, src] of [['developer mode', '/index.html?dev=1'], ['normal mode', '/index.html']]) {
       it(`a click on the page outside the panel, grid and number pad deselects in ${mode}`, async () => {
         seedSavedGame({ givens: KIDDIE, solution: KIDDIE_SOLUTION, difficulty: 'kiddie' });

@@ -1,6 +1,6 @@
 # Test Strategy — Debug Instrumentation
 **Date:** 2026-11-15
-**Status:** Draft — for Orchestrator review before hand-off to the QE Test Writer
+**Status:** Final
 **Author:** QE Strategist
 **Inputs:** aspec-debug-instrumentation (Final), fspec-007-debug-instrumentation,
 rspec-007-debug-instrumentation, vspec-007-debug-instrumentation; conventions from

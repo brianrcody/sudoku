@@ -110,6 +110,8 @@ export async function mount({
   badge.href = '#dev-root';
   badge.textContent = 'DEV';
   badge.setAttribute('aria-label', 'Developer mode on — skip to developer tools');
+  // The badge sits outside the panel but is a developer control too, so it must not deselect the board (fspec D-35 e).
+  badge.dataset.keepSelection = '';
   document.body.appendChild(badge);
 
   _panel = document.createElement('section');

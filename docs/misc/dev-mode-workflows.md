@@ -30,7 +30,8 @@ Four things to know before you start:
    attempt is recorded on your next digit.
 2. **Some tools change the game.** *Load puzzle from string*, *Replay* and *Generate*
    (from a seed) replace it, asking first if you have progress. The inspector's
-   set-board-to-step replaces your digits and trims your pencil marks until you press
+   set-board-to-step replaces your digits, trims your pencil marks and gives cells you never
+   marked the solver's candidates, until you press
    *Restore board*. `sudokuDev.setPencilMarks` and `fillPencilMarks` edit pencil marks as
    an undoable move. The table in §4 says what each tool touches.
 3. **Everything you do is recorded.** From page load, the session recorder keeps every

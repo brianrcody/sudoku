@@ -244,6 +244,10 @@ Director has not asked for the files to be updated.
 
 ### 3.1 Project-wide branch coverage is 96.98%, not 100%
 
+**Waived for V4 (Product Director, 2026-11-27).** Measured at merge: 97.01% branch,
+98.32% statements; every `js/dev/` file at 100%. Scheduled as a post-V4 point release:
+`v4featureCandidates.md` "Code Coverage to 100% Branch".
+
 The project bar is 100%. Every file this feature created is at 100% (the §1.2 arm was closed
 2026-11-26). All other shortfall predates the feature:
 
@@ -370,6 +374,26 @@ serves `.js` files with headers that allow reuse without revalidation; page and 
 could briefly run different versions, and the worker protocol gained fields in this
 feature. **To check before shipping:** the `Cache-Control` / `ETag` behaviour for `.js`
 on the host, and whether a cache-busting query on the module entry points is wanted.
+
+**Backlog — investigate before deploying V4 (Product Director, 2026-11-26).** Chosen
+direction: revalidation headers, a server-configuration change with no application code.
+A cache-busting query on `js/main.js` would not work: relative imports and the worker
+URL (`config.js`, built from `import.meta.url`) resolve without it, so other modules
+could still be served stale. The intended configuration, kept in the repository as an
+`.htaccess` beside `index.html` unless the host has a panel setting instead:
+
+```apache
+<FilesMatch "\.(js|mjs|css)$">
+  Header set Cache-Control "no-cache"
+</FilesMatch>
+```
+
+To confirm on hosting.com: `.htaccess` overrides are allowed and `mod_headers` is
+enabled; `.js` responses carry `ETag` or `Last-Modified`, so a revalidation returns a
+`304` rather than the whole file. Cost: one conditional request per module per page
+load. If cold-load time on slow connections later matters, the fallback is a versioned
+deploy directory (`/v<sha>/js/…`, with only `index.html` revalidated): every import is
+relative, so it needs only a deploy script, about half a day to a day.
 
 ### 4.3 The live-debugging driver script is not in the repository — resolved 2026-11-22
 

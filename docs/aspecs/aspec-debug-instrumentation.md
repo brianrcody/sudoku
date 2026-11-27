@@ -1295,7 +1295,7 @@ Generation events:
 | `result` | `GEN_RESULT` handler, foreground and background | `requestedTier`, `tier`, `seed`, `attempts`, `elapsedMs` |
 | `fallback` | `GEN_RESULT` handler when `msg.fallback` | `requestedTier`, `tier`, `seed` |
 | `cancelled` | The abort listener | `tier`, `reason` |
-| `failed` | `GEN_ERROR`, `worker.onerror`, `foreground.js` catch | `message` |
+| `failed` | `GEN_ERROR`, `worker.onerror`; the `foreground.js` catch only after the puzzle was delivered, so a worker failure is logged once | `message` |
 | `discarded` | Background `GEN_RESULT` with an Unrated puzzle (§9.5) | `requestedTier`, `seed` |
 
 `elapsedMs` is measured in the worker around `generateForTier` and added to the
@@ -1316,12 +1316,13 @@ Each `catch` binds its error and emits; nothing else in the block changes.
 | `foreground.request` | `game/foreground.js`, the `AbortError` branch. Phase 1 emits it from `main.js` as `main.requestForeground`; Phase 1B moves and renames it |
 | `foreground.chooseTier` | `game/foreground.js`, `accept()`: a failed tier-preference write (added 2026-11-26, open item §1.2) |
 | `recorder.open`, `recorder.write` | `dev/recorderStore.js` |
+| `replay.prepare` | `dev/devSession.js`: an exception while checking a replay document (`prepare` returns `error`) |
 
 The always-loaded code has thirteen silent sites, not ten: three in `storage.js`, one in
 `clipboard.js`, two in `statistics.js` (sharing one name), two in `cookieStatsStore.js`,
 three in `clientGenProvider.js`, one in `puzzleLoader.js`, and the `AbortError` branch.
 Phase 1 instrumented all thirteen; `foreground.chooseTier`, added 2026-11-26, makes
-fourteen. The two `recorder.*` sites are dev-only and arrive in
+fourteen. The two `recorder.*` sites and `replay.prepare` are dev-only and arrive in
 Phase 4. The hook
 is the `diagnostics` emitter of §4.1: no new file, no import cycle (`events.js` is a
 leaf), nothing executed outside `catch` blocks.
@@ -1642,17 +1643,21 @@ Report contents, built from `formatReportLines` into `#dev-rec-report` (emptied 
 <ul><li class="dev-error-item">…</li></ul>
 ```
 
+A hint divergence with several differing parts is one `<li>` holding one full sentence
+per part (`divergenceText`), not one item per part.
+
 Each `<pre>` holds `JSON.stringify` (2-space) of an object keyed by the differing part
 names. Divergence time is formatted with `Date` local getters, zero-padded.
 
 Wiring:
 
 - **Counts**: on recorder `change`, coalesced with `requestAnimationFrame` so a burst of
-  progress entries costs one text update per frame. Numbers use
-  `toLocaleString('en-US')`, and the nouns go through `count()` (§8.4): "1 action, 1 error
+  progress entries costs one text update per frame. Numbers get an en-US thousands
+  separator from `count()` (§8.4), which also supplies the nouns: "1 action, 1 error
   recorded." The capacity sentence is a `<span class="dev-capacity">`.
 - **Storage line**: on recorder `storage`; text set in place, announced when it changes to
-  a non-empty message.
+  a non-empty message. A message already in force when the panel mounts is announced once
+  at mount (fspec D-35 d).
 - **Copy session**: on failure unhide `#dev-rec-fallback`, set the text, `focus()`,
   `select()`, `scrollTop = 0`. Hidden again by the next Copy session, by `cleared`, and by
   `cleared-fallback`.
