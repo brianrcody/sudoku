@@ -47,6 +47,9 @@ describe('hiddenSubsets', function () {
     expect(result).to.not.be.null;
     expect(result.eliminations).to.have.length.above(0);
     expect(result.technique).to.equal('Hidden Triple');
+    // `cells` reports the whole triple, a superset of the cells receiving eliminations.
+    expect(result.cells).to.have.length(3);
+    for (const e of result.eliminations) expect(result.cells).to.include(e.cellIndex);
   });
 
   // HT2: Hidden triple variant

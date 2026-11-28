@@ -321,18 +321,19 @@ describe('coach/analyzer — rank 6: Naked Triple', function () {
 });
 */
 
-/* rank07 fixture pending — rank-clean board not yet collected. See docs/misc/coach-fixture-tracker.md.
 describe('coach/analyzer — rank 7: Hidden Triple', function () {
   techniqueTests('Hidden Triple', 7, 'elimination', rank07, function (step) {
-    expect(step.digits).to.have.length(3);
-    expect(step.roles.cause).to.have.length(3);
+    // Only cell 69 receives an elimination; cells 60 and 78 must still be recovered.
+    expect(step.digits).to.deep.equal([2, 3, 4]);
+    expect(step.roles.cause).to.deep.equal([60, 69, 78]);
     // elimTarget is empty for hidden triple.
     expect(step.roles.elimTarget).to.deep.equal([]);
     expect(step.unit).to.not.equal(null);
+    expect(step.unit.type).to.equal('col');
     expect(step.arrows).to.deep.equal([]);
+    expect(step.supportingText).to.not.include('undefined');
   });
 });
-*/
 
 // Captures rank-8 row-locked supportingText; compared in rank08Transpose block (AN8).
 let rank08SupportingText = null;

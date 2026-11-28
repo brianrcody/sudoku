@@ -755,9 +755,9 @@ const MAPPERS = {
   // Rank 7: Hidden Triple
   // -------------------------------------------------------------------------
   'Hidden Triple'(step, workingBoard, candidates) {
-    // Same structure as Hidden Pair but with 3 cells.
-    const elimCells = [...new Set(step.eliminations.map(e => e.cellIndex))].sort((a, b) => a - b);
-    const tripleCells = elimCells;
+    // Take the triple cells from the solver: a cell holding only triple digits
+    // receives no eliminations, so the cells cannot be inferred from step.eliminations.
+    const tripleCells = [...step.cells].sort((a, b) => a - b);
     const unitDesc = sharedUnit(tripleCells);
 
     let hiddenDigits = [];

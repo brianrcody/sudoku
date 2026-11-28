@@ -32,7 +32,8 @@ export function hiddenTriple(state) {
  * @param {{ board: Uint8Array, candidates: Uint16Array }} state
  * @param {number} size
  * @param {string} techniqueName
- * @returns {{ placements: Array, eliminations: Array, technique: string }|null}
+ * @returns {{ placements: Array, eliminations: Array, technique: string, cells: number[] }|null}
+ *   `cells` lists every subset cell, including any that receive no eliminations.
  */
 function hiddenSubset(state, size, techniqueName) {
   const { board, candidates } = state;
@@ -76,7 +77,8 @@ function hiddenSubset(state, size, techniqueName) {
         }
       }
       if (elims.length > 0) {
-        return { placements: [], eliminations: elims, technique: techniqueName };
+        const cells = [...cellSet].sort((a, b) => a - b);
+        return { placements: [], eliminations: elims, technique: techniqueName, cells };
       }
     }
   }

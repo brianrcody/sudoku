@@ -41,7 +41,7 @@ then run `/add-coach-fixture`.
 | 4    | Naked Pair       | `rank04`         | Complete  | Source: `080090030030000000002060108020800500800907006004005070503040900000000010010050020` |
 | 5    | Hidden Pair      | `rank05`         | Complete  | Source: `720400030000000047001076802010039000000801000000260080209680400340000000060003075`; also needs regression fixture — see below |
 | 6    | Naked Triple     | `rank06`         | Pending   | AS candidates solved before rank 6; export in index.js is an invalid placeholder (fires rank 3) |
-| 7    | Hidden Triple    | `rank07`         | Pending   | AS candidate solved before rank 7; export in index.js is an invalid placeholder (fires rank 1) |
+| 7    | Hidden Triple    | `rank07`         | Complete  | Source: `030000104052010070000400503100090002090008040007000030060305000000002000000061007` after step 13; pencil state included; only one triple cell takes an elimination (coach "undefined" regression) |
 | 8    | X-Wing (row)     | `rank08`         | Complete  | Source: `100000569402000008050009040000640801000010000208035000040500010900000402621000005` |
 | 8    | X-Wing (col)     | `rank08Transpose`| Complete  | Source: `000000004760010050090002081070050010000709000080030060240100070010090045900000000` |
 | 9    | Swordfish (row)  | `rank09` / `rank09Row` | Complete | Source: `020040069003806200060020000890500010000000000030001026000010070009604300270050090`; `rank09Row` is a re-export alias |
