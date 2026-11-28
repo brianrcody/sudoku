@@ -25,7 +25,7 @@ import {
   rank16, rank16Rule4, rank17, rank18B, rank18Long, rank19, rank20, rank20Type2,
   rank20Type4, rank21,
   noTechniqueComplete, noTechniqueInconsistent,
-  // rank05OneElimCell,  // pending — see docs/misc/coach-fixture-tracker.md
+  rank05OneElimCell,
 } from '/js/tests/fixtures/puzzles/coach/index.js';
 
 // ---------------------------------------------------------------------------
@@ -274,7 +274,6 @@ describe('coach/analyzer — rank 5: Hidden Pair', function () {
   });
 });
 
-/* rank05 regression: one-elim-cell hidden pair — fixture pending. See docs/misc/coach-fixture-tracker.md.
 describe('coach/analyzer — rank 5: Hidden Pair (one-elim-cell regression)', function () {
   // Regression for the bug where pairCells was built solely from step.eliminations.
   // When one pair cell already holds only the two hidden digits (no extras), the solver
@@ -282,13 +281,13 @@ describe('coach/analyzer — rank 5: Hidden Pair (one-elim-cell regression)', fu
   it('Hidden Pair one-elim-cell: digits has 2 elements and cause has 2 cells', function () {
     const step = analyze(puzzleOf(rank05OneElimCell), playerStateOf(rank05OneElimCell));
     expect(step.technique).to.equal('Hidden Pair');
-    expect(step.digits).to.have.length(2);
-    expect(step.roles.cause).to.have.length(2);
-    expect(step.supportingText).to.not.include('undefined');
+    expect(step.digits).to.deep.equal([2, 8]);
+    expect(step.roles.cause).to.deep.equal([58, 59]);
+    expect(step.supportingText).to.equal(
+      '*2* and *8* can only go in these two cells in this *row* — all other candidates in these cells can be removed.');
     assertSchemaComplete(step);
   });
 });
-*/
 
 // Regression: Naked Triple where one triple digit (4) has no elimination targets.
 // The old guard required `union digits ⊆ allElimDigits`; when allElimDigits = {6,9}
@@ -331,7 +330,8 @@ describe('coach/analyzer — rank 7: Hidden Triple', function () {
     expect(step.unit).to.not.equal(null);
     expect(step.unit.type).to.equal('col');
     expect(step.arrows).to.deep.equal([]);
-    expect(step.supportingText).to.not.include('undefined');
+    expect(step.supportingText).to.equal(
+      '*2*, *3*, and *4* can only appear in these three cells in this *column* — remove all other candidates from these cells.');
   });
 });
 

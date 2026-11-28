@@ -277,6 +277,44 @@ export const rank05 = {
 };
 
 // ===========================================================================
+// Rank 5 regression: Hidden Pair where only one pair cell receives eliminations.
+// Mined rank-clean (seed 640003); pencil state included.
+// Hidden pair {2,8} in row 6, cells 58/59; the only elimination is 7 from cell 58,
+// so cell 59 (already {2,8}) receives none and must come from step.cells.
+// ===========================================================================
+export const rank05OneElimCell = {
+  givens: board([
+    1,0,4,8,6,0,9,5,2,  // r0
+    0,0,5,4,9,0,7,8,1,  // r1
+    0,0,0,0,0,1,4,3,6,  // r2
+    3,1,0,6,0,5,2,7,0,  // r3
+    4,0,0,1,3,9,5,6,8,  // r4
+    0,0,0,2,0,0,3,1,0,  // r5
+    0,9,0,0,0,0,1,4,5,  // r6
+    0,4,1,9,0,6,8,2,3,  // r7
+    0,0,0,0,1,4,6,9,7,  // r8
+  ]),
+  playerPen: null,
+  pencil: pencil([
+    0,68,0,0,0,68,0,0,0,          // r0
+    34,38,0,0,0,6,0,0,0,          // r1
+    450,192,450,80,82,0,0,0,0,    // r2
+    0,0,384,0,136,0,0,0,264,      // r3
+    0,66,66,0,0,0,0,0,0,          // r4
+    432,176,416,0,200,192,0,0,264, // r5
+    96,0,100,68,194,130,0,0,0,    // r6
+    80,0,0,0,80,0,0,0,0,          // r7
+    146,146,134,20,0,0,0,0,0,     // r8
+  ]),
+  expected: {
+    technique: 'Hidden Pair',
+    rank: 5,
+    type: 'elimination',
+    complexityAcknowledged: false,
+  },
+};
+
+// ===========================================================================
 // Rank 6: Naked Triple
 //
 // Adapted from nakedSubsets.js nakedTriple board `c`.
@@ -400,152 +438,6 @@ export const rank07 = {
     complexityAcknowledged: false,
   },
 };
-
-// ===========================================================================
-// Rank 8: X-Wing
-//
-// Adapted from xWing.js position3 (bivalue corner pattern).
-// Digit 9 forms X-Wing in rows 3 and 6, cols 1 and 8.
-// Row 3: cells 27,29,30,31,32,33,34 given {1,2,3,4,5,6,7} → missing {8,9}.
-// Row 6: cells 54,56,57,58,59,60,61 given {1,2,3,4,5,6,7} → missing {8,9}.
-// Cells 28(r3c1),35(r3c8),55(r6c1),62(r6c8) each = {8,9}.
-// The 4 corners are bivalue, but naked pair {28,35} in row3 fires at rank4.
-//
-// Lower-rank suppression: the X-Wing board from position3 inherently has
-// naked pairs {corner pairs in each row}. We need to prevent rank<8 firing.
-// Use the position1 board instead (rows 1,5 with digit 1 in cols 3,7).
-// Row 1: cells 9,10,11,13,14,15,17 given {2,3,4,5,6,7,8} → missing {1,9}.
-// Row 5: cells 45,46,47,49,50,51,53 given {2,3,4,5,6,7,8} → missing {1,9}.
-// Cells 12,16,48,52 empty. Each row has exactly cells {12,16} and {48,52} as empties.
-// Cell 12 = row1 miss {1,9}. Col3 is open → no extra blocking. Cell12={1,9}. Bivalue.
-// Naked pair {12,16}={1,9} → rank4. Same problem.
-//
-// Add extra givens to make cells 12 and 48 have 3+ candidates:
-// Leave more cells empty in rows 1,5 to increase missing count.
-// Row 1: give cells 10,11,13,14,15 with {3,4,5,6,7}. Leave 9,12,16,17 empty.
-// Row1 missing {1,2,8,9}. Cell12={1,2,8,9}(4 cands from row) minus col/box.
-// Cell16={1,2,8,9}. Cell9(r1c0)={1,2,8,9}. Cell17(r1c8)={1,2,8,9}.
-// 1 in row1: cells 9,12,16,17 (4 cells). Not HS. ✓
-// For X-Wing: 1 must be confined to cols 3,7 in rows 1,5.
-// Block 1 from cells 9(col0) and 17(col8): col0 and col8 must each have 1.
-// b[0]=1(r0c0) → col0 has 1 → cell9 loses 1. b[8]=1(r0c8) → col8 has 1 → cell17 loses 1.
-// Cell9 = row1 miss {1,2,8,9} minus col0{1} = {2,8,9}. Cell17={2,8,9}.
-// Still need 1 confined to col3,col7 in row1: cells 12,16 have 1. ✓ (cells 9,17 don't).
-// But cells 12={1,2,8,9} and 16={1,2,8,9} — not bivalue. ✓ (no naked pair). ✓
-// Do similarly for row 5: give 46,47,49,50,51 with {3,4,5,6,7}. Leave 45,48,52,53 empty.
-// Row5 missing {1,2,8,9}. Block 1 from cells 45(col0): col0 already has 1 via b[0]=1. ✓
-// Block 1 from cell53(col8): col8 already has 1 via b[8]=1. ✓
-// Cell45={2,8,9}. Cell53={2,8,9}. Cells 48,52 have 1. ✓
-// X-Wing: 1 in rows1,5 each confined to cols 3,7. Eliminate 1 from col3,col7 elsewhere. ✓
-// NS check: min candidates in empty cells = 3 (cells 9,17,45,53). Not NS. ✓
-// HS check: 1 in row1 → only cells 12,16. 1 in row5 → only cells 48,52. 2 cells each → not HS. ✓
-// LC check: 1 in col3 rows1,5 confined to boxes? Cells 12(r1c3,box1) and 48(r5c3,box4). Different boxes. ✓
-//   1 in col7 rows1,5: cells 16(r1c7,box2) and 52(r5c7,box5). Different boxes. ✓
-//   No LC. ✓
-// NP check: cells 9={2,8,9}, 12={1,2,8,9}, 16={1,2,8,9}, 17={2,8,9}. No pair. ✓
-// NT check: cells 9,17,45,53={2,8,9}. All same 3-candidate set! → naked triple! rank6. PROBLEM.
-//
-// Fix: make their candidate sets different.
-// Block 8 from cell9(r1c0) via col0 or box: b[27]=8(r3c0) → col0 has 8 → cell9 loses 8.
-// Cell9={2,9}(bivalue). NP: any matching bivalue? Cell17={2,8,9}, cell45={2,8,9}, cell53={2,8,9}.
-// Cells 45 and 53 still match → potential NT among 3 cells. Block 8 from cell45(r5c0) too:
-// col0 has 8(r3c0) → cell45 already loses 8. Cell45={2,9}(bivalue). Cells9={2,9},45={2,9}: naked pair in col0! rank4. PROBLEM.
-//
-// This is an inherently difficult constraint. The X-Wing is a rank-8 technique and
-// boards that purely test it without triggering rank1-7 are complex to construct.
-// The board from position1 already WORKS for the technique test — it just might
-// trigger lower-rank techniques. Let me check what actually fires on position1:
-// position1 board: c[9]=2,c[10]=3,c[11]=4,c[13]=5,c[14]=6,c[15]=7,c[17]=8,
-//                  c[45]=2,c[46]=3,c[47]=4,c[49]=5,c[50]=6,c[51]=7,c[53]=8.
-// Row1 cells9-17: given 2(c0),3(c1),4(c2),[12 empty],5(c4),6(c5),7(c6),[16 empty],8(c8).
-// Row1 missing {1,9}. Cells 12={1,9}, 16={1,9} → naked pair! rank4.
-//
-// FINAL SOLUTION: Use a minimal board where NO row/col has only 2 empties.
-// Row 1 has 3+ empties to avoid naked pair. Ensure 1 confined to cols 3,7.
-// Row1: give c1=2,c2=3,c5=5,c6=6,c8=8. Leave c0,c3,c4,c7 empty (4 empties).
-// Row1 missing {1,4,7,9}. Cell12(c3)={1,4,7,9}. Cell16(c7)={1,4,7,9}. Same → could be NP if bivalue, but 4 cands → not bivalue. ✓
-// 1 in row1: cells 9(c0),12(c3),16(c7) (cell9 might have 1). Need 1 only in cols 3,7.
-// Block 1 from col0: b[0]=1 → col0 → cell9 loses 1. Cell9={4,7,9}.
-// Now 1 in row1 → only cells 12,16. ✓
-// Cell at c4 (index 13)=row1 col4: row1 miss {1,4,7,9} minus col4 contents.
-// Hmm we're leaving cell13 empty too. 4 empties: 9,12,13,16. 1 in row1 confined to cols3,7 (cells12,16). ✓
-// For row5: give c1=2,c2=3,c5=5,c6=6,c8=8. Leave c0,c3,c4,c7 empty.
-// Row5 missing {1,4,7,9}. Block 1 from col0 (already blocked via b[0]=1). ✓
-// Cell48(r5c3): 1 present. Cell52(r5c7): 1 present. ✓
-// But cell45(r5c0) loses 1 via col0. cell45={4,7,9}. ✓
-//
-// Naked pair/triple check: cells {9,13}={4,7,9}(3) and {12,16}={1,4,7,9}(4) and {45,49,52}...
-// cell49(r5c4): row5 miss {1,4,7,9} minus col4? Col4 has nothing → cell49={1,4,7,9}.
-// But cell49 is left empty and has 1 as candidate. Need 1 confined to cols 3,7 in row5.
-// Block 1 from cell49(col4): need col4 or row5 to block 1.
-// b[4]=1(r0c4) → col4 has 1 → cell49 loses 1. cell49={4,7,9}. ✓
-// Also block 1 from cell45(col0) — done via b[0]=1. ✓
-// Check: row1 cell13(r1c4): col4 has 1 via b[4]=1 → cell13 loses 1 → cell13={4,7,9}. ✓
-// Naked triple? Cells 9={4,7,9}, 13={4,7,9}, 45={4,7,9}, 49={4,7,9}. All same 3-candidate set!
-// Naked triple in any unit containing 3 of them. E.g., cells 9,13 both in row1 + one more?
-// Cells 9,13 are in row1, NOT forming a triple by themselves (need 3 cells).
-// Do any 3 of {9,13,45,49} share a unit? 9(r1c0,box0), 13(r1c4,box1), 45(r5c0,box3), 49(r5c4,box4).
-// No 3 share a row, col, or box. ✓ No naked triple fires. ✓
-// NS check: all empty cells have ≥3 candidates. ✓
-// HS check: 1 in col0 → only given (b[0]=1). Digit 1 elsewhere: confined to specific places.
-//   1 in row0: only b[0] (all other row0 cells... row0 is otherwise mostly empty).
-//   Hmm row0: b[0]=1(given at r0c0), b[4]=1? NO: b[4]=1 means cell4(r0c4). row0 has two 1s! CONFLICT.
-// b[0]=1 and b[4]=1 are both in row0. INVALID.
-// Fix: use a different row for col4 blocking. b[31]=1(r3c4) → col4 has 1. Cell13(r1c4) and cell49(r5c4) lose 1. ✓
-// Also b[0]=1(r0c0) → col0 has 1. Cell9(r1c0) and cell45(r5c0) lose 1. ✓
-// Row0 has only one 1 (at c0). Row3 has only one 1 (at c4). ✓
-// NS: min cands = 3 (cells 9,13,45,49). ✓
-// HS: 1 in row1 → cells 12,16 (2 cells). 1 in row5 → cells 48,52 (2 cells). Not HS. ✓
-//
-// Now: what about naked pair in row1? cells 9={4,7,9},13={4,7,9},12={1,4,7,9},16={1,4,7,9}.
-// No two cells have same bivalue mask → no NP. ✓
-// NT in row1: cells 9,13 have {4,7,9} (2 cells). Need a 3rd with subset. Cell12 has {1,4,7,9} (superset). Union 9∪13∪12 = {1,4,7,9} = 4 bits → not NT. ✓
-// Row5 same analysis. ✓
-//
-// Now hidden pair/triple: 1 in col3 → only rows 1,5 (cells 12,48). In boxes: 12(r1c3,box1), 48(r5c3,box4). Different boxes. "1 in col3 confined to rows 1,5" → no LC. ✓
-//
-// Great! Let me finalize this board for rank08.
-//
-// rank07 FINAL WORKING IMPLEMENTATION (using col4 hidden triple):
-// Col4: give cells 13=7, 22=8, 40=7? No, same digit twice in col.
-// Actually I'll use the col4 approach with the clean construction:
-// Col4 givens: b[13]=1(r1c4), b[31]=1? No, col4 can't have two 1s.
-// Let me use col4 with givens: b[22]=1(r2c4), b[31]=2(r3c4), b[49]=4(r5c4), b[76]=6(r8c4).
-// Col4 missing {3,5,7,8,9}. Empty cells in col4: 4(r0c4),13(r1c4),40(r4c4),58(r6c4),67(r7c4).
-// All in boxes: 4(b1),13(b1),40(b4),58(b7),67(b7). Two pairs of same box.
-// Block {7,8,9} from cells 13(r1c4) and 40(r4c4) via rows 1,4:
-//   row1: b[9]=7(r1c0), b[10]=8(r1c1), b[11]=9(r1c2). cell13 loses {7,8,9} → cell13={3,5}.
-//   row4: b[36]=7(r4c0), b[37]=8(r4c1), b[38]=9(r4c2). cell40 loses {7,8,9} → cell40={3,5}.
-//   Cells 13={3,5} and 40={3,5}: NAKED PAIR! rank4. PROBLEM again.
-//
-// I cannot construct a clean hidden triple board manually in reasonable time.
-// Use the board that was designed for this purpose in hiddenSubsets.js (hiddenTriple2):
-// c[31]=1,c[40]=2,c[49]=3,c[67]=5,c[76]=6,c[54]=7,c[55]=8,c[56]=9.
-// Col4 empties: 4,13,22,58. Cells 4,13,22 have {4,7,8,9}.
-// Cell 58: row6 has {7,8,9} → cell58 loses {7,8,9} → cell58={4}. NAKED SINGLE.
-//
-// ABSOLUTE FINAL: Accept hiddenTriple1 board EXACTLY as-is from hiddenSubsets.js.
-// Board: b[30]=2,b[31]=3,b[32]=4,b[33]=6, b[7]=1,b[16]=5,b[25]=9, b[8]=1?
-// hiddenTriple1 uses: b[30]=2,b[31]=3,b[32]=4,b[33]=6 (row3 givens),
-//   b[7]=1,b[16]=5,b[25]=9 (col7 blocks for cell34),
-//   b[8]=1,b[17]=5,b[26]=9 (col8 blocks for cell35).
-// But b[7]=1(r0c7) and b[8]=1(r0c8) → row0 has TWO 1s. INVALID.
-// The actual hiddenTriple1 code uses: b[7]=1,b[16]=5,b[25]=9,b[8]=1,b[17]=5,b[26]=9.
-// Row0: b[7]=1(c7), b[8]=1(c8) → CONFLICT. But hiddenSubsets.js was created and presumably tested...
-// Wait: looking again at hiddenTriple1 in hiddenSubsets.js, it uses the `b` array:
-//   b[7]=1, b[16]=5, b[25]=9 → col7 blocks
-//   b[8]=1, b[17]=5, b[26]=9 → col8 blocks
-// b[7]=cell7(r0c7)=1 and b[8]=cell8(r0c8)=1 → row0 has 1 twice! The fixture is technically
-// invalid as a Sudoku board but may still work for technique detection since the
-// technique solver doesn't validate full Sudoku consistency, only candidate computation.
-// initialCandidates computes by row/col/box eliminations — it will still compute candidates.
-// But having 1 in row0 twice means ALL row0 cells lose 1 (from any peer having 1).
-// Cell 34(r3c7): col7 has 1 → loses 1 ✓. Cell 35(r3c8): col8 has 1 → loses 1 ✓.
-// The duplicate doesn't cause additional harm to the intended pattern.
-// The question is: does having an "invalid" Sudoku board (multiple same digit in row)
-// cause the analyzer to return unexpected results? The analyzer uses initialCandidates
-// which just does bitset eliminations — it won't crash, just compute tighter candidates.
-// Use this board as-is (accepting the row-level inconsistency as a purposeful fixture choice).
 
 // ===========================================================================
 // Rank 8: X-Wing (row-locked)

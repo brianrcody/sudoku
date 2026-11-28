@@ -223,6 +223,17 @@ function unitDescriptor(cellIdx, unitSlot) {
 }
 
 /**
+ * Player-facing noun for a unit descriptor, as used in supportingText.
+ *
+ * @param {{ type: 'row'|'col'|'box' }|null} unitDesc
+ * @returns {'row'|'column'|'box'|'unit'}
+ */
+function unitNoun(unitDesc) {
+  if (!unitDesc) return 'unit';
+  return unitDesc.type === 'col' ? 'column' : unitDesc.type;
+}
+
+/**
  * Find the shared unit for a set of cells. Returns the first unit (row, col,
  * box order) that contains ALL of the given cells.
  *
@@ -360,7 +371,7 @@ const MAPPERS = {
       ? UNITS_OF[target][hidingUnitSlot].filter(c => c !== target)
       : [];
 
-    const unitTypeName = unitDesc ? unitDesc.type : 'unit';
+    const unitTypeName = unitNoun(unitDesc);
     const hidingUnitType = unitDesc ? unitDesc.type : null;
 
     // For each empty non-target cell E in the unit, find which filled D-cells
@@ -583,7 +594,7 @@ const MAPPERS = {
     pairCells.sort((a, b) => a - b);
     const digits = pairCells.length === 2 ? iterate(candidates[pairCells[0]]) : [];
     const unitDesc = pairCells.length === 2 ? sharedUnit(pairCells) : null;
-    const unitTypeName = unitDesc ? unitDesc.type : 'unit';
+    const unitTypeName = unitNoun(unitDesc);
 
     const arrows = [];
     if (pairCells.length === 2) {
@@ -615,35 +626,9 @@ const MAPPERS = {
   // Rank 5: Hidden Pair
   // -------------------------------------------------------------------------
   'Hidden Pair'(step, workingBoard, candidates) {
-    // Elim targets are within the cause cells (non-pair candidates removed).
-    const elimCells = [...new Set(step.eliminations.map(e => e.cellIndex))];
-    // The pair cells are the cells receiving eliminations.
-    let pairCells = [...elimCells].sort((a, b) => a - b);
-
-    // One pair cell may already hold only the hidden digits (no extras), so
-    // the solver emits no eliminations for it and it won't appear in elimCells.
-    // Recover the missing partner by scanning units for the cell that contains
-    // exactly the hidden digits (candidates of the known cell minus its elims).
-    if (pairCells.length === 1) {
-      const knownCell = pairCells[0];
-      const elimBits = step.eliminations
-        .reduce((m, e) => m | (1 << (e.digit - 1)), 0);
-      const hiddenMask = candidates[knownCell] & ~elimBits;
-      outer:
-      for (let slot = 0; slot < 3; slot++) {
-        const unit = UNITS_OF[knownCell][slot];
-        for (const c of unit) {
-          if (c === knownCell || workingBoard[c] !== 0) continue;
-          if ((candidates[c] & hiddenMask) === hiddenMask) {
-            const others = unit.filter(x => x !== knownCell && x !== c);
-            if (others.every(x => workingBoard[x] !== 0 || !(candidates[x] & hiddenMask))) {
-              pairCells = [knownCell, c].sort((a, b) => a - b);
-              break outer;
-            }
-          }
-        }
-      }
-    }
+    // Take the pair cells from the solver: a cell holding only the hidden digits
+    // receives no eliminations, so the cells cannot be inferred from step.eliminations.
+    const pairCells = [...step.cells].sort((a, b) => a - b);
 
     const unitDesc = sharedUnit(pairCells);
 
@@ -662,7 +647,7 @@ const MAPPERS = {
     }
     hiddenDigits.sort((a, b) => a - b);
     const [A, B] = hiddenDigits;
-    const unitTypeName = unitDesc ? unitDesc.type : 'unit';
+    const unitTypeName = unitNoun(unitDesc);
 
     return {
       roles: {
@@ -723,7 +708,7 @@ const MAPPERS = {
     const tripleUnion = tripleCells.reduce((acc, c) => acc | candidates[c], 0);
     const digits = iterate(tripleUnion);
     const unitDesc = sharedUnit(tripleCells);
-    const unitTypeName = unitDesc ? unitDesc.type : 'unit';
+    const unitTypeName = unitNoun(unitDesc);
 
     const arrows = [];
     for (let idx = 0; idx < tripleCells.length - 1; idx++) {
@@ -774,7 +759,7 @@ const MAPPERS = {
     }
     hiddenDigits.sort((a, b) => a - b);
     const [A, B, C] = hiddenDigits;
-    const unitTypeName = unitDesc ? unitDesc.type : 'unit';
+    const unitTypeName = unitNoun(unitDesc);
 
     return {
       roles: {

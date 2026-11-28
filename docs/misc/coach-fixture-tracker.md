@@ -39,7 +39,7 @@ then run `/add-coach-fixture`.
 | 2    | Hidden Single    | `rank02`         | Complete  |                                                                                     |
 | 3    | Locked Candidates| `rank03`         | Complete  |                                                                                     |
 | 4    | Naked Pair       | `rank04`         | Complete  | Source: `080090030030000000002060108020800500800907006004005070503040900000000010010050020` |
-| 5    | Hidden Pair      | `rank05`         | Complete  | Source: `720400030000000047001076802010039000000801000000260080209680400340000000060003075`; also needs regression fixture — see below |
+| 5    | Hidden Pair      | `rank05`         | Complete  | Source: `720400030000000047001076802010039000000801000000260080209680400340000000060003075`; regression fixture `rank05OneElimCell` below |
 | 6    | Naked Triple     | `rank06`         | Pending   | AS candidates solved before rank 6; export in index.js is an invalid placeholder (fires rank 3) |
 | 7    | Hidden Triple    | `rank07`         | Complete  | Source: `030000104052010070000400503100090002090008040007000030060305000000002000000061007` after step 13; pencil state included; only one triple cell takes an elimination (coach "undefined" regression) |
 | 8    | X-Wing (row)     | `rank08`         | Complete  | Source: `100000569402000008050009040000640801000010000208035000040500010900000402621000005` |
@@ -71,4 +71,4 @@ dedicated test in `analyzer.test.js`.
 
 | Bug                              | Fixture export          | Status  | What to assert                                                                  |
 |----------------------------------|-------------------------|---------|---------------------------------------------------------------------------------|
-| Hidden Pair — one elim cell      | `rank05OneElimCell`     | Pending | `step.digits.length === 2`, `step.roles.cause.length === 2`, no `"undefined"` in `step.supportingText`. Board: a Hidden Pair where one pair cell already holds only the two hidden digits (no extras) so the solver emits eliminations from only one cell. The test was written to catch the bug where `pairCells` was built solely from `step.eliminations`, leaving the clean pair cell out of `roles.cause` and `A`/`B` as `undefined`. |
+| Hidden Pair — one elim cell      | `rank05OneElimCell`     | Complete (mined, seed 640003, pencil) | `step.digits.length === 2`, `step.roles.cause.length === 2`, no `"undefined"` in `step.supportingText`. Board: a Hidden Pair where one pair cell already holds only the two hidden digits (no extras) so the solver emits eliminations from only one cell. The test was written to catch the bug where `pairCells` was built solely from `step.eliminations`, leaving the clean pair cell out of `roles.cause` and `A`/`B` as `undefined`. |
