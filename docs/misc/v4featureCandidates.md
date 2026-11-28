@@ -17,22 +17,25 @@ board. Persistent preference. The board stays centered within the panel arrangem
 
 > Shipped in `6c4803e`; inspector stepping and side panel in `415ff16`. Specs: `rspec-006-puzzle-sharing`,
 > `fspec-006-puzzle-sharing`, `vspec-006-puzzle-sharing`, `aspec-puzzle-sharing`,
-> `tspec-puzzle-sharing`. Report: `docs/misc/v4-devmode-sharing-report.md`. The Share
-> button sits in the action row provisionally, until the hamburger menu absorbs it.
+> `tspec-puzzle-sharing`. Report: `docs/misc/v4-devmode-sharing-report.md`. Share
+> moved into the hamburger menu in `c077ddf`.
 
 Encode the puzzle's given cells into a URL parameter. A "Share" action generates and
 copies the link to clipboard. Recipients start from the same givens with no progress.
 Zero server infrastructure required.
 
-### Hamburger Menu UI Consolidation — In progress
+### Hamburger Menu UI Consolidation — ✅ Done (2026-11-27)
 
-> Scope widened 2026-11-27: New Puzzle moves beside Difficulty, Reset moves into the
-> menu, the action row goes away, and Stats placement is open. Spec:
-> `rspec-008-hamburger-menu`. Exploratory mockup: `docs/mockups/hamburger-menu-v1.html`.
+> Shipped in `c077ddf` (not yet deployed; deploy waits on the cache-headers item,
+> `debug-instrumentation-open-items.md` §4.2). Specs: `rspec-008-hamburger-menu`,
+> `fspec-008-hamburger-menu`, `vspec-008-hamburger-menu`, `aspec-hamburger-menu`,
+> `tspec-hamburger-menu`. Reviews: `review-hamburger-menu-v1.md`, `-v2.md`. Test summary:
+> `test-summary-hamburger-menu.md`.
 
-A hamburger menu (top-right in right-hand mode, top-left in left-hand mode) consolidates
-settings and actions that currently live ad-hoc in the UI: theme selection, handedness
-toggle, and puzzle sharing.
+A hamburger menu at the right end of the header, in every hand and width, holds Theme,
+Left-handed, Share, Reset and Statistics (now a dialog), grouped into Game and Settings
+sections for later items. New Puzzle sits beside Difficulty as one cluster, the action row
+is gone, and the number pad tools are regrouped into two labelled columns.
 
 ---
 
