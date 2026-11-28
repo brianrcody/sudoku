@@ -51,6 +51,8 @@ body.theme-terminal {
 
 /* ── Header ───────────────────────────────────────────────────────────── */
 header {
+  position: relative;
+  z-index: 50;   /* the menu overlays main */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -99,34 +101,6 @@ body.theme-coffee header h1 {
 
 body.theme-school header {
   border-bottom: 2px solid #b8c4d4;
-}
-
-/* ── Header right-side group: handedness switch + theme control ─────── */
-.header-controls {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-/* ── Theme control (header right) ────────────────────────────────────── */
-.theme-control {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-body.theme-mountain .theme-control {
-  color: #adc6de;
-}
-
-body.theme-coffee .theme-control {
-  color: #c9a97a;
-}
-
-.theme-control label {
-  white-space: nowrap;
 }
 
 /* ── Main layout ──────────────────────────────────────────────────────── */
@@ -212,13 +186,29 @@ body.theme-terminal main {
   flex-shrink: 0;
 }
 
-/* Left-hand mode swaps the columns on wide viewports only. The query is the exact
-   complement of the mobile breakpoint below, so this higher-specificity rule never
-   overrides the stacked layout. */
+/* Wide layout (vspec-008 §2.2): a two-column grid. The board column's wrapper is
+   display: contents, so its children (cluster, grid, cards) are rows of column 1
+   and the control column sits in the grid's row: the number pad's top edge is
+   the grid's top edge. DOM, reading and Tab order are untouched. Left-hand mode
+   swaps the two grid columns. The query is the exact complement of the mobile
+   breakpoint below, so these rules never override the stacked layout. */
 @media not all and (max-width: 720px) {
-  html[data-hand="left"] .game-area {
-    flex-direction: row-reverse;
+  .game-area {
+    display: grid;
+    grid-template-columns: auto auto;
+    column-gap: 32px;
+    row-gap: 14px;
+    justify-content: center;
+    align-items: start;
   }
+
+  .left-col { display: contents; }
+  .left-col > * { grid-column: 1; }
+  .left-col > #controls-root { grid-row: 1; }
+  .right-col { grid-column: 2; grid-row: 2; }
+
+  html[data-hand="left"] .left-col > * { grid-column: 2; }
+  html[data-hand="left"] .right-col { grid-column: 1; }
 }
 
 /* ── Responsive: mobile ───────────────────────────────────────────────── */

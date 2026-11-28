@@ -11,16 +11,42 @@
   gap: 6px;
 }
 
-.numpad-utils {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-}
-
-.numpad-bottom-row1 {
+/* Tool block (vspec-008 §6.2): two columns read as two groups through a 14px
+   gutter with a centred hairline. Rows are shared across the columns (subgrid),
+   so the columns line up row by row. Tool buttons drop their side padding to
+   6px, which pays for the wider gutter at an unchanged column width. */
+.numpad-tools {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  grid-template-rows: repeat(3, auto);
+  column-gap: 14px;
+  row-gap: 6px;
+  margin: 4px 0;
+}
+
+.numpad-tools::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 50%;
+  width: 1px;
+  margin-left: -0.5px;
+  background: var(--border);
+  pointer-events: none;
+}
+
+.tool-group {
+  display: grid;
+  grid-row: 1 / -1;
+  grid-template-rows: subgrid;
+  row-gap: 6px;
+}
+
+.tool-group .btn {
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 .numpad-bottom-row2 {
@@ -29,12 +55,6 @@
 
 .numpad-bottom-row2 .btn-check {
   width: 100%;
-}
-
-.numpad-undo-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
 }
 
 /* ── Base button ──────────────────────────────────────────────────────── */
@@ -102,6 +122,13 @@ body.theme-school .btn {
 body.theme-mountain .btn {
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(26,58,82,0.1);
+}
+
+/* Coffee (R15, vspec-008 §8.3): rings on the dark page backdrop use the
+   header tone; rings on light surfaces keep the accent. */
+body.theme-coffee .numpad .btn:focus-visible,
+body.theme-coffee .next-game .btn-new:focus-visible {
+  outline-color: #c9a97a;
 }
 
 /* ── Digit buttons ────────────────────────────────────────────────────── */
@@ -317,18 +344,6 @@ body.theme-terminal .coach-recap {
   border-radius: 0;
 }
 
-/* ── Action row ───────────────────────────────────────────────────────── */
-.action-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-/* Share takes its own full-width row beneath New Puzzle / Reset (vspec-006 §2). */
-#btn-share {
-  grid-column: 1 / -1;
-}
-
 /* ── Notice card (vspec-006 §3) ───────────────────────────────────────── */
 /* The width lives on the root: in the stacked layout the board column centres
    its children, and a percentage max-width on the card itself would resolve
@@ -484,155 +499,6 @@ body.theme-coffee .modal {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
-}
-
-/* ── Theme select (header) ────────────────────────────────────────────── */
-#theme-select {
-  font-size: 13px;
-  padding: 4px 24px 4px 8px;
-  border: 1px solid var(--btn-border);
-  border-radius: 4px;
-  background-color: var(--btn-bg);
-  color: var(--text);
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7570'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  font-family: inherit;
-}
-
-body.theme-coffee #theme-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238c6642'/%3E%3C/svg%3E");
-}
-
-body.theme-school #theme-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23718096'/%3E%3C/svg%3E");
-}
-
-body.theme-terminal #theme-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2339ff14'/%3E%3C/svg%3E");
-  border-color: var(--accent);
-}
-
-body.theme-mountain .theme-control #theme-select {
-  background-color: #2d5878;
-  color: #e8f0f7;
-  border-color: #4d7a99;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23adc6de'/%3E%3C/svg%3E");
-}
-
-body.theme-coffee .theme-control #theme-select {
-  background-color: #3b2a1a;
-  color: #f5ede0;
-  border-color: #7c4f22;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c9a97a'/%3E%3C/svg%3E");
-}
-
-#theme-select:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-/* Dark headers: the theme accent is near-invisible against them. */
-body.theme-coffee .theme-control #theme-select:focus {
-  outline-color: #c9a97a;
-}
-
-body.theme-mountain .theme-control #theme-select:focus {
-  outline-color: #adc6de;
-}
-
-/* ── Handedness switch (vspec-004) ────────────────────────────────────── */
-.hand-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 2px;
-  border: 0;
-  border-radius: 4px;
-  background: none;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 13px;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color 0.1s;
-}
-
-.header-controls .hand-switch:hover {
-  color: inherit;
-}
-
-.hand-switch:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.hand-switch-track {
-  position: relative;
-  flex-shrink: 0;
-  width: 32px;
-  height: 18px;
-  border: 1px solid var(--text-muted);
-  border-radius: 9px;
-  background: var(--btn-bg);
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.hand-switch-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  transition: transform 0.15s, background 0.15s;
-}
-
-.hand-switch[aria-checked="true"] .hand-switch-track {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-
-.hand-switch[aria-checked="true"] .hand-switch-thumb {
-  transform: translateX(14px);
-  background: var(--surface);
-}
-
-/* Dark headers: theme accents lack contrast against the header, so use the header's muted tone */
-body.theme-coffee .hand-switch { color: #c9a97a; }
-body.theme-coffee .hand-switch:focus-visible { outline-color: #c9a97a; }
-body.theme-coffee .hand-switch-track { border-color: #c9a97a; background: #3b2a1a; }
-body.theme-coffee .hand-switch-thumb { background: #c9a97a; }
-body.theme-coffee .hand-switch[aria-checked="true"] .hand-switch-track { background: #c9a97a; }
-body.theme-coffee .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #2b1d0e; }
-
-body.theme-mountain .hand-switch { color: #adc6de; }
-body.theme-mountain .hand-switch:focus-visible { outline-color: #adc6de; }
-body.theme-mountain .hand-switch-track { border-color: #adc6de; background: #2d5878; }
-body.theme-mountain .hand-switch-thumb { background: #adc6de; }
-body.theme-mountain .hand-switch[aria-checked="true"] .hand-switch-track { background: #adc6de; }
-body.theme-mountain .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #1a3a52; }
-
-body.theme-terminal .hand-switch-track { border-color: var(--accent); border-radius: 0; }
-body.theme-terminal .hand-switch-thumb { border-radius: 0; }
-body.theme-terminal .hand-switch[aria-checked="true"] .hand-switch-thumb { background: #000; }
-
-@media (prefers-reduced-motion: reduce) {
-  .hand-switch-track,
-  .hand-switch-thumb {
-    transition: none;
-  }
-}
-
-@media (max-width: 720px) {
-  .hand-switch {
-    display: none;
-  }
 }
 
 /* ── Generation busy / progress card (vspec-003 §4) ───────────────────── */

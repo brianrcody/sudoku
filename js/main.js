@@ -5,14 +5,16 @@
  * Steps follow aspec §4.1.1 exactly.
  */
 
-import { initTheme, bindThemeSelect } from './ui/themes.js';
-import { initHandedness, bindHandToggle } from './ui/handedness.js';
+import { initTheme, applyTheme, currentTheme, THEME_OPTIONS } from './ui/themes.js';
+import { initHandedness, getHandedness, toggleHandedness } from './ui/handedness.js';
 import { mount as mountSrLive, announce } from './ui/srLive.js';
 import { mount as mountDialog, open as openDialog, close as closeDialog } from './ui/dialog.js';
 import { mount as mountGrid } from './ui/grid.js';
 import { mount as mountNumpad } from './ui/numpad.js';
 import { mount as mountControls } from './ui/controls.js';
-import { mount as mountStats } from './ui/stats.js';
+import { mount as mountStats, open as openStats, close as closeStats } from './ui/stats.js';
+import { mount as mountMenu, close as closeMenu } from './ui/menu.js';
+import { createRequestFocus } from './ui/requestFocus.js';
 import { mount as mountWinBanner } from './ui/winBanner.js';
 import { mount as mountKeyboard } from './ui/keyboard.js';
 import { mount as mountCoach } from './ui/coach.js';
@@ -149,11 +151,14 @@ if (!restorable) {
 
 // ── Step 8: mount UI modules ───────────────────────────────────────────────
 mountSrLive(document.body);
-mountDialog(document.getElementById('dialog-root'));
-
-const themeSelect = document.getElementById('theme-select');
-if (themeSelect) bindThemeSelect(themeSelect);
-bindHandToggle(document.getElementById('hand-toggle'));
+// A confirmation never opens beneath the Statistics dialog or the menu: both
+// close first, so the dialog records the menu button as its trigger.
+mountDialog(document.getElementById('dialog-root'), {
+  beforeOpen: () => {
+    closeStats();
+    closeMenu({ focusButton: true });
+  },
+});
 
 mountControls(
   document.getElementById('controls-root'),
@@ -180,7 +185,7 @@ mountBusy(
 );
 
 mountStats(
-  document.getElementById('stats-root'),
+  document.getElementById('stats-dialog-root'),
   gameState,
   stats
 );
@@ -193,27 +198,56 @@ mountWinBanner(
 mountKeyboard(document.body, gameState);
 
 notice.mount(document.getElementById('notice-root'));
-mountShare(document.getElementById('btn-share'), gameState);
 
-// ── Wire action buttons (New Puzzle + Reset) ───────────────────────────────
+const menuButton = document.getElementById('menu-button');
+const gridEl = document.querySelector('#grid-root .sudoku-grid');
+const share = mountShare(gameState, { returnFocus: () => menuButton });
 
-document.getElementById('btn-new')?.addEventListener('click', () => {
+mountMenu(document.getElementById('menu-root'), gameState, {
+  onStatistics: () => openStats(menuButton),
+  onShare: () => share.share(),
+  onReset: _confirmReset,
+  themes: { options: THEME_OPTIONS, current: currentTheme, apply: v => applyTheme('theme-' + v) },
+  hand: { isLeft: () => getHandedness() === 'left', toggle: toggleHandedness },
+  nextFocus: () => document.getElementById('difficulty-select'),
+});
+
+const focusAfterRequest = createRequestFocus({
+  newPuzzle: () => document.getElementById('btn-new'),
+  difficulty: () => document.getElementById('difficulty-select'),
+  grid: () => gridEl,
+});
+
+// ── Wire New Puzzle and Reset ──────────────────────────────────────────────
+
+/**
+ * Starts a new game at `tier`; focus at the end of the request follows the
+ * control it came from (fspec-008 §3.4).
+ *
+ * @param {'new-puzzle'|'difficulty'} origin
+ * @param {string} tier
+ */
+const _startFrom = (origin, tier) => foreground.startNew(
+  tier, () => removeItem(STATE_KEY), outcome => focusAfterRequest(origin, outcome));
+
+document.getElementById('btn-new').addEventListener('click', () => {
   const state = gameState.getState();
-  const inProgress = _isInProgress(state);
-
-  if (inProgress) {
+  const start = () => _startFrom('new-puzzle', foreground.generationTier(state));
+  if (_isInProgress(state)) {
     openDialog({
       title: 'Start a new puzzle?',
       body: 'Your current progress will be lost.',
       confirmLabel: 'New Puzzle',
-      onConfirm: () => foreground.startNew(foreground.generationTier(state), _afterNewPuzzle('btn-new')),
+      onConfirm: start,
     });
   } else {
-    foreground.startNew(foreground.generationTier(state), _afterNewPuzzle('btn-new'));
+    start();
   }
 });
 
-document.getElementById('btn-reset')?.addEventListener('click', () => {
+function _confirmReset() {
+  // No puzzle guard: the item is aria-disabled with no puzzle and the menu
+  // returns before calling this, so a guard would be an unreachable branch.
   openDialog({
     title: 'Reset puzzle?',
     body: 'Your entries will be cleared.',
@@ -221,21 +255,9 @@ document.getElementById('btn-reset')?.addEventListener('click', () => {
     onConfirm: () => {
       gameState.dispatch({ type: 'RESET_PUZZLE' });
       announce('Puzzle reset.');
-      document.getElementById('btn-reset')?.focus();
+      gridEl.focus();
     },
   });
-});
-
-/**
- * @param {string} focusId - Control that takes focus once the puzzle loads:
- *   the one the player started it from.
- * @returns {function(): void} The `afterLoad` callback for `foreground.startNew`.
- */
-function _afterNewPuzzle(focusId) {
-  return () => {
-    removeItem(STATE_KEY);
-    document.getElementById(focusId)?.focus();
-  };
 }
 
 function _isInProgress(state) {
@@ -258,7 +280,7 @@ gameState.on('changed', ({ action, changed }) => {
   // before the won-board exit below: a finished game can change tier too.
   if (action.type === 'CHANGE_DIFFICULTY') {
     foreground.chooseTier(action.difficulty);
-    foreground.startNew(action.difficulty, _afterNewPuzzle('difficulty-select'));
+    _startFrom('difficulty', action.difficulty);
     return;
   }
 

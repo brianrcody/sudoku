@@ -36,18 +36,23 @@ says so honestly and offers the hardest one it generated instead.
   you apply the move. ALS-XZ uses deliberately limited coaching: the coach names the
   technique, highlights the two cell groups and the result, and leaves the tracing to you
 - Puzzle state persisted across page loads (`localStorage`)
-- Per-difficulty statistics (games played, win rate, best/average time) persisted in cookies
-- New Puzzle confirmation when a game is in progress
+- Per-difficulty statistics (games attempted and won) persisted in cookies, shown in a
+  Statistics dialog opened from the menu
+- New Puzzle sits beside the Difficulty selector above the grid, with a confirmation when a
+  game is in progress
 
-**Visual themes** — Minimalist, Coffee Shop, School, Digital Terminal, Mountain. Theme
-persisted in a cookie; applied before first paint (no flash).
+**Menu** — the header's menu button (☰) holds Statistics… (a dialog), Share puzzle, Reset
+puzzle…, the theme choices, and the Left-handed setting. It is keyboard operable (arrow
+keys, Home/End, type-ahead, Escape) and follows the ARIA menu-button pattern.
 
-**Left-handed layout** — a header switch moves the number pad, action buttons, and
-statistics to the left of the board on wide screens (phones keep the stacked layout, and
-the switch is hidden there). Keyboard and screen reader order are the same in both modes.
+**Visual themes** — Minimalist, Coffee Shop, School, Digital Terminal, Mountain, chosen in
+the menu. Theme persisted in a cookie; applied before first paint (no flash).
+
+**Left-handed layout** — the menu's Left-handed item moves the number pad to the left of
+the board on wide screens (phones keep the stacked layout, and the item is hidden there). Keyboard and screen reader order are the same in both modes.
 The preference is persisted in a cookie and applied before first paint.
 
-**Share links** — the **Share** button copies a link to the current puzzle. The link
+**Share links** — the menu's **Share puzzle** item copies a link to the current puzzle. The link
 carries only the givens — 81 digits, `0` for an empty cell — in the `p` query parameter:
 
 ```

@@ -6,7 +6,7 @@
 
 import {
   createApp, waitFor, waitForPuzzle, waitForLinkHandled, waitForDevPanel, appFrame, gsOf,
-  seedSavedGame, readStats, enter, solveAll, boardString,
+  seedSavedGame, readStats, enter, solveAll, boardString, clickMenuItem,
 } from './_app.js';
 import { contrast } from './sharing.test.js';
 import {
@@ -509,7 +509,7 @@ describe('integration: developer mode', function () {
       $(iframe, '#dev-inspect-run').click();
       expect($(iframe, '#dev-root').getBoundingClientRect().height).to.be.at.most(900);
 
-      $(iframe, '#hand-toggle').click();
+      clickMenuItem(iframe, 'mi-hand');
       await appFrame(iframe);
       ({ panel, game } = rects());
       expect(panel.left).to.be.at.least(game.right);
@@ -535,10 +535,8 @@ describe('integration: developer mode', function () {
       $(iframe, '#dev-inspect-list button').click();
       $(iframe, '#dev-overlay-toggle').click();
 
-      const themeSelect = $(iframe, '#theme-select');
       for (const theme of ['minimalist', 'coffee', 'school', 'terminal', 'mountain']) {
-        themeSelect.value = theme;
-        themeSelect.dispatchEvent(new win.Event('change'));
+        clickMenuItem(iframe, `mi-theme-${theme}`);
         await sleep(350);
         const panel = $(iframe, '#dev-root');
         const badge = $(iframe, '#dev-badge');
@@ -557,7 +555,7 @@ describe('integration: developer mode', function () {
 
       const panelLeft = $(iframe, '#dev-root').getBoundingClientRect().left;
       const badgeLeft = $(iframe, '#dev-badge').getBoundingClientRect().left;
-      $(iframe, '#hand-toggle').click();
+      clickMenuItem(iframe, 'mi-hand');
       await appFrame(iframe);
       expect($(iframe, '#dev-root').getBoundingClientRect().left).to.equal(panelLeft);
       expect($(iframe, '#dev-badge').getBoundingClientRect().left).to.equal(badgeLeft);

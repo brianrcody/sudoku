@@ -1,12 +1,13 @@
 /**
- * @fileoverview Unit tests for js/ui/themes.js (UT1–UT7).
+ * @fileoverview Unit tests for js/ui/themes.js (UT1–UT12; UT8–UT12 tspec-hamburger-menu §2.5).
  *
  * UT7 (inline head script / first-paint flicker) is an integration test that
  * requires loading the full page. It is implemented in system.test.js as part
  * of the SYS4 theme-cycle test.
  */
 
-import { applyTheme, initTheme } from '../../ui/themes.js';
+import * as themesModule from '../../ui/themes.js';
+import { applyTheme, initTheme, THEME_OPTIONS, currentTheme } from '../../ui/themes.js';
 import { mount as mountSrLive } from '../../ui/srLive.js';
 import * as cookies from '../../persist/cookies.js';
 import { THEME_CLASSES } from '../../config.js';
@@ -87,5 +88,36 @@ describe('ui/themes.js', () => {
     cookies.set(THEME_COOKIE, 'coffee');
     initTheme();
     expect(document.body.classList.contains('theme-coffee')).to.be.true;
+  });
+
+  it('UT8: THEME_OPTIONS lists every theme in THEME_CLASSES order', () => {
+    expect(THEME_OPTIONS).to.deep.equal([
+      { value: 'minimalist', label: 'Minimalist' },
+      { value: 'coffee', label: 'Coffee Shop' },
+      { value: 'school', label: 'School' },
+      { value: 'terminal', label: 'Digital Terminal' },
+      { value: 'mountain', label: 'Mountain' },
+    ]);
+    expect(THEME_OPTIONS.map(o => 'theme-' + o.value)).to.deep.equal(THEME_CLASSES);
+  });
+
+  it('UT9: currentTheme returns the applied theme', () => {
+    document.body.className = 'theme-coffee';
+    expect(currentTheme()).to.equal('coffee');
+  });
+
+  it('UT10: currentTheme falls back to the default with no theme class', () => {
+    document.body.className = '';
+    expect(currentTheme()).to.equal('minimalist');
+  });
+
+  it("UT11: the menu's apply path announces the display name", async () => {
+    applyTheme('theme-' + 'terminal');
+    await new Promise(r => requestAnimationFrame(r));
+    expect(srLive.textContent).to.equal('Theme changed to Digital Terminal.');
+  });
+
+  it('UT12: bindThemeSelect is gone', () => {
+    expect('bindThemeSelect' in themesModule).to.be.false;
   });
 });

@@ -452,7 +452,8 @@ required. Clears all saved puzzle state. Hint count resets to the level default.
   is cleared. Hint count resets to the level default.
 
 The dialog must be keyboard accessible (Escape = Cancel, Enter on focused button =
-confirm). Focus moves to the dialog on open and returns to the grid on dismiss.
+confirm). Focus moves to the dialog on open. Cancel returns focus to New Puzzle; once the
+new puzzle has loaded, the grid takes focus (fspec-008 §3.4).
 
 ### 9.2 Reset
 
@@ -468,8 +469,10 @@ Resets the current puzzle to its initial state:
    was already recorded).
 7. Persistence is updated.
 
-Reset is available at all times (including after puzzle completion — though the puzzle is
-no longer resumable after win, the player may still use Reset to try again for practice).
+Reset is an item in the menu (fspec-008 §5.4). It is available whenever a puzzle is
+loaded, including after puzzle completion — though the puzzle is no longer resumable after
+win, the player may still use Reset to try again for practice. It is disabled while no
+puzzle is loaded.
 
 Reset requires a confirmation dialog:
 
@@ -480,7 +483,8 @@ Reset requires a confirmation dialog:
 - **Reset:** Proceeds with the reset as described above.
 
 The dialog must be keyboard accessible (Escape = Cancel, Enter on focused button =
-confirm). Focus moves to the dialog on open and returns to the grid on dismiss.
+confirm). Focus moves to the dialog on open. Confirming moves focus to the grid; Cancel
+returns it to the menu button (fspec-008 §8).
 
 ### 9.3 Difficulty Selector
 
@@ -719,6 +723,9 @@ The following events must produce screen reader announcements via a live region:
 | Hints exhausted                                 | "No hints remaining"                                      |
 | Puzzle complete (win)                           | "Puzzle complete! Well done."                             |
 | Undo applied                                    | "Last move undone"                                        |
+| Reset confirmed                                 | "Puzzle reset."                                           |
+| Theme changed                                   | "Theme changed to [Theme name]."                          |
+| Pen/Pencil button pressed (not the `P` key)     | "Mode: Pen" or "Mode: Pencil"                             |
 
 ### 14.4 Focus Management
 

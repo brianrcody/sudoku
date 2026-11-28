@@ -28,6 +28,7 @@
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/grid.css">
   <link rel="stylesheet" href="css/controls.css">
+  <link rel="stylesheet" href="css/menu.css">
   <link rel="stylesheet" href="css/stats.css">
 </head>
 <body class="theme-minimalist">
@@ -41,21 +42,18 @@
   <!-- Header -->
   <header>
     <h1>Sudoku</h1>
-    <div class="header-controls">
-      <button type="button" id="hand-toggle" class="hand-switch" role="switch" aria-checked="false">
-        <span class="hand-switch-label">Left-handed</span>
-        <span class="hand-switch-track" aria-hidden="true"><span class="hand-switch-thumb"></span></span>
+    <div class="menu-wrap" id="menu-root">
+      <button type="button" class="menu-button" id="menu-button"
+              aria-haspopup="menu" aria-expanded="false" aria-controls="app-menu"
+              aria-label="Menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+          <rect x="2" y="4"  width="16" height="2" rx="1" fill="currentColor"/>
+          <rect x="2" y="9"  width="16" height="2" rx="1" fill="currentColor"/>
+          <rect x="2" y="14" width="16" height="2" rx="1" fill="currentColor"/>
+        </svg>
       </button>
-      <div class="theme-control">
-        <label for="theme-select">Theme</label>
-        <select id="theme-select" aria-label="Select visual theme">
-          <option value="minimalist" selected>Minimalist</option>
-          <option value="coffee">Coffee Shop</option>
-          <option value="school">School</option>
-          <option value="terminal">Digital Terminal</option>
-          <option value="mountain">Mountain</option>
-        </select>
-      </div>
+      <!-- Menu items (mounted by menu.js) -->
+      <div class="app-menu" id="app-menu" role="menu" aria-label="Menu" hidden></div>
     </div>
   </header>
 
@@ -63,10 +61,10 @@
   <main>
     <div id="app-root" class="game-area">
 
-      <!-- Left column: difficulty selector + grid -->
+      <!-- Left column: next-game cluster + grid -->
       <div class="left-col">
 
-        <!-- Difficulty selector (mounted by controls.js) -->
+        <!-- Next-game cluster: Difficulty selector + New Puzzle (mounted by controls.js) -->
         <div id="controls-root"></div>
 
         <!-- Grid wrapper: contains win banner overlay + grid + coach overlay -->
@@ -110,21 +108,11 @@
 
       </div><!-- /left-col -->
 
-      <!-- Right column: numpad + action buttons + stats -->
+      <!-- Right column: number pad -->
       <div class="right-col">
 
         <!-- Number pad (mounted by numpad.js) -->
         <div id="numpad-root"></div>
-
-        <!-- Action buttons -->
-        <div class="action-row">
-          <button class="btn" id="btn-new" aria-label="Start new puzzle">New Puzzle</button>
-          <button class="btn" id="btn-reset" aria-label="Reset current puzzle">Reset</button>
-          <button class="btn" id="btn-share" aria-label="Share puzzle link" disabled>Share</button>
-        </div>
-
-        <!-- Statistics panel (mounted by stats.js) -->
-        <div id="stats-root"></div>
 
       </div><!-- /right-col -->
 
@@ -133,6 +121,9 @@
 
   <!-- Confirmation dialog (mounted by dialog.js) -->
   <div id="dialog-root"></div>
+
+  <!-- Statistics dialog (mounted by stats.js) -->
+  <div id="stats-dialog-root"></div>
 
   <footer>
     <p>&copy; 2026 <a href="https://briancody.org">Brian Cody</a></p>

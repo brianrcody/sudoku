@@ -2,8 +2,8 @@
  * @fileoverview Shared helpers for integration tests that load the real app
  * (index.html) in an iframe: sized frames, readiness waits, and state seeding.
  *
- * Controls are always selected by id. Header controls such as #hand-toggle are
- * display:none at ≤720px, so "first button" selectors are unreliable in small
+ * Controls are always selected by id. Menu items such as #mi-hand are
+ * display:none at ≤720px, so "first item" selectors are unreliable in small
  * frames (docs/misc/bugs-left-hand-1.md).
  */
 
@@ -109,14 +109,34 @@ export function seedSavedGame({ givens, solution, difficulty = 'easy', entries =
   }));
 }
 
-/** Statistics shown in the panel, as `{ Kiddie: {attempted, won}, … }`. */
+/**
+ * Statistics in the Statistics dialog's table, as `{ Kiddie: {attempted, won}, … }`.
+ * The table is rendered whether or not the dialog is open.
+ */
 export function readStats(iframe) {
   const out = {};
   for (const tr of iframe.contentDocument.querySelectorAll('#stats-tbody tr')) {
-    const m = tr.getAttribute('aria-label').match(/^(.+): (\d+) attempted, (\d+) won$/);
+    const m = tr.getAttribute('aria-label').match(/^(.+?)(?:, current level)?: (\d+) attempted, (\d+) won$/);
     out[m[1]] = { attempted: Number(m[2]), won: Number(m[3]) };
   }
   return out;
+}
+
+/** Opens the header menu with a pointer click on the menu button (if closed). */
+export function openMenu(iframe) {
+  const button = iframe.contentDocument.getElementById('menu-button');
+  if (button.getAttribute('aria-expanded') !== 'true') button.click();
+}
+
+/**
+ * Opens the header menu and clicks one of its items.
+ *
+ * @param {HTMLIFrameElement} iframe
+ * @param {string} id - e.g. `'mi-reset'`, `'mi-theme-coffee'`.
+ */
+export function clickMenuItem(iframe, id) {
+  openMenu(iframe);
+  iframe.contentDocument.getElementById(id).click();
 }
 
 /** Enter a digit through the reducer, as a keypress would. */

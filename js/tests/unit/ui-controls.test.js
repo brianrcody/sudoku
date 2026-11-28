@@ -1,9 +1,9 @@
 /**
  * @fileoverview Unit tests for js/ui/controls.js (UC1–UC10).
  *
- * controls.js only manages the difficulty selector. The New Puzzle / Reset
- * buttons are wired in main.js (not in controls.js), so UC1–UC6 that reference
- * those buttons are noted as out-of-scope for this module. The tests below cover
+ * controls.js manages the difficulty selector and renders New Puzzle; the New
+ * Puzzle click and Reset are wired in main.js (not in controls.js), so UC1–UC6
+ * that reference those actions are noted as out-of-scope for this module. The tests below cover
  * all branches actually present in controls.js.
  *
  * DEVIATION from tspec UC1–UC6: controls.js does not own the New Puzzle or Reset
@@ -138,10 +138,10 @@ describe('ui/controls.js', () => {
     expect(call).to.not.exist;
   });
 
-  // UC10: Theme select triggers applyTheme (handled by themes.js / main.js binding)
-  // DEVIATION: controls.js does not own the theme selector; that is wired by
-  // bindThemeSelect in themes.js (called from main.js). UC10 is covered by
-  // ui-themes.test.js (UT2/UT3). Recording this deviation here for traceability.
+  // UC10: Theme selection (handled by the menu's theme items)
+  // DEVIATION: controls.js does not own theme selection; the menu's theme items
+  // (menu.js, wired in main.js) apply themes through themes.js. Recording this
+  // deviation here for traceability.
   it('UC10: controls.js does not own the theme selector — covered by ui-themes.test.js', () => {
     // Structural invariant: controls root contains the difficulty selector.
     mountControls();
@@ -250,5 +250,35 @@ describe('ui/controls.js', () => {
     mountControls({ puzzle: null });
     expect(root.querySelector('#difficulty-select').value).to.equal('medium');
     expect(unratedOption()).to.be.null;
+  });
+
+  // ── Next-game cluster (tspec-hamburger-menu §2.9) ─────────────────────────
+
+  it('UC20: renders the next-game cluster', () => {
+    mountControls();
+    const row = root.querySelector('.difficulty-row');
+    const label = row.querySelector(':scope > label');
+    expect(label.getAttribute('for')).to.equal('difficulty-select');
+    expect(label.textContent).to.equal('Difficulty');
+    const group = row.querySelector(':scope > .next-game');
+    expect(group.getAttribute('role')).to.equal('group');
+    expect(group.getAttribute('aria-label')).to.equal('Next game');
+    expect([...group.children].map(el => el.id)).to.deep.equal(['difficulty-select', 'btn-new']);
+  });
+
+  it('UC21: New Puzzle keeps its id, name and type', () => {
+    mountControls();
+    const btn = root.querySelector('#btn-new');
+    expect(btn.getAttribute('type')).to.equal('button');
+    expect([...btn.classList]).to.deep.equal(['btn', 'btn-new']);
+    expect(btn.getAttribute('aria-label')).to.equal('Start new puzzle');
+    expect(btn.textContent).to.equal('New Puzzle');
+    expect(root.querySelector('#difficulty-select').getAttribute('aria-label')).to.equal('Select difficulty level');
+  });
+
+  it('UC22: controls.js wires no New Puzzle action', () => {
+    const fakeGs = mountControls();
+    root.querySelector('#btn-new').click();
+    expect(fakeGs.dispatch.calls).to.be.empty;
   });
 });

@@ -1,5 +1,5 @@
 /**
- * Visual smoke pass for share links and developer mode.
+ * Visual smoke pass for share links, the header menu and developer mode.
  *
  * Boots the real app in headless Chromium, drives it into the states worth
  * looking at, and writes full-page screenshots plus a JSON summary of what was
@@ -19,6 +19,8 @@
  *   link-unrated-coffee   ?p= with an unrateable puzzle, Coffee theme
  *   link-rejected-mobile  ?p= malformed, 390px wide
  *   share-fallback-mobile Share with the clipboard unavailable, 390px wide
+ *   menu-<theme>[-mobile] the open header menu, each theme, 1100px and 390px wide
+ *   stats-dialog          the Statistics dialog, opened from the menu
  *   dev-<theme>           ?dev=1 with every tool open and in use, each theme,
  *                         1440px wide so the panel sits beside the game
  *                         (School is taken in left-hand mode)
@@ -149,9 +151,36 @@ try {
       await page.evaluate(() => {
         Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
       });
-      await page.click('#btn-share');
+      await page.click('#menu-button');
+      await page.click('#mi-share');
       await page.waitForSelector('#share-link-field');
       return { link: await page.inputValue('#share-link-field') };
+    },
+  });
+
+  for (const theme of THEMES) {
+    for (const [suffix, width] of [['', 1100], ['-mobile', 390]]) {
+      await shot(`menu-${theme}${suffix}`, '', {
+        theme, width, height: 900,
+        actions: async page => {
+          await page.click('#menu-button');
+          return {
+            expanded: await page.getAttribute('#menu-button', 'aria-expanded'),
+            focused: await page.evaluate(() => document.activeElement.id),
+          };
+        },
+      });
+    }
+  }
+
+  await shot('stats-dialog', '', {
+    actions: async page => {
+      await page.click('#menu-button');
+      await page.click('#mi-stats');
+      return {
+        open: await page.evaluate(() => document.getElementById('stats-backdrop').classList.contains('open')),
+        focused: await page.evaluate(() => document.activeElement.id),
+      };
     },
   });
 

@@ -1,15 +1,21 @@
 /**
- * @fileoverview Unit tests for js/ui/handedness.js (UH1–UH19, tspec-left-hand §2.1).
+ * @fileoverview Unit tests for js/ui/handedness.js (UH1–UH14, tspec-left-hand §2.1; UH17–UH23,
+ * tspec-hamburger-menu §2.6).
+ *
+ * ID alignment: the Implementor's repair kept UH17–UH19 for the toggle tests;
+ * the tspec numbers them UH20–UH22. Both are kept (no ID clash): UH17–UH19 stay
+ * as written and UH20–UH23 implement the tspec rows.
  */
 
 import {
   getHandedness,
   applyHandedness,
   initHandedness,
-  bindHandToggle,
+  toggleHandedness,
 } from '../../ui/handedness.js';
 import { mount as mountSrLive } from '../../ui/srLive.js';
 import * as cookies from '../../persist/cookies.js';
+import * as handednessModule from '../../ui/handedness.js';
 
 const HAND_COOKIE = 'sudoku.hand';
 const ON_TEXT = 'Left-handed layout on. Controls are left of the puzzle.';
@@ -20,7 +26,6 @@ const nextFrame = () => new Promise(r => requestAnimationFrame(r));
 
 describe('ui/handedness.js', () => {
   let srLive;
-  let button;
 
   beforeEach(() => {
     // setup.js clears cookies and data-hand before each test.
@@ -28,17 +33,10 @@ describe('ui/handedness.js', () => {
     srLive.id = 'sr-live';
     document.body.appendChild(srLive);
     mountSrLive(document.body);
-
-    button = document.createElement('button');
-    button.type = 'button';
-    button.setAttribute('role', 'switch');
-    button.setAttribute('aria-checked', 'false');
-    document.body.appendChild(button);
   });
 
   afterEach(() => {
     srLive.remove();
-    button.remove();
   });
 
   describe('getHandedness', () => {
@@ -129,46 +127,60 @@ describe('ui/handedness.js', () => {
     });
   });
 
-  describe('bindHandToggle', () => {
-    it('UH15: bindHandToggle marks the switch checked when left is applied', () => {
-      root.setAttribute('data-hand', 'left');
-      bindHandToggle(button);
-      expect(button.getAttribute('aria-checked')).to.equal('true');
-    });
-
-    it('UH16: bindHandToggle marks the switch unchecked when right is applied', () => {
-      button.setAttribute('aria-checked', 'true');
-      bindHandToggle(button);
-      expect(button.getAttribute('aria-checked')).to.equal('false');
-    });
-
-    it('UH17: clicking the switch from right turns left-hand mode on', async () => {
-      bindHandToggle(button);
-      button.click();
+  // The menu item's aria-checked state (formerly UH15–UH16) is owned by menu.js.
+  describe('toggleHandedness', () => {
+    it('UH17: toggling from right turns left-hand mode on', async () => {
+      toggleHandedness();
       await nextFrame();
       expect(root.getAttribute('data-hand')).to.equal('left');
-      expect(button.getAttribute('aria-checked')).to.equal('true');
+      expect(getHandedness()).to.equal('left');
       expect(cookies.get(HAND_COOKIE)).to.equal('left');
       expect(srLive.textContent).to.equal(ON_TEXT);
     });
 
-    it('UH18: clicking the switch from left turns left-hand mode off', async () => {
+    it('UH18: toggling from left turns left-hand mode off', async () => {
       root.setAttribute('data-hand', 'left');
-      bindHandToggle(button);
-      button.click();
+      toggleHandedness();
       await nextFrame();
       expect(root.hasAttribute('data-hand')).to.be.false;
-      expect(button.getAttribute('aria-checked')).to.equal('false');
       expect(cookies.get(HAND_COOKIE)).to.equal('right');
       expect(srLive.textContent).to.equal(OFF_TEXT);
     });
 
-    it('UH19: clicking the switch twice restores the original state', () => {
-      bindHandToggle(button);
-      button.click();
-      button.click();
+    it('UH19: toggling twice restores the original state', () => {
+      toggleHandedness();
+      toggleHandedness();
       expect(root.hasAttribute('data-hand')).to.be.false;
-      expect(button.getAttribute('aria-checked')).to.equal('false');
+      expect(cookies.get(HAND_COOKIE)).to.equal('right');
+    });
+  });
+
+  describe('toggleHandedness (tspec-hamburger-menu §2.6)', () => {
+    it('UH20: toggleHandedness from right turns left-hand mode on', async () => {
+      toggleHandedness();
+      await nextFrame();
+      expect(root.getAttribute('data-hand')).to.equal('left');
+      expect(cookies.get(HAND_COOKIE)).to.equal('left');
+      expect(srLive.textContent).to.equal(ON_TEXT);
+    });
+
+    it('UH21: toggleHandedness from left turns it off', async () => {
+      applyHandedness('left', false);
+      toggleHandedness();
+      await nextFrame();
+      expect(root.hasAttribute('data-hand')).to.be.false;
+      expect(cookies.get(HAND_COOKIE)).to.equal('right');
+      expect(srLive.textContent).to.equal(OFF_TEXT);
+    });
+
+    it('UH22: two toggles restore the original state', () => {
+      toggleHandedness();
+      toggleHandedness();
+      expect(root.hasAttribute('data-hand')).to.be.false;
+    });
+
+    it('UH23: bindHandToggle is gone', () => {
+      expect('bindHandToggle' in handednessModule).to.be.false;
     });
   });
 });

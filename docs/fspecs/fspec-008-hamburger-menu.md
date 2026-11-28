@@ -604,13 +604,14 @@ or the code. This spec does not change them.
   "returns to the element that triggered it", and the code (`js/ui/dialog.js`) does that.
   This spec sets each case: New Puzzle cancel returns to New Puzzle (§3.4), Reset cancel
   returns to the menu button (§5.4), and other on-page dialogs return to their trigger
-  (§12, fspec-001 §14.4). The fspec-001 §9.1–9.2 wording should still be corrected.
+  (§12, fspec-001 §14.4). fspec-001 §9.1–9.2 wording corrected 2026-11-27.
 - **D3. Reset confirm focus.** *Resolved by R4a (§5.4).* The code focuses the Reset
   button after a confirmed reset. fspec-001 says the grid or the trigger.
 - **D4. New Puzzle focus after load.** *Resolved by R4d (§3.4).* The code returns focus
   to New Puzzle once the new puzzle has loaded; fspec-001 §9.1 says the grid. The grid now
   takes focus, with the §3.4 guard.
-- **D5. Announcements missing from fspec-001 §14.3.** The code announces "Puzzle reset.",
+- **D5. Announcements missing from fspec-001 §14.3.** *Corrected in fspec-001 §14.3
+  (2026-11-27).* The code announces "Puzzle reset.",
   "Theme changed to *X*." and, from the Pen/Pencil button only (not the `P` key),
   "Mode: Pen/Pencil". This spec writes down the first two as existing behavior (§10).
   The mockup uses "Theme: *X*" and makes no Left-handed announcement. The code's strings
@@ -620,7 +621,8 @@ or the code. This spec does not change them.
 - **D7. Reset with no puzzle loaded.** *Resolved by R4c (§5.4).* The Reset button had no
   disabled state. Before the first puzzle loaded, confirming did nothing to the board but
   still announced "Puzzle reset.". Reset is now disabled with no puzzle loaded.
-- **D8. Coach visibility before a puzzle.** fspec-002 §3.1 says Coach "is not shown
+- **D8. Coach visibility before a puzzle.** *Corrected in fspec-002 §3.1 (2026-11-27)
+  to match the code: shown, disabled until a puzzle loads.* fspec-002 §3.1 says Coach "is not shown
   before a puzzle is loaded". The code always renders it, and pressing it with no puzzle
   does nothing. Not changed here.
 - **D9. Busy-card Cancel drops focus.** *Resolved for focus (§3.4).* When Cancel is
@@ -641,6 +643,13 @@ or the code. This spec does not change them.
 ---
 
 ## 14. Open Questions
+
+**Edge cases settled during architecture (2026-11-27).** aspec-hamburger-menu §17 O1–O3
+reconcile three edge cases this spec left open or contradictory; the Orchestrator
+accepted them. (O1) A fallback offer arriving while Statistics is open closes Statistics
+first; focus returns to the menu button. (O2) On a declined fallback, focus goes to New
+Puzzle only if it is on New Puzzle or nowhere, overriding the unconditional §3.4 row.
+(O3) A Difficulty-path load while the menu is open closes the menu (N1 wins over §11).
 
 None block this spec. Q1–Q3 were decided by the Product Director on 2026-11-27 and are
 now rspec-008 R10, R4c and R4d. The item below is non-blocking.

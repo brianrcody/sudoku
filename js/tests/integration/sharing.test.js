@@ -6,7 +6,7 @@
 
 import {
   createApp, waitFor, waitForPuzzle, waitForLinkHandled, appFrame, gsOf,
-  seedSavedGame, readStats, enter, solveAll, boardString, digits,
+  seedSavedGame, readStats, enter, solveAll, boardString, digits, openMenu, clickMenuItem,
   STATE_KEY, DIFF_KEY, PREGEN_PREFIX,
 } from './_app.js';
 import {
@@ -568,7 +568,7 @@ describe('integration: puzzle sharing', function () {
       gsOf(iframe).dispatch({ type: 'PENCIL_TOGGLE', digit: 6 });
       const copied = stubClipboard('ok');
 
-      $(iframe, '#btn-share').click();
+      clickMenuItem(iframe, 'mi-share');
       await waitFor(() => copied.length === 1, 5000, 'clipboard write');
       await appFrame(iframe);
 
@@ -582,7 +582,7 @@ describe('integration: puzzle sharing', function () {
       await openShared();
       enter(iframe, EMPTY, 4);
       const copied = stubClipboard('ok');
-      $(iframe, '#btn-share').click();
+      clickMenuItem(iframe, 'mi-share');
       await waitFor(() => copied.length === 1, 5000, 'clipboard write');
       const link = new URL(copied[0]);
       localStorage.clear();   // the recipient is someone else
@@ -597,7 +597,7 @@ describe('integration: puzzle sharing', function () {
       it(`SHR31: with the clipboard ${behaviour}, the link is shown in a focused, selected, read-only field`, async () => {
         await openShared();
         stubClipboard(behaviour);
-        $(iframe, '#btn-share').click();
+        clickMenuItem(iframe, 'mi-share');
         const field = await waitFor(() => $(iframe, '#share-link-field'), 5000, 'fallback field');
         await appFrame(iframe);
 
@@ -612,11 +612,11 @@ describe('integration: puzzle sharing', function () {
       });
     }
 
-    it('SHR32: typing in the fallback field never reaches the board, and Dismiss returns focus to Share', async () => {
+    it('SHR32: typing in the fallback field never reaches the board, and Dismiss returns focus to the menu button', async () => {
       await openShared();
       gsOf(iframe).dispatch({ type: 'SELECT_CELL', index: EMPTY });
       stubClipboard('denied');
-      $(iframe, '#btn-share').click();
+      clickMenuItem(iframe, 'mi-share');
       const field = await waitFor(() => $(iframe, '#share-link-field'), 5000, 'fallback field');
       gsOf(iframe).dispatch({ type: 'SELECT_CELL', index: EMPTY });   // as if a cell were still selected
 
@@ -628,38 +628,40 @@ describe('integration: puzzle sharing', function () {
       expect(gsOf(iframe).getState().selected).to.equal(EMPTY);
 
       $(iframe, '#notice-root .notice-dismiss').click();
-      expect(iframe.contentDocument.activeElement.id).to.equal('btn-share');
+      expect(iframe.contentDocument.activeElement.id).to.equal('menu-button');
     });
 
     it('SHR33: Share is available for an Unrated puzzle and for a won board', async () => {
       await open(`/index.html?p=${UNRATED}`);
       await waitForLinkHandled(iframe);
-      expect($(iframe, '#btn-share').disabled).to.be.false;
+      expect($(iframe, '#mi-share').hasAttribute('aria-disabled')).to.be.false;
       const copied = stubClipboard('ok');
       solveAll(iframe);
       expect(gsOf(iframe).getState().won).to.be.true;
-      $(iframe, '#btn-share').click();
+      clickMenuItem(iframe, 'mi-share');
       await waitFor(() => copied.length === 1, 5000, 'clipboard write');
       expect(new URL(copied[0]).searchParams.get('p')).to.equal(UNRATED);
     });
 
-    it('SHR34: Share has an accessible name and is a keyboard-focusable button', async () => {
+    it('SHR34: Share is a menu item with an accessible name, focusable in the open menu', async () => {
       await openShared();
-      const share = $(iframe, '#btn-share');
-      expect(share.tagName).to.equal('BUTTON');
+      openMenu(iframe);
+      const share = $(iframe, '#mi-share');
+      expect(share.getAttribute('role')).to.equal('menuitem');
       expect(share.getAttribute('aria-label')).to.equal('Share puzzle link');
-      expect(share.textContent).to.equal('Share');
+      expect(share.querySelector('.mi-label').textContent).to.equal('Share puzzle');
       share.focus();
       expect(iframe.contentDocument.activeElement).to.equal(share);
     });
 
-    it('SHR35: Share is visible and inside the viewport at every width, including where header controls are hidden', async () => {
+    it('SHR35: Share is reachable in the open menu and inside the viewport at every width', async () => {
       await openShared();
       const win = iframe.contentWindow;
+      openMenu(iframe);
       for (const width of [1100, 721, 720, 414, 375, 320]) {
         iframe.style.width = `${width}px`;
         await appFrame(iframe);
-        const share = $(iframe, '#btn-share');
+        const share = $(iframe, '#mi-share');
         const rect = share.getBoundingClientRect();
         const style = win.getComputedStyle(share);
         expect(style.display, `display at ${width}`).to.not.equal('none');
@@ -667,16 +669,19 @@ describe('integration: puzzle sharing', function () {
         expect(rect.width, `width at ${width}`).to.be.above(40);
         expect(rect.left, `left at ${width}`).to.be.at.least(0);
         expect(rect.right, `right at ${width}`).to.be.at.most(width);
+        const menu = $(iframe, '#app-menu').getBoundingClientRect();
+        expect(menu.left, `menu left at ${width}`).to.be.at.least(0);
+        expect(menu.right, `menu right at ${width}`).to.be.at.most(width);
+        const handHidden = win.getComputedStyle($(iframe, '.mi-hand-section')).display === 'none';
+        expect(handHidden, `Left-handed hidden at ${width}`).to.equal(width <= 720);
       }
-      // Sanity: this is a width at which a header control really is hidden.
-      expect(win.getComputedStyle($(iframe, '#hand-toggle')).display).to.equal('none');
     });
 
     it('SHR36: the notice never overflows the viewport on a narrow screen', async () => {
       await open(`/index.html?p=${KIDDIE}`, { width: 320, height: 800 });
       await waitForLinkHandled(iframe);
       stubClipboard('denied');
-      $(iframe, '#btn-share').click();
+      clickMenuItem(iframe, 'mi-share');
       await waitFor(() => $(iframe, '#share-link-field'), 5000, 'fallback field');
       const rect = $(iframe, '#notice-root .notice').getBoundingClientRect();
       expect(rect.left).to.be.at.least(0);
@@ -684,32 +689,32 @@ describe('integration: puzzle sharing', function () {
       expect(iframe.contentDocument.documentElement.scrollWidth).to.be.at.most(320);
     });
 
-    it('SHR37: Share and the notice are legible in every theme, and follow the layout in left-hand mode', async () => {
+    it('SHR37: the Share item and the notice are legible in every theme, and the notice follows the board in left-hand mode', async () => {
       await openShared();
       const win = iframe.contentWindow;
       const css = el => win.getComputedStyle(el);
       stubClipboard('denied');
-      $(iframe, '#btn-share').click();
+      clickMenuItem(iframe, 'mi-share');
       await waitFor(() => $(iframe, '#share-link-field'), 5000, 'fallback field');
 
-      const themeSelect = $(iframe, '#theme-select');
       for (const theme of ['minimalist', 'coffee', 'school', 'terminal', 'mountain']) {
-        themeSelect.value = theme;
-        themeSelect.dispatchEvent(new win.Event('change'));
+        clickMenuItem(iframe, `mi-theme-${theme}`);
         await sleep(350);   // theme colours transition over 0.2 s
         const card = $(iframe, '#notice-root .notice');
-        const share = $(iframe, '#btn-share');
+        const shareLabel = $(iframe, '#mi-share .mi-label');
         const field = $(iframe, '#share-link-field');
         expect(contrast(css($(iframe, '.notice-message')).color, css(card).backgroundColor), `notice text, ${theme}`).to.be.above(4.5);
         expect(contrast(css(field).color, css(field).backgroundColor), `link field, ${theme}`).to.be.above(4.5);
-        expect(contrast(css(share).color, css(share).backgroundColor), `share button, ${theme}`).to.be.above(4.5);
+        expect(contrast(css(shareLabel).color, css($(iframe, '#app-menu')).backgroundColor), `share item, ${theme}`).to.be.above(4.5);
       }
 
       const left = el => el.getBoundingClientRect().left;
-      expect(left($(iframe, '#btn-share'))).to.be.above(left($(iframe, '.sudoku-grid')));
-      $(iframe, '#hand-toggle').click();
+      expect(Math.abs(left($(iframe, '#notice-root')) - left($(iframe, '.sudoku-grid')))).to.be.below(2);
+      const gridLeft = left($(iframe, '.sudoku-grid'));
+      clickMenuItem(iframe, 'mi-hand');
       await appFrame(iframe);
-      expect(left($(iframe, '#btn-share'))).to.be.below(left($(iframe, '.sudoku-grid')));
+      // Left-hand mode puts the board column on the right.
+      expect(left($(iframe, '.sudoku-grid'))).to.be.above(gridLeft);
       // The notice belongs to the board column and moves with the board.
       expect(Math.abs(left($(iframe, '#notice-root')) - left($(iframe, '.sudoku-grid')))).to.be.below(2);
     });

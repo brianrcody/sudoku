@@ -287,15 +287,18 @@ describe('integration/game-flows', () => {
     await new Promise(r => setTimeout(r, 100));
     expect(gameState.getState().attemptRecorded).to.be.true;
 
-    const resetBtn = iframe.contentDocument.getElementById('btn-reset');
-    if (!resetBtn) return this.skip();
-    resetBtn.click();
+    const doc = iframe.contentDocument;
+    doc.getElementById('menu-button').click();
+    doc.getElementById('mi-reset').click();
     await new Promise(r => setTimeout(r, 100));
-    iframe.contentDocument.querySelector('#modal-confirm')?.click();
+    doc.querySelector('#modal-confirm').click();
     await new Promise(r => setTimeout(r, 200));
 
     expect(gameState.getState().pen[idx]).to.equal(0);
     expect(gameState.getState().attemptRecorded).to.be.true;
+    // R4a: a confirmed Reset focuses the grid itself, with no cell selected.
+    expect(doc.activeElement).to.equal(doc.querySelector('.sudoku-grid'));
+    expect(gameState.getState().selected).to.be.null;
   });
 
   // GF9: Difficulty change with progress triggers dialog; cancel reverts selector
@@ -460,10 +463,11 @@ describe('integration/game-flows', () => {
     await new Promise(r => setTimeout(r, 500));
     expect(gameState.getState().won).to.be.true;
 
-    const resetBtn = iframe.contentDocument.getElementById('btn-reset');
-    resetBtn?.click();
+    const doc = iframe.contentDocument;
+    doc.getElementById('menu-button').click();
+    doc.getElementById('mi-reset').click();
     await new Promise(r => setTimeout(r, 100));
-    iframe.contentDocument.querySelector('#modal-confirm')?.click();
+    doc.querySelector('#modal-confirm').click();
     await new Promise(r => setTimeout(r, 300));
 
     expect(gameState.getState().won).to.be.false;
@@ -701,7 +705,7 @@ describe('integration/game-flows', () => {
     expect(gameState.getState().undoSnapshot).to.not.be.null;
 
     // Focus a button so the focus guard fires. Target one that is displayed in
-    // this 1px iframe — the header's handedness switch is display:none here.
+    // this 1px iframe, not a menu item hidden in the closed menu.
     const anyBtn = iframe.contentDocument.getElementById('btn-new');
     anyBtn?.focus();
     await new Promise(r => setTimeout(r, 50));

@@ -1,4 +1,17 @@
-/* ── Statistics panel ─────────────────────────────────────────────────── */
+/* ── Statistics dialog (vspec-008 §7) ─────────────────────────────────── */
+.modal.modal-stats {
+  max-width: 340px;
+}
+
+.modal-stats h2 {
+  margin-bottom: 14px;
+}
+
+.modal-stats .stats-panel {
+  margin-bottom: 20px;
+}
+
+/* ── Statistics table panel ───────────────────────────────────────────── */
 .stats-panel {
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -14,22 +27,6 @@ body.theme-terminal .stats-panel {
 body.theme-terminal .stats-panel:hover,
 body.theme-terminal .stats-panel:focus-within {
   border-color: var(--accent);
-}
-
-.stats-heading {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  padding: 8px 12px 6px;
-  border-bottom: 1px solid var(--border);
-}
-
-body.theme-terminal .stats-heading {
-  color: var(--accent);
-  letter-spacing: 0.15em;
-  font-size: 10px;
 }
 
 .stats-table {

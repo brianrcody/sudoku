@@ -1,7 +1,8 @@
 /**
  * @fileoverview Share action — copies a link to the current puzzle's givens.
  *
- * Owns the `#btn-share` button. Results are shown through the notice card and
+ * Runs when the menu's Share puzzle item is activated; the menu owns the item
+ * and its disabled state. Results are shown through the notice card and
  * announced through the live region.
  */
 
@@ -30,33 +31,34 @@ export function buildShareUrl(givens, href) {
 }
 
 /**
- * @param {HTMLButtonElement} button - The `#btn-share` element.
  * @param {{ getState: function, on: function }} gameState
- * @param {object} [deps]
+ * @param {object} deps
+ * @param {function(): HTMLElement} deps.returnFocus - Receives focus when the
+ *   copy-fallback notice is dismissed (the menu button).
  * @param {function(string): Promise<boolean>} [deps.copy]
  * @param {function(): string} [deps.getHref]
+ * @returns {{ share: function(): Promise<void> }}
  */
-export function mount(button, gameState, { copy = copyText, getHref = () => location.href } = {}) {
-  const sync = () => { button.disabled = gameState.getState().puzzle === null; };
+export function mount(gameState, { returnFocus, copy = copyText, getHref = () => location.href }) {
+  gameState.on('changed', ({ action }) => {
+    // A freshly generated puzzle makes any link or outcome on show stale.
+    if (action.type === 'NEW_PUZZLE') notice.hide();
+  });
 
-  button.addEventListener('click', async () => {
-    const url = buildShareUrl(gameState.getState().puzzle.givens, getHref());
+  async function share() {
+    const puzzle = gameState.getState().puzzle;
+    if (puzzle === null) return;
+    const url = buildShareUrl(puzzle.givens, getHref());
     if (await copy(url)) {
       notice.show('Link copied to clipboard.', { timeoutMs: COPIED_MS });
       announce('Link copied to clipboard.');
     } else {
       notice.showLink('Copy this link to share the puzzle:', url, {
-        onDismiss: () => button.focus(),
+        onDismiss: () => returnFocus().focus(),
       });
       announce('Couldn\'t copy automatically. The link is shown for you to copy.');
     }
-  });
+  }
 
-  gameState.on('changed', ({ action, changed }) => {
-    if (changed.has('puzzle')) sync();
-    // A freshly generated puzzle makes any link or outcome on show stale.
-    if (action.type === 'NEW_PUZZLE') notice.hide();
-  });
-
-  sync();
+  return { share };
 }

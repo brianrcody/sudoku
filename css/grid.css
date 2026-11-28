@@ -58,6 +58,55 @@ body.theme-mountain #difficulty-select {
   outline-offset: 2px;
 }
 
+/* Coffee (R15): the selector's ring sits on the dark page backdrop. */
+body.theme-coffee #difficulty-select:focus {
+  outline-color: #c9a97a;
+}
+
+/* ── Next-game cluster (vspec-008 §5.2, §9.3) ─────────────────────────── */
+/* Select and button share one border, so they read as one control. */
+.next-game {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.next-game #difficulty-select {
+  height: 34px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  position: relative;
+}
+
+.next-game .btn.btn-new {
+  height: 34px;
+  margin-left: -1px;
+  padding: 0 14px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-color: var(--btn-border);
+  box-shadow: none;
+}
+
+/* The focus ring and hover border sit above the shared border. */
+.next-game #difficulty-select:focus,
+.next-game .btn-new:focus-visible,
+.next-game .btn-new:hover {
+  z-index: 1;
+  position: relative;
+}
+
+body.theme-coffee .next-game,
+body.theme-mountain .next-game {
+  border-radius: 6px;
+}
+
+body.theme-coffee .next-game   { box-shadow: 0 1px 3px rgba(59,42,26,0.15); }
+body.theme-mountain .next-game { box-shadow: 0 1px 3px rgba(26,58,82,0.1); }
+
+body.theme-terminal .next-game .btn-new {
+  border-color: var(--accent);
+}
+
 /* ── Grid wrapper & grid ──────────────────────────────────────────────── */
 .grid-wrapper {
   position: relative;
@@ -94,6 +143,18 @@ body.theme-school .sudoku-grid {
 body.theme-mountain .sudoku-grid {
   box-shadow: 0 2px 16px rgba(26,58,82,0.15);
 }
+
+/* Grid focus (R14, vspec-008 §8.2): the grid itself takes focus after a
+   confirmed Reset and a New Puzzle load. Keyboard focus only; the offset clears
+   the box border. */
+.sudoku-grid:focus { outline: none; }
+
+.sudoku-grid:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+body.theme-coffee .sudoku-grid:focus-visible { outline-color: #c9a97a; }
 
 /* ── Cells ────────────────────────────────────────────────────────────── */
 .cell {

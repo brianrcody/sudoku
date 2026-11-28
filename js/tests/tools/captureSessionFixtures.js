@@ -353,7 +353,8 @@ export const SCENARIOS = {
 
     await d.reload();
     await d.play(10);
-    await d.click('#btn-reset');
+    await d.click('#menu-button');
+    await d.click('#mi-reset');
     await d.pause(100);
     await page.click('#modal-confirm');
     await d.pause(100);

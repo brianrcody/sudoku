@@ -1,0 +1,293 @@
+/* ── Header menu button and menu (vspec-008 §3, §4, §9.1, §9.2, §10) ──── */
+
+.menu-wrap {
+  position: relative;
+}
+
+.menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.menu-button svg { display: block; }
+
+.menu-button:hover,
+.menu-button[aria-expanded="true"] {
+  background: var(--btn-hover);
+  border-color: var(--btn-border);
+}
+
+.menu-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Dark headers (Coffee, Mountain): same rule as the old header switch (vspec-004 §2.4),
+   header muted tone instead of the theme accent. */
+body.theme-coffee .menu-button:hover,
+body.theme-coffee .menu-button[aria-expanded="true"] {
+  background: #3b2a1a;
+  border-color: #7c4f22;
+}
+body.theme-coffee .menu-button:focus-visible { outline-color: #c9a97a; }
+
+body.theme-mountain .menu-button:hover,
+body.theme-mountain .menu-button[aria-expanded="true"] {
+  background: #2d5878;
+  border-color: #4d7a99;
+}
+body.theme-mountain .menu-button:focus-visible { outline-color: #adc6de; }
+
+body.theme-terminal .menu-button {
+  border-radius: 0;
+  color: var(--accent);
+}
+body.theme-terminal .menu-button:hover,
+body.theme-terminal .menu-button[aria-expanded="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 6px rgba(57,255,20,0.2);
+}
+
+/* ── Menu panel ───────────────────────────────────────────────────────── */
+.app-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 248px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding: 6px 0;
+  background: var(--modal-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: normal;
+  animation: menu-in 0.12s ease-out;
+}
+
+.app-menu[hidden] { display: none; }
+
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-menu { animation: none; }
+}
+
+body.theme-coffee .app-menu   { box-shadow: 0 8px 28px rgba(59,42,26,0.45); }
+body.theme-mountain .app-menu { box-shadow: 0 8px 28px rgba(26,58,82,0.25); }
+body.theme-terminal .app-menu {
+  border-radius: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 18px rgba(57,255,20,0.2);
+}
+
+.menu-section + .menu-section {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+/* Section heading: same treatment as the Difficulty label and stats column heads. */
+.menu-heading {
+  padding: 6px 14px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.menu-subheading {
+  padding: 8px 14px 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+body.theme-terminal .menu-heading {
+  color: var(--accent);
+  letter-spacing: 0.15em;
+  font-size: 10px;
+}
+
+body.theme-terminal .menu-subheading {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+}
+
+.mi {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 0 14px;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  transition: background 0.08s;
+}
+
+.mi-label { flex: 1; }
+
+/* Pointer hover moves focus to the item (APG), so hover and keyboard focus share
+   one highlight; keyboard focus adds the inset ring. */
+.mi:focus {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.mi:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+
+.mi-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.mi:focus .mi-hint { color: inherit; opacity: 0.8; }
+
+/* Disabled (R15, vspec-008 §8.5): the opacity goes on the children, so the
+   focused background and ring draw at full strength in every theme. */
+.mi[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.mi[aria-disabled="true"] > * {
+  opacity: 0.38;
+}
+
+.mi[aria-disabled="true"]:focus {
+  background: var(--btn-hover);
+  color: var(--text);
+}
+
+/* Outranks .mi:focus .mi-hint; 0.3 ≈ 0.38 × 0.8. */
+.mi[aria-disabled="true"]:focus .mi-hint {
+  opacity: 0.3;
+}
+
+body.theme-terminal .mi {
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+
+body.theme-terminal .mi:focus {
+  text-shadow: 0 0 4px rgba(57,255,20,0.3);
+}
+
+/* Theme items: radio indicator. */
+.mi-radio {
+  position: relative;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 50%;
+}
+
+.mi[aria-checked="true"] .mi-radio {
+  border-color: var(--accent);
+}
+
+.mi[aria-checked="true"] .mi-radio::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+body.theme-terminal .mi-radio,
+body.theme-terminal .mi[aria-checked="true"] .mi-radio::after {
+  border-radius: 0;
+}
+
+/* Theme swatch: the theme's own page background and accent, fixed per item. */
+.mi-swatch {
+  flex-shrink: 0;
+  width: 18px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(0,0,0,0.25);
+}
+body.theme-terminal .mi-swatch { border-radius: 0; }
+
+.mi[data-theme="minimalist"] .mi-swatch { background: linear-gradient(135deg, #f7f6f2 55%, #2c5282 55%); }
+.mi[data-theme="coffee"] .mi-swatch     { background: linear-gradient(135deg, #3b2a1a 55%, #c9a97a 55%); }
+.mi[data-theme="school"] .mi-swatch     { background: linear-gradient(135deg, #f8f5e6 55%, #4a5568 55%); }
+.mi[data-theme="terminal"] .mi-swatch   { background: linear-gradient(135deg, #0d0d0d 55%, #39ff14 55%); }
+.mi[data-theme="mountain"] .mi-swatch   { background: linear-gradient(135deg, #1a3a52 55%, #d4e8f5 55%); }
+
+/* Left-handed item: switch graphic, the vspec-004 track and thumb on the menu surface. */
+.mi-switch-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  border: 1px solid var(--text-muted);
+  border-radius: 9px;
+  background: var(--btn-bg);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.mi-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform 0.15s, background 0.15s;
+}
+
+.mi[aria-checked="true"] .mi-switch-track {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.mi[aria-checked="true"] .mi-switch-thumb {
+  transform: translateX(14px);
+  background: var(--surface);
+}
+
+body.theme-terminal .mi-switch-track,
+body.theme-terminal .mi-switch-thumb { border-radius: 0; }
+body.theme-terminal .mi[aria-checked="true"] .mi-switch-thumb { background: #000; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mi-switch-track, .mi-switch-thumb { transition: none; }
+}
+
+/* ── Narrow (≤720px) ──────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  /* R6: Left-handed and its "Settings" group are hidden from all users. */
+  .mi-hand-section { display: none; }
+
+  .app-menu {
+    width: min(300px, calc(100vw - 24px));
+    right: -4px;
+  }
+
+  .mi { min-height: 44px; }
+}

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for js/ui/dialog.js (UD1–UD6).
+ * @fileoverview Unit tests for js/ui/dialog.js (UD1–UD17; UD14–UD17 tspec-hamburger-menu §2.7).
  */
 
 import { mount, open, close } from '../../ui/dialog.js';
@@ -170,5 +170,56 @@ describe('ui/dialog.js', () => {
     const backdrop = root.querySelector('#modal-backdrop');
     expect(backdrop.getAttribute('aria-describedby')).to.equal('modal-body');
     expect(root.querySelector('#modal-body').textContent).to.equal('Are you sure?');
+  });
+
+  // ── beforeOpen (tspec-hamburger-menu §2.7) ────────────────────────────────
+
+  describe('beforeOpen', () => {
+    let a, b;
+
+    beforeEach(() => {
+      a = document.createElement('button');
+      b = document.createElement('button');
+      document.body.append(a, b);
+    });
+
+    afterEach(() => {
+      close();
+      mount(root);
+      a.remove();
+      b.remove();
+    });
+
+    const openPlain = () => open({ title: 'T', body: 'B', confirmLabel: 'OK', onConfirm: () => {} });
+
+    it('UD14: beforeOpen runs before the trigger is captured', () => {
+      mount(root, { beforeOpen: () => b.focus() });
+      a.focus();
+      openPlain();
+      root.querySelector('#modal-cancel').click();
+      expect(document.activeElement).to.equal(b);
+    });
+
+    it('UD15: beforeOpen runs once per open, before the dialog shows', () => {
+      const seen = [];
+      mount(root, {
+        beforeOpen: () => seen.push(root.querySelector('#modal-backdrop').classList.contains('open')),
+      });
+      openPlain();
+      expect(seen).to.deep.equal([false]);
+      expect(root.querySelector('#modal-backdrop').classList.contains('open')).to.be.true;
+    });
+
+    it('UD16: mount(root) with no options still opens', () => {
+      mount(root);
+      expect(() => openPlain()).not.to.throw();
+      expect(root.querySelector('#modal-backdrop').classList.contains('open')).to.be.true;
+    });
+
+    it('UD17: mount(root, {}) with no beforeOpen still opens', () => {
+      mount(root, {});
+      expect(() => openPlain()).not.to.throw();
+      expect(root.querySelector('#modal-backdrop').classList.contains('open')).to.be.true;
+    });
   });
 });

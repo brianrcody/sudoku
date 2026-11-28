@@ -1,5 +1,5 @@
 /**
- * @fileoverview System tests (SYS1–SYS4).
+ * @fileoverview System tests (SYS1–SYS10; HMS1–HMS2, tspec-hamburger-menu §3.2).
  *
  * SYS1: Full Kiddie solve is skipped with a documented reason — puzzle seeds
  * are not controllable from outside the iframe, so the puzzle content is
@@ -9,6 +9,10 @@
  * SYS3: Expert generation perf gate — verified by loading the app with
  * a DM difficulty pre-set and measuring time to puzzle load.
  */
+
+import {
+  createApp, waitFor, waitForPuzzle as waitForAppPuzzle, appFrame, gsOf, enter,
+} from './_app.js';
 
 async function waitForPuzzle(iframe, timeoutMs = 12000) {
   const deadline = Date.now() + timeoutMs;
@@ -157,13 +161,13 @@ describe('system tests', () => {
 
     const themes = ['theme-coffee', 'theme-school', 'theme-terminal', 'theme-mountain', 'theme-minimalist'];
     const doc = iframe.contentDocument;
-    const themeSelect = doc.getElementById('theme-select');
-    if (!themeSelect) return this.skip();
+    doc.getElementById('menu-button').click();
 
     for (const theme of themes) {
-      themeSelect.value = theme.replace('theme-', '');
-      themeSelect.dispatchEvent(new iframe.contentWindow.Event('change', { bubbles: true }));
+      // Theme items keep the menu open (fspec-008 §5.5).
+      doc.getElementById(`mi-${theme}`).click();
       await new Promise(r => setTimeout(r, 50));
+      expect(doc.getElementById(`mi-${theme}`).getAttribute('aria-checked')).to.equal('true');
 
       // Body should have the new theme class.
       expect(doc.body.classList.contains(theme)).to.be.true;
@@ -218,10 +222,11 @@ describe('system tests: left-hand layout', () => {
 
     const doc = iframe.contentDocument;
     expect(doc.documentElement.getAttribute('data-hand')).to.equal('left');
-    expect(doc.getElementById('hand-toggle').getAttribute('aria-checked')).to.equal('true');
+    expect(doc.getElementById('mi-hand').getAttribute('aria-checked')).to.equal('true');
     expect(leftOf(doc, '#numpad-root')).to.be.below(leftOf(doc, '.sudoku-grid'));
+    // .left-col is display: contents on wide viewports, so it has no box of its own.
     expect(doc.querySelector('.right-col').getBoundingClientRect().right)
-      .to.be.at.most(doc.querySelector('.left-col').getBoundingClientRect().left);
+      .to.be.at.most(doc.querySelector('.grid-wrapper').getBoundingClientRect().left);
   });
 
   it('SYS6: the head script applies only a saved left preference, before the stylesheets load', async () => {
@@ -250,48 +255,59 @@ describe('system tests: left-hand layout', () => {
     expect(dataHandFor('sudoku.hand=sideways')).to.be.undefined;
   });
 
-  it('SYS7: toggling the switch swaps the layout without disturbing game state', async function () {
+  it('SYS7: toggling Left-handed in the menu swaps the layout without disturbing game state', async function () {
     this.timeout(20000);
     ({ iframe } = createSizedIframe(1100, 800));
     await waitForPuzzle(iframe);
 
     const doc = iframe.contentDocument;
-    const gs = iframe.contentWindow.gameState;
+    const win = iframe.contentWindow;
+    const gs = win.gameState;
     const state = gs.getState();
     const idx = [...Array(81).keys()].find(i => state.puzzle.givens[i] === 0);
     gs.dispatch({ type: 'SELECT_CELL', index: idx });
     gs.dispatch({ type: 'PEN_ENTER', digit: 1 });
 
-    const toggle = doc.getElementById('hand-toggle');
     expect(leftOf(doc, '#numpad-root')).to.be.above(leftOf(doc, '.sudoku-grid'));
 
-    toggle.focus();
+    const menuButton = doc.getElementById('menu-button');
+    const hand = doc.getElementById('mi-hand');
+    const key = k => doc.activeElement.dispatchEvent(
+      new win.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    menuButton.click();
+    // Like any click outside the grid and number pad, opening by pointer
+    // deselects (fspec-001 §4.2).
+    expect(gs.getState().selected).to.be.null;
+    key('End');   // Left-handed is the last visible item on a wide viewport
+    expect(doc.activeElement).to.equal(hand);
+
     const t0 = performance.now();
-    toggle.click();
+    key('Enter');
     const numpadNowLeft = leftOf(doc, '#numpad-root') < leftOf(doc, '.sudoku-grid');
     const elapsed = performance.now() - t0;
 
     expect(numpadNowLeft).to.be.true;
     expect(elapsed).to.be.below(1000);
+    expect(hand.getAttribute('aria-checked')).to.equal('true');
     expect(gs.getState().pen[idx]).to.equal(1);
-    // Like any click outside the grid and number pad, this deselects (fspec-001 §4.2).
-    expect(gs.getState().selected).to.be.null;
-    expect(doc.activeElement).to.equal(toggle);
+    // The menu stays open with focus on the item (fspec-008 §5.6).
+    expect(menuButton.getAttribute('aria-expanded')).to.equal('true');
+    expect(doc.activeElement).to.equal(hand);
 
-    toggle.click();
+    key('Enter');
     expect(leftOf(doc, '#numpad-root')).to.be.above(leftOf(doc, '.sudoku-grid'));
+    expect(hand.getAttribute('aria-checked')).to.equal('false');
   });
 
-  it('SYS8: the switch is hidden and the layout stacks on a narrow viewport', async function () {
+  it('SYS8: Left-handed is hidden from the menu and the layout stacks on a narrow viewport', async function () {
     this.timeout(20000);
     setHandCookie('left');
-    let loaded;
-    ({ iframe, loaded } = createSizedIframe(400, 800));
-    await loaded;
+    ({ iframe } = createSizedIframe(400, 800));
+    await waitForPuzzle(iframe);
 
     const doc = iframe.contentDocument;
     const win = iframe.contentWindow;
-    expect(win.getComputedStyle(doc.getElementById('hand-toggle')).display).to.equal('none');
+    expect(win.getComputedStyle(doc.querySelector('.mi-hand-section')).display).to.equal('none');
     expect(win.getComputedStyle(doc.querySelector('.game-area')).flexDirection).to.equal('column');
     expect(doc.documentElement.getAttribute('data-hand')).to.equal('left');
   });
@@ -299,9 +315,8 @@ describe('system tests: left-hand layout', () => {
   it('SYS9: document order keeps the grid before the controls in left-hand mode', async function () {
     this.timeout(20000);
     setHandCookie('left');
-    let loaded;
-    ({ iframe, loaded } = createSizedIframe(1100, 800));
-    await loaded;
+    ({ iframe } = createSizedIframe(1100, 800));
+    await waitForPuzzle(iframe);
 
     const doc = iframe.contentDocument;
     const precedes = (a, b) =>
@@ -309,25 +324,178 @@ describe('system tests: left-hand layout', () => {
         & Node.DOCUMENT_POSITION_FOLLOWING);
 
     expect(doc.documentElement.getAttribute('data-hand')).to.equal('left');
-    expect(precedes('#hand-toggle', '.sudoku-grid')).to.be.true;
+    expect(precedes('#menu-button', '#difficulty-select')).to.be.true;
+    expect(precedes('#difficulty-select', '.sudoku-grid')).to.be.true;
     expect(precedes('.sudoku-grid', '#numpad-root')).to.be.true;
-    expect(precedes('#numpad-root', '#stats-root')).to.be.true;
   });
 
-  it('SYS10: the header switch exposes switch semantics with its visible label as name', async function () {
+  it('SYS10: Left-handed is a menuitemcheckbox in the group "Settings", named by its visible label', async function () {
     this.timeout(20000);
-    let loaded;
-    ({ iframe, loaded } = createSizedIframe(1100, 800));
-    await loaded;
+    ({ iframe } = createSizedIframe(1100, 800));
+    await waitForPuzzle(iframe);
 
     const doc = iframe.contentDocument;
-    const toggle = doc.getElementById('hand-toggle');
-    expect(toggle.tagName).to.equal('BUTTON');
-    expect(toggle.getAttribute('type')).to.equal('button');
-    expect(toggle.getAttribute('role')).to.equal('switch');
-    expect(toggle.textContent.trim()).to.equal('Left-handed');
-    expect(toggle.querySelector('.hand-switch-track').getAttribute('aria-hidden')).to.equal('true');
-    expect(toggle.compareDocumentPosition(doc.getElementById('theme-select'))
-      & Node.DOCUMENT_POSITION_FOLLOWING).to.be.ok;
+    const hand = doc.getElementById('mi-hand');
+    expect(hand.getAttribute('role')).to.equal('menuitemcheckbox');
+    expect(hand.hasAttribute('aria-label')).to.be.false;
+    expect(hand.textContent.trim()).to.equal('Left-handed');
+    expect(hand.querySelector('.mi-switch-track').getAttribute('aria-hidden')).to.equal('true');
+    const group = hand.closest('[role="group"]');
+    expect(group.classList.contains('mi-hand-section')).to.be.true;
+    const labelId = group.getAttribute('aria-labelledby');
+    expect(doc.getElementById(labelId).textContent).to.equal('Settings');
+    expect(hand.closest('[role="menu"]').id).to.equal('app-menu');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Header menu (HMS1–HMS2, tspec-hamburger-menu §3.2)
+// ---------------------------------------------------------------------------
+
+describe('system tests: header menu', function () {
+  this.timeout(60000);
+  let iframe;
+
+  afterEach(() => {
+    iframe?.remove();
+    iframe = null;
+  });
+
+  async function bootMenu(size) {
+    iframe = createApp('/index.html', size);
+    await waitForAppPuzzle(iframe);
+    const doc = iframe.contentDocument;
+    const win = iframe.contentWindow;
+    return {
+      doc, win, gs: gsOf(iframe),
+      $: id => doc.getElementById(id),
+      active: () => doc.activeElement,
+      key: (k, mods = {}) => doc.activeElement.dispatchEvent(
+        new win.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...mods })),
+      menuOpen: () => doc.getElementById('menu-button').getAttribute('aria-expanded') === 'true',
+    };
+  }
+
+  const tabStops = doc => [...doc.querySelectorAll('a[href], button, select, input, textarea, [tabindex]')]
+    .filter(el => el.tabIndex >= 0 && !el.disabled && el.getClientRects().length > 0 &&
+      el.getAttribute('tabindex') !== '-1');
+
+  it('HMS1: a keyboard-only player uses every menu action', async () => {
+    const r = await bootMenu({ width: 1100, height: 900 });
+    const { givens } = r.gs.getState().puzzle;
+    const empty = givens.findIndex(g => g === 0);
+    enter(iframe, empty, 1);
+    r.gs.dispatch({ type: 'DESELECT' });
+    const button = r.$('menu-button');
+
+    // Clipboard refused, so Share shows the link field.
+    Object.defineProperty(r.win.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async () => { throw new Error('denied'); } },
+    });
+
+    expect(tabStops(r.doc)[0], 'first Tab stop').to.equal(button);
+    button.focus();
+
+    // Left-handed: ArrowUp opens on it, Enter toggles, the menu stays.
+    r.key('ArrowUp');
+    expect(r.active()).to.equal(r.$('mi-hand'));
+    r.key('Enter');
+    expect(r.doc.documentElement.getAttribute('data-hand')).to.equal('left');
+    expect(r.active()).to.equal(r.$('mi-hand'));
+
+    // Coffee Shop by type-ahead; Escape returns to the button.
+    r.key('Home');
+    r.key('c');
+    expect(r.active()).to.equal(r.$('mi-theme-coffee'));
+    r.key('Enter');
+    expect(r.doc.body.classList.contains('theme-coffee')).to.be.true;
+    r.key('Escape');
+    expect(r.active()).to.equal(button);
+    expect(r.menuOpen()).to.be.false;
+
+    // Statistics: Enter opens on it, Enter opens the dialog, Escape returns.
+    r.key('Enter');
+    expect(r.active()).to.equal(r.$('mi-stats'));
+    r.key('Enter');
+    expect(r.active()).to.equal(r.$('stats-close'));
+    r.key('Escape');
+    expect(r.active()).to.equal(button);
+
+    // Share: type-ahead, Enter, the link field is focused and selected.
+    r.key('Enter');
+    r.key('s');
+    expect(r.active()).to.equal(r.$('mi-share'));
+    r.key('Enter');
+    const field = await waitFor(() => r.doc.getElementById('share-link-field'), 5000, 'link field');
+    await waitFor(() => r.active() === field, 2000, 'link field focused');
+    expect(field.selectionStart).to.equal(0);
+    expect(field.selectionEnd).to.equal(field.value.length);
+    // Tab to Dismiss, Enter (browser defaults: synthetic keys run none).
+    const dismiss = r.doc.querySelector('#notice-root .notice-dismiss');
+    dismiss.focus();
+    dismiss.click();
+    expect(r.active()).to.equal(button);
+
+    // Reset: type-ahead, Enter, then Reset in the confirmation.
+    r.key('Enter');
+    r.key('r');
+    expect(r.active()).to.equal(r.$('mi-reset'));
+    r.key('Enter');
+    expect(r.active()).to.equal(r.$('modal-cancel'));
+    r.$('modal-confirm').focus();
+    r.$('modal-confirm').click();
+    await appFrame(iframe);
+
+    const grid = r.doc.querySelector('.sudoku-grid');
+    expect(r.active()).to.equal(grid);
+    expect(r.gs.getState().pen[empty]).to.equal(0);
+    expect(r.doc.documentElement.getAttribute('data-hand')).to.equal('left');
+    expect(r.doc.body.classList.contains('theme-coffee')).to.be.true;
+
+    // Tab from the grid: the next stop outside the grid is the first enabled digit.
+    const next = tabStops(r.doc).find(el =>
+      !grid.contains(el) && (grid.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING));
+    expect(next.classList.contains('btn-digit')).to.be.true;
+    expect(next).to.equal([...r.doc.querySelectorAll('.btn-digit')].find(b => !b.disabled));
+  });
+
+  it('HMS2: a pointer player opens, uses and dismisses the menu', async () => {
+    const r = await bootMenu({ width: 390, height: 800 });
+    const button = r.$('menu-button');
+    const handHidden = () => r.win.getComputedStyle(r.doc.querySelector('.mi-hand-section')).display === 'none';
+    const board = () => [...r.gs.getState().pen].join('');
+
+    button.click();
+    expect(handHidden(), 'Left-handed hidden').to.be.true;
+    r.$('mi-theme-school').click();
+    expect(r.doc.body.classList.contains('theme-school')).to.be.true;
+    expect(r.menuOpen(), 'open after School').to.be.true;
+
+    // An outside click on a cell (a pointer press focuses it first).
+    const { givens } = r.gs.getState().puzzle;
+    const empty = givens.findIndex(g => g === 0);
+    const cell = r.doc.querySelector(`.cell[data-index="${empty}"]`);
+    cell.focus();
+    cell.click();
+    expect(r.menuOpen(), 'closed by the cell click').to.be.false;
+    expect(r.gs.getState().selected).to.equal(empty);
+
+    button.click();
+    expect(handHidden(), 'Left-handed hidden').to.be.true;
+    r.$('mi-stats').click();
+    expect(r.$('stats-backdrop').classList.contains('open')).to.be.true;
+    r.$('stats-close').click();
+    expect(r.$('stats-backdrop').classList.contains('open')).to.be.false;
+    expect(r.active()).to.equal(button);
+
+    const before = board();
+    button.click();
+    expect(handHidden(), 'Left-handed hidden').to.be.true;
+    r.$('mi-reset').click();
+    expect(r.doc.querySelector('#modal-backdrop.open')).to.exist;
+    r.$('modal-cancel').click();
+    expect(r.active()).to.equal(button);
+    expect(board()).to.equal(before);
   });
 });

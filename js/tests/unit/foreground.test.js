@@ -1026,4 +1026,77 @@ describe('game/foreground.js', () => {
       expect(outcomes).to.deep.equal([{ status: 'failed' }]);
     });
   });
+
+  // tspec-hamburger-menu §2.8: startNew forwards how the request ended.
+  describe('startNew onOutcome', () => {
+    it('FG42: startNew reports loaded to onOutcome after afterLoad', async () => {
+      const { fg, log } = makeForeground();
+      const puzzle = puzzleOf('hard');
+      const outcomes = [];
+      fg.startNew('hard', () => log.order.push('afterLoad'),
+        o => { outcomes.push(o); log.order.push('onOutcome'); });
+
+      log.requests[0].resolve({ puzzle, fallback: false });
+      await settle();
+
+      expect(outcomes).to.deep.equal([{ status: 'loaded', puzzle, fallback: false }]);
+      expect(log.order).to.deep.equal(['SET_GENERATING', 'NEW_PUZZLE', 'announce', 'afterLoad', 'onOutcome']);
+    });
+
+    it('FG43: startNew reports cancelled on cancel()', () => {
+      const { fg } = makeForeground();
+      const outcomes = [];
+      fg.startNew('hard', undefined, o => outcomes.push(o));
+
+      fg.cancel();
+
+      expect(outcomes).to.deep.equal([{ status: 'cancelled' }]);
+    });
+
+    it('FG44: startNew reports replaced when superseded', () => {
+      const { fg } = makeForeground();
+      const outcomes = [];
+      fg.startNew('hard', undefined, o => outcomes.push(o));
+
+      fg.startNew('expert');
+
+      expect(outcomes).to.deep.equal([{ status: 'replaced' }]);
+    });
+
+    it("FG45: startNew reports fallback-declined from the fallback dialog's Cancel", async () => {
+      const { fg, log } = makeForeground();
+      const outcomes = [];
+      fg.startNew('nightmare', undefined, o => outcomes.push(o));
+      log.requests[0].resolve({ puzzle: puzzleOf('expert'), fallback: true });
+      await settle();
+
+      log.dialogs[0].onCancel();
+
+      expect(outcomes).to.deep.equal([{ status: 'fallback-declined' }]);
+    });
+
+    it('FG46: startNew reports failed on a provider error', async () => {
+      const { fg, log } = makeForeground();
+      const outcomes = [];
+      fg.startNew('hard', undefined, o => outcomes.push(o));
+
+      log.requests[0].reject(new Error('worker died'));
+      await settle();
+
+      expect(outcomes).to.deep.equal([{ status: 'failed' }]);
+    });
+
+    it('FG47: startNew with no onOutcome still loads', async () => {
+      const { fg, log } = makeForeground();
+      const puzzle = puzzleOf('hard');
+      const after = [];
+      fg.startNew('hard', p => after.push(p));
+
+      log.requests[0].resolve({ puzzle, fallback: false });
+      await settle();
+
+      expect(log.dispatched.at(-1)).to.deep.equal({ type: 'NEW_PUZZLE', difficulty: 'hard', puzzle });
+      expect(after).to.deep.equal([puzzle]);
+    });
+  });
 });

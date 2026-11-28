@@ -37,7 +37,7 @@ const HONEST_FALLBACK_TIERS = new Set(['diabolical', 'nightmare']);
  *   request: function(string, function(object): void, object=): void,
  *   abort: function(string): void,
  *   cancel: function(): void,
- *   startNew: function(string, function(object): void=): void,
+ *   startNew: function(string, function(object): void=, function(SeededOutcome): void=): void,
  *   generateSeeded: function({tier: string, seed: number, fallback: string, budget?: number}): Promise<SeededOutcome>,
  *   chooseTier: function(string): void,
  *   preferredTier: function(): string,
@@ -209,15 +209,16 @@ export function createForegroundGenerator({
    *
    * @param {string} difficulty
    * @param {function(object): void} [afterLoad] - Runs after the puzzle starts.
+   * @param {function(SeededOutcome): void} [onOutcome] - Hears how the request ended.
    */
-  function startNew(difficulty, afterLoad = () => {}) {
+  function startNew(difficulty, afterLoad = () => {}, onOutcome = () => {}) {
     request(difficulty, puzzle => {
       gameState.dispatch({ type: 'NEW_PUZZLE', difficulty: puzzle.difficulty, puzzle });
       announce(puzzle.difficulty === UNRATED
         ? 'New puzzle started. It could not be rated, so hints and coach are unavailable.'
         : 'New puzzle started.');
       afterLoad(puzzle);
-    });
+    }, { onOutcome });
   }
 
   /**

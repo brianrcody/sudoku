@@ -73,11 +73,16 @@ The Implementor creates the following container IDs in `index.html`. UI modules 
 | `#app-root` | Outermost wrapper |
 | `#grid-root` | `ui/grid.js` |
 | `#numpad-root` | `ui/numpad.js` |
-| `#controls-root` | `ui/controls.js` (Difficulty selector) |
-| `#stats-root` | `ui/stats.js` |
+| `#controls-root` | `ui/controls.js` (next-game cluster: Difficulty selector + `#btn-new`) |
+| `#menu-root` | `ui/menu.js` — header menu button + `#app-menu` |
+| `#stats-dialog-root` | `ui/stats.js` — Statistics dialog (replaces `#stats-root`) |
 | `#win-banner-root` | `ui/winBanner.js` — absolute-positioned over grid; empty until won |
 | `#dialog-root` | `ui/dialog.js` — modal container; empty until opened |
 | `#sr-live` | `ui/srLive.js` — `aria-live` region |
+
+> **Amended (V4 hamburger menu):** `#stats-root`, the action row (`#btn-reset`,
+> `#btn-share`) and the header theme/hand controls are removed; see
+> `aspec-hamburger-menu.md` §3 for the full element inventory.
 
 No UI module queries the DOM outside its own root.
 
@@ -243,6 +248,11 @@ Announcements are fired by UI modules (`numpad.js`, `winBanner.js`) immediately 
 ---
 
 ## 14. Focus Management
+
+> **Amended (V4 hamburger menu):** focus for the menu, the Statistics dialog, dialogs
+> opened from the menu (focus returns to the menu button), a confirmed Reset (the grid)
+> and the end of a New Puzzle / Difficulty request (`ui/requestFocus.js`) is specified in
+> `aspec-hamburger-menu.md` §9, which overrides the rules below where they differ.
 
 Behavioral obligations (from fspec §14.4):
 

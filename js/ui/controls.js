@@ -1,9 +1,12 @@
 /**
- * @fileoverview Controls UI — Difficulty selector.
+ * @fileoverview Controls UI — the next-game cluster: Difficulty selector and
+ * New Puzzle.
  *
  * Owns the `#controls-root` subtree. Manages the difficulty selector. Choosing
  * a tier dispatches CHANGE_DIFFICULTY, which starts a new puzzle at that tier
- * (main.js); with progress on the board the player is asked first.
+ * (main.js); with progress on the board the player is asked first. The
+ * `#btn-new` button is rendered here; its click is wired in main.js, which
+ * owns the foreground generator.
  */
 
 import { open as openDialog } from './dialog.js';
@@ -24,13 +27,16 @@ export function mount(root, gameState) {
 
   const options = DIFFICULTY_ORDER
     .map(id => `<option value="${id}"${id === 'medium' ? ' selected' : ''}>${TIER_LABELS[id]}</option>`)
-    .join('\n        ');
+    .join('\n          ');
   _root.innerHTML = `
     <div class="difficulty-row">
       <label for="difficulty-select">Difficulty</label>
-      <select id="difficulty-select" aria-label="Select difficulty level">
-        ${options}
-      </select>
+      <div class="next-game" role="group" aria-label="Next game">
+        <select id="difficulty-select" aria-label="Select difficulty level">
+          ${options}
+        </select>
+        <button type="button" class="btn btn-new" id="btn-new" aria-label="Start new puzzle">New Puzzle</button>
+      </div>
     </div>
   `;
 

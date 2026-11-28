@@ -1,9 +1,9 @@
 /**
  * @fileoverview Left-/right-hand layout preference: `<html data-hand>` attribute,
- * cookie persistence, and the header switch.
+ * and cookie persistence. The menu's Left-handed item toggles it.
  *
- * The swap itself is pure CSS (`flex-direction: row-reverse`), so DOM and focus
- * order never change with the mode.
+ * The swap itself is pure CSS (the vspec-008 §2.2 grid-column swap), so DOM and
+ * focus order never change with the mode.
  */
 
 import * as cookies from '../persist/cookies.js';
@@ -52,16 +52,7 @@ export function initHandedness() {
   applyHandedness(cookies.get(COOKIE_NAME) === 'left' ? 'left' : 'right', false);
 }
 
-/**
- * Wires the `#hand-toggle` switch: reflects the current state and flips it on click.
- *
- * @param {HTMLButtonElement} buttonEl - A `role="switch"` button.
- */
-export function bindHandToggle(buttonEl) {
-  buttonEl.setAttribute('aria-checked', String(getHandedness() === 'left'));
-  buttonEl.addEventListener('click', () => {
-    const next = getHandedness() === 'left' ? 'right' : 'left';
-    applyHandedness(next);
-    buttonEl.setAttribute('aria-checked', String(next === 'left'));
-  });
+/** Flips the applied handedness, saves it, and announces it (fspec-004 §2.3 steps 2–5). */
+export function toggleHandedness() {
+  applyHandedness(getHandedness() === 'left' ? 'right' : 'left');
 }

@@ -241,4 +241,103 @@ describe('ui/keyboard.js', () => {
     select.remove();
     expect(fakeGs.dispatch.calls.some(a => a.type === 'PEN_ENTER' && a.digit === 5)).to.be.true;
   });
+
+  // ── Arrow keys from the grid container (tspec-hamburger-menu §2.11) ───────
+
+  describe('arrow keys from the grid container', () => {
+    const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+    let grid;
+
+    beforeEach(() => {
+      grid = gridRoot.querySelector('.sudoku-grid');
+      grid.tabIndex = 0;
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.index = String(i);
+        cell.tabIndex = -1;
+        grid.appendChild(cell);
+      }
+    });
+
+    /** Records focus() calls on every cell. */
+    function spyCells() {
+      const calls = [];
+      for (const cell of grid.querySelectorAll('.cell')) {
+        const orig = cell.focus.bind(cell);
+        cell.focus = (...a) => { calls.push(Number(cell.dataset.index)); orig(...a); };
+      }
+      return calls;
+    }
+
+    /** The stub reducer: ARROW_NAV leaves `selected` at `to`. */
+    function arrowTo(to) {
+      const dispatch = fakeGs.dispatch;
+      fakeGs.dispatch = action => {
+        dispatch(action);
+        if (action.type === 'ARROW_NAV') fakeGs.getState().selected = to;
+      };
+      fakeGs.dispatch.calls = dispatch.calls;
+    }
+
+    it('UK17: an arrow key on the focused grid container moves DOM focus to the selected cell', async () => {
+      fakeGs.getState().selected = null;
+      arrowTo(0);
+      grid.focus();
+      keydown({ key: 'ArrowRight' });
+      expect(fakeGs.dispatch.calls.some(a => a.type === 'ARROW_NAV' && a.direction === 'right')).to.be.true;
+      await nextFrame();
+      expect(document.activeElement).to.equal(grid.querySelector('.cell[data-index="0"]'));
+    });
+
+    it('UK18: an arrow key with focus on a cell does not refocus from keyboard.js', async () => {
+      fakeGs.getState().selected = 4;
+      grid.querySelector('.cell[data-index="4"]').focus();
+      const calls = spyCells();
+      keydown({ key: 'ArrowDown' });
+      expect(fakeGs.dispatch.calls.some(a => a.type === 'ARROW_NAV' && a.direction === 'down')).to.be.true;
+      await nextFrame();
+      expect(calls).to.be.empty;
+    });
+
+    it('UK19: container focused but no selection after dispatch', async () => {
+      fakeGs.getState().selected = null;
+      arrowTo(null);
+      // No cells: listeners left by earlier mounts in this file (other fake
+      // states, other selections) then have nothing to focus either.
+      grid.replaceChildren();
+      grid.focus();
+      // Focus within the grid passes the guard with no selection.
+      expect(() => keydown({ key: 'ArrowLeft' })).not.to.throw();
+      expect(fakeGs.dispatch.calls.some(a => a.type === 'ARROW_NAV')).to.be.true;
+      await nextFrame();
+      expect(document.activeElement).to.equal(grid);
+    });
+
+    it('UK20: an arrow with a selection and focus outside the grid dispatches without moving focus', async () => {
+      const btn = document.createElement('button');
+      document.body.appendChild(btn);
+      try {
+        fakeGs.getState().selected = 3;
+        btn.focus();
+        keydown({ key: 'ArrowUp' });
+        expect(fakeGs.dispatch.calls.some(a => a.type === 'ARROW_NAV' && a.direction === 'up')).to.be.true;
+        await nextFrame();
+        expect(document.activeElement).to.equal(btn);
+      } finally {
+        btn.remove();
+      }
+    });
+
+    // Added under tspec §4 (re-derived branch): the `?.focus()` arm with no matching cell.
+    it('UK21: a selection with no rendered cell leaves focus on the container', async () => {
+      fakeGs.getState().selected = null;
+      arrowTo(80);
+      grid.replaceChildren();
+      grid.focus();
+      expect(() => keydown({ key: 'ArrowDown' })).not.to.throw();
+      await nextFrame();
+      expect(document.activeElement).to.equal(grid);
+    });
+  });
 });

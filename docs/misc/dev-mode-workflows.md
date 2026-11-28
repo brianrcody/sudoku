@@ -62,7 +62,7 @@ recorded history fails with `needs-replace` or `needs-discard-history` and chang
 nothing, so `sudokuDev.load(s)` on a game with progress needs
 `sudokuDev.load(s, { replace: true })`.
 
-The **Share** button gives you the givens too: the copied link ends in `?p=<81 digits>`.
+The menu's **Share puzzle** item gives you the givens too: the copied link ends in `?p=<81 digits>`.
 
 ### Driving the app from a script
 

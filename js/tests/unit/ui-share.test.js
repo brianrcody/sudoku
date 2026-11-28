@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for js/ui/share.js (SH1–SH13).
+ * @fileoverview Unit tests for js/ui/share.js (SH1–SH21; SH17–SH21 tspec-hamburger-menu §2.4).
  */
 
 import { mount, buildShareUrl } from '../../ui/share.js';
@@ -42,23 +42,23 @@ describe('ui/share.js', () => {
   });
 
   describe('mount', () => {
-    let button, noticeRoot, sr;
+    let trigger, noticeRoot, sr;
 
     beforeEach(() => {
-      button = document.createElement('button');
-      button.id = 'btn-share';
+      trigger = document.createElement('button');
+      trigger.id = 'menu-button';
       noticeRoot = document.createElement('div');
       noticeRoot.id = 'notice-root';
       sr = document.createElement('div');
       sr.id = 'sr-live';
-      document.body.append(button, noticeRoot, sr);
+      document.body.append(trigger, noticeRoot, sr);
       mountNotice(noticeRoot);
       mountSrLive(document.body);
     });
 
     afterEach(() => {
       hideNotice();
-      button.remove();
+      trigger.remove();
       noticeRoot.remove();
       sr.remove();
     });
@@ -66,47 +66,31 @@ describe('ui/share.js', () => {
     function mountShare({ puzzle = { givens: toGivens(KIDDIE) }, copyResult = true } = {}) {
       const gs = makeFakeGameState({ puzzle });
       const copied = [];
-      mount(button, gs, {
+      const api = mount(gs, {
+        returnFocus: () => trigger,
         copy: async text => { copied.push(text); return copyResult; },
         getHref: () => 'https://example.test/app/?dev=1',
       });
-      return { gs, copied };
+      return { gs, copied, share: api.share };
     }
 
-    it('SH6: the button is disabled while no puzzle is loaded', () => {
-      mountShare({ puzzle: null });
-      expect(button.disabled).to.be.true;
+    // The item's enabled state (formerly SH6–SH9) is owned by menu.js now.
+    it('SH6: share() does nothing while no puzzle is loaded', async () => {
+      const { copied, share } = mountShare({ puzzle: null });
+      await share();
+      expect(copied).to.deep.equal([]);
+      expect(noticeRoot.hidden).to.be.true;
     });
 
-    it('SH7: the button is enabled when a puzzle is loaded', () => {
-      mountShare();
-      expect(button.disabled).to.be.false;
-    });
-
-    it('SH8: the button enables when a puzzle arrives', () => {
-      const { gs } = mountShare({ puzzle: null });
-      gs.getState().puzzle = { givens: toGivens(KIDDIE) };
-      gs._emit('changed', { action: { type: 'PUZZLE_LOADED' }, changed: new Set(['puzzle']) });
-      expect(button.disabled).to.be.false;
-    });
-
-    it('SH9: a change that does not touch the puzzle leaves the button alone', () => {
-      const { gs } = mountShare();
-      gs.getState().puzzle = null;
-      gs._emit('changed', { action: { type: 'SELECT_CELL' }, changed: new Set(['selected']) });
-      expect(button.disabled).to.be.false;
-    });
-
-    it('SH10: clicking copies the share link for the current givens', async () => {
-      const { copied } = mountShare();
-      button.click();
-      await settle();
+    it('SH10: share() copies the share link for the current givens', async () => {
+      const { copied, share } = mountShare();
+      await share();
       expect(copied).to.deep.equal([`https://example.test/app/?p=${KIDDIE}`]);
     });
 
     it('SH11: a successful copy shows and announces the confirmation', async () => {
-      mountShare();
-      button.click();
+      const { share } = mountShare();
+      await share();
       await settle();
       expect(noticeRoot.querySelector('.notice-info .notice-message').textContent)
         .to.equal('Link copied to clipboard.');
@@ -115,8 +99,8 @@ describe('ui/share.js', () => {
     });
 
     it('SH12: a failed copy shows the link in a selected field and announces the fallback', async () => {
-      mountShare({ copyResult: false });
-      button.click();
+      const { share } = mountShare({ copyResult: false });
+      await share();
       await settle();
       const field = noticeRoot.querySelector('#share-link-field');
       expect(field.value).to.equal(`https://example.test/app/?p=${KIDDIE}`);
@@ -124,34 +108,98 @@ describe('ui/share.js', () => {
       expect(sr.textContent).to.equal('Couldn\'t copy automatically. The link is shown for you to copy.');
     });
 
-    it('SH13: dismissing the fallback returns focus to the Share button', async () => {
-      mountShare({ copyResult: false });
-      button.click();
+    it('SH13: dismissing the fallback returns focus to returnFocus (the menu button)', async () => {
+      const { share } = mountShare({ copyResult: false });
+      await share();
       await settle();
       noticeRoot.querySelector('.notice-dismiss').click();
-      expect(document.activeElement).to.equal(button);
+      expect(document.activeElement).to.equal(trigger);
     });
 
     it('SH14: a newly generated puzzle clears the notice', async () => {
-      const { gs } = mountShare({ copyResult: false });
-      button.click();
+      const { gs, share } = mountShare({ copyResult: false });
+      await share();
       await settle();
       gs._emit('changed', { action: { type: 'NEW_PUZZLE' }, changed: new Set(['puzzle']) });
       expect(noticeRoot.hidden).to.be.true;
     });
 
     it('SH15: other actions leave the notice in place', async () => {
-      const { gs } = mountShare({ copyResult: false });
-      button.click();
+      const { gs, share } = mountShare({ copyResult: false });
+      await share();
       await settle();
       gs._emit('changed', { action: { type: 'PEN_ENTER' }, changed: new Set(['pen']) });
       expect(noticeRoot.hidden).to.be.false;
     });
 
+    it('SH17: share() with no puzzle does nothing', async () => {
+      const { copied, share } = mountShare({ puzzle: null });
+      await share();
+      await settle();
+      expect(copied).to.be.empty;
+      expect(noticeRoot.hidden).to.be.true;
+      expect(sr.textContent).to.equal('');
+    });
+
+    it('SH18: a successful copy shows and announces the copied notice', async () => {
+      const { copied, share } = mountShare();
+      await share();
+      await settle();
+      expect(copied).to.deep.equal([buildShareUrl(toGivens(KIDDIE), 'https://example.test/app/?dev=1')]);
+      expect(noticeRoot.querySelector('.notice-message').textContent).to.equal('Link copied to clipboard.');
+      expect(sr.textContent).to.equal('Link copied to clipboard.');
+    });
+
+    it('SH19: a failed copy shows the link; Dismiss focuses returnFocus() resolved at dismiss time', async () => {
+      const a = document.createElement('button');
+      const b = document.createElement('button');
+      document.body.append(a, b);
+      try {
+        let target = a;
+        const gs = makeFakeGameState({ puzzle: { givens: toGivens(KIDDIE) } });
+        const { share } = mount(gs, {
+          returnFocus: () => target,
+          copy: async () => false,
+          getHref: () => 'https://example.test/app/',
+        });
+        await share();
+        await settle();
+        expect(noticeRoot.querySelector('#share-link-field')).to.exist;
+        expect(sr.textContent).to.equal('Couldn\'t copy automatically. The link is shown for you to copy.');
+        target = b;
+        noticeRoot.querySelector('.notice-dismiss').click();
+        expect(document.activeElement).to.equal(b);
+      } finally {
+        a.remove();
+        b.remove();
+      }
+    });
+
+    it('SH20: mount takes no button and owns no disabled state', () => {
+      const before = document.querySelectorAll('[disabled]').length;
+      const gs = makeFakeGameState({ puzzle: { givens: toGivens(KIDDIE) } });
+      const api = mount(gs, { returnFocus: () => trigger });
+      gs.getState().puzzle = null;
+      gs._emit('changed', { action: { type: 'NEW_PUZZLE' }, changed: new Set(['puzzle']) });
+      expect(document.querySelectorAll('[disabled]').length).to.equal(before);
+      expect(Object.keys(api)).to.deep.equal(['share']);
+      expect(api.share).to.be.a('function');
+    });
+
+    it('SH21: only NEW_PUZZLE hides the notice', async () => {
+      const { gs, share } = mountShare({ copyResult: false });
+      await share();
+      await settle();
+      gs._emit('changed', { action: { type: 'RESET_PUZZLE' }, changed: new Set(['pen', 'won']) });
+      expect(noticeRoot.hidden).to.be.false;
+      gs._emit('changed', { action: { type: 'NEW_PUZZLE' }, changed: new Set(['puzzle']) });
+      expect(noticeRoot.hidden).to.be.true;
+    });
+
     it('SH16: the default dependencies are the real clipboard helper and location', async () => {
       const gs = makeFakeGameState({ puzzle: { givens: toGivens(KIDDIE) } });
-      mount(button, gs);
-      button.click();
+      const { share } = mount(gs, { returnFocus: () => trigger });
+      share();
       await new Promise(r => setTimeout(r, 100));
       // Whether the headless clipboard accepts the write or not, one of the two
       // outcomes is shown, and a fallback link is built from the page's own URL.

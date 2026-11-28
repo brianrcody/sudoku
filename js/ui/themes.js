@@ -43,17 +43,11 @@ export function applyTheme(themeClass, shouldAnnounce = true) {
   }
 }
 
-/**
- * Wires up the `#theme-select` element.
- *
- * @param {HTMLSelectElement} selectEl
- */
-export function bindThemeSelect(selectEl) {
-  // Reflect current theme.
-  const current = THEME_CLASSES.find(c => document.body.classList.contains(c)) ?? DEFAULT_THEME;
-  selectEl.value = current.replace('theme-', '');
+/** Theme choices in menu order: `[{ value: 'minimalist', label: 'Minimalist' }, …]`. */
+export const THEME_OPTIONS = THEME_CLASSES.map(c => ({ value: c.replace('theme-', ''), label: DISPLAY_NAMES[c] }));
 
-  selectEl.addEventListener('change', () => {
-    applyTheme('theme-' + selectEl.value);
-  });
+/** @returns {string} The applied theme's value (e.g. `'coffee'`), or the default's. */
+export function currentTheme() {
+  const cls = THEME_CLASSES.find(c => document.body.classList.contains(c)) ?? DEFAULT_THEME;
+  return cls.replace('theme-', '');
 }

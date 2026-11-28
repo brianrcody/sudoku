@@ -200,4 +200,64 @@ describe('ui/numpad.js', () => {
     expect(root.querySelector('#hint-count').textContent).to.equal('0');
     expect(root.querySelector('#btn-hint').getAttribute('aria-label')).to.equal('Hint — no hints remaining');
   });
+
+  // ── Structure (tspec-hamburger-menu §2.10) ────────────────────────────────
+
+  it('UN16: the pad is a group named Number pad, not a toolbar', () => {
+    mountNumpad();
+    const pad = root.querySelector('.numpad');
+    expect(pad.getAttribute('role')).to.equal('group');
+    expect(pad.getAttribute('aria-label')).to.equal('Number pad');
+    expect(root.querySelector('[role=toolbar]')).to.be.null;
+  });
+
+  it('UN17: two labelled tool groups in the specified order', () => {
+    mountNumpad();
+    const groups = [...root.querySelectorAll('.tool-group')];
+    expect(groups.map(g => [g.getAttribute('role'), g.getAttribute('aria-label')])).to.deep.equal([
+      ['group', 'Input and help'], ['group', 'Corrections'],
+    ]);
+    expect([...groups[0].querySelectorAll('button')].map(b => b.id)).to.deep.equal(['btn-mode', 'btn-coach', 'btn-hint']);
+    expect([...groups[1].querySelectorAll('button')].map(b => b.id)).to.deep.equal(['btn-undo', 'btn-clear', 'btn-erase-all']);
+  });
+
+  it('UN18: DOM order is the Tab order of fspec §7.2', () => {
+    mountNumpad();
+    const order = [...root.querySelectorAll('button')].map(b => b.id || `digit-${b.textContent}`);
+    expect(order).to.deep.equal([
+      'digit-1', 'digit-2', 'digit-3', 'digit-4', 'digit-5', 'digit-6', 'digit-7', 'digit-8', 'digit-9',
+      'btn-mode', 'btn-coach', 'btn-hint', 'btn-undo', 'btn-clear', 'btn-erase-all', 'btn-check',
+    ]);
+  });
+
+  it('UN19: Check, the completion message and the digits are outside both tool groups', () => {
+    mountNumpad();
+    expect(root.querySelector('#btn-check').closest('.tool-group')).to.be.null;
+    expect(root.querySelector('#completion-msg').closest('.tool-group')).to.be.null;
+    const digitsEl = root.querySelector('#numpad-digits');
+    expect(digitsEl.closest('.tool-group')).to.be.null;
+    expect(digitsEl.hasAttribute('role')).to.be.false;
+  });
+
+  it('UN20: buttons keep their names and default state', () => {
+    mountNumpad({ undoSnapshot: null });
+    // Pre-feature values: the old markup plus the unchanged render for the default rig.
+    const expected = {
+      'btn-mode':      { label: 'Switch to Pencil mode', pressed: 'false', disabled: false },
+      'btn-coach':     { label: 'Coach', pressed: null, disabled: false },
+      'btn-hint':      { label: 'Hint, 3 remaining', pressed: null, disabled: false },
+      'btn-undo':      { label: 'Undo last move', pressed: null, disabled: true },
+      'btn-clear':     { label: 'Clear selected cell', pressed: null, disabled: false },
+      'btn-erase-all': { label: 'Erase all pencil marks', pressed: null, disabled: true },
+      'btn-check':     { label: 'Check answers', pressed: null, disabled: false },
+    };
+    for (const [id, want] of Object.entries(expected)) {
+      const btn = root.querySelector(`#${id}`);
+      expect({
+        label: btn.getAttribute('aria-label'),
+        pressed: btn.getAttribute('aria-pressed'),
+        disabled: btn.disabled,
+      }, id).to.deep.equal(want);
+    }
+  });
 });

@@ -2,7 +2,7 @@
  * @fileoverview Global keyboard shortcut handler.
  *
  * Handles: digits 1–9, Backspace/Delete, arrow keys, P (pen/pencil toggle),
- * Home (focus first cell), Escape (close dialogs). All dispatched via GameState.
+ * Home (select and focus the first cell), Escape (close dialogs). All dispatched via GameState.
  * Digit, erase, and arrow shortcuts are ignored while a text field has focus.
  */
 
@@ -26,7 +26,7 @@ export function mount(root, gameState) {
     // Text fields keep their own digits, erase keys, and caret movement.
     const inTextField = tag === 'INPUT' || tag === 'TEXTAREA';
 
-    // Home focuses the first non-given cell.
+    // Home selects and focuses the first cell (index 0).
     if (e.key === 'Home') {
       if (inInput) return;
       e.preventDefault();
@@ -101,6 +101,14 @@ export function mount(root, gameState) {
       if (grid && (grid.contains(document.activeElement) || gameState.getState().selected !== null)) {
         e.preventDefault();
         gameState.dispatch({ type: 'ARROW_NAV', direction: arrowDir });
+        // From the focused grid container itself, move DOM focus onto the newly
+        // selected cell so the screen reader follows it (as Home does).
+        if (document.activeElement === grid) {
+          requestAnimationFrame(() => {
+            const sel = gameState.getState().selected;
+            if (sel !== null) grid.querySelector(`.cell[data-index="${sel}"]`)?.focus();
+          });
+        }
       }
     }
   });

@@ -243,25 +243,27 @@ describe('integration/a11y', () => {
     expect(backdrop.getAttribute('aria-labelledby')).to.equal('modal-title');
   });
 
-  // A17: Dialog open moves focus; close returns focus
+  // A17: Dialog open moves focus; close returns focus (to the menu button when
+  // the dialog was opened from the menu, fspec-008 §8.1)
   it('A17: opening the dialog moves focus; closing it returns focus to trigger', async function () {
     this.timeout(10000);
-    const resetBtn = iframe.contentDocument.getElementById('btn-reset');
-    if (!resetBtn) return this.skip();
-    resetBtn.focus();
-
-    resetBtn.click();
+    const doc = iframe.contentDocument;
+    const menuButton = doc.getElementById('menu-button');
+    menuButton.click();
+    expect(menuButton.getAttribute('aria-expanded')).to.equal('true');
+    doc.getElementById('mi-reset').click();
     await new Promise(r => setTimeout(r, 100));
 
-    const backdrop = iframe.contentDocument.querySelector('#modal-backdrop');
+    const backdrop = doc.querySelector('#modal-backdrop');
     expect(backdrop.classList.contains('open')).to.be.true;
+    expect(menuButton.getAttribute('aria-expanded')).to.equal('false');
     // Focus should be on cancel button.
-    expect(iframe.contentDocument.activeElement.id).to.equal('modal-cancel');
+    expect(doc.activeElement.id).to.equal('modal-cancel');
 
-    iframe.contentDocument.querySelector('#modal-cancel').click();
+    doc.querySelector('#modal-cancel').click();
     await new Promise(r => setTimeout(r, 100));
 
-    expect(iframe.contentDocument.activeElement).to.equal(resetBtn);
+    expect(doc.activeElement).to.equal(menuButton);
   });
 
   // A18: Win moves focus to New Puzzle button

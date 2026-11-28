@@ -1,8 +1,8 @@
 /**
  * @fileoverview Number pad renderer and input router.
  *
- * Owns the `#numpad-root` subtree. Renders digit buttons (1–9), Erase, mode
- * toggle, Hint, and Check.
+ * Owns the `#numpad-root` subtree. Renders digit buttons (1–9), the two-column
+ * tool block (Pen/Pencil, Coach, Hint | Undo, Clear, Erase all pencil), and Check.
  */
 
 import { announce } from './srLive.js';
@@ -38,28 +38,28 @@ export function mount(root, gameState) {
 
 function _buildNumpad() {
   _root.innerHTML = `
-    <div class="numpad" role="toolbar" aria-label="Number pad">
+    <div class="numpad" role="group" aria-label="Number pad">
       <div class="numpad-digits" id="numpad-digits"></div>
-      <div class="numpad-utils">
-        <button class="btn" id="btn-clear" aria-label="Clear selected cell">Clear</button>
-        <button class="btn btn-mode mode-pen" id="btn-mode"
-                aria-label="Switch to Pencil mode" aria-pressed="false">
-          <span class="mode-label">
-            <span class="mode-main" id="mode-label-main">Pen</span>
-            <span class="mode-sub" id="mode-label-sub">tap for pencil</span>
-          </span>
-        </button>
-      </div>
-      <div class="numpad-undo-row">
-        <button class="btn btn-erase-all" id="btn-erase-all"
-                aria-label="Erase all pencil marks" disabled>Erase all pencil</button>
-        <button class="btn btn-undo" id="btn-undo" aria-label="Undo last move" disabled>Undo</button>
-      </div>
-      <div class="numpad-bottom-row1">
-        <button class="btn btn-hint" id="btn-hint" aria-label="Hint">
-          Hint <span class="hint-badge" id="hint-count">0</span>
-        </button>
-        <button class="btn btn-coach" id="btn-coach" aria-label="Coach">Coach</button>
+      <div class="numpad-tools">
+        <div class="tool-group" role="group" aria-label="Input and help">
+          <button class="btn btn-mode mode-pen" id="btn-mode"
+                  aria-label="Switch to Pencil mode" aria-pressed="false">
+            <span class="mode-label">
+              <span class="mode-main" id="mode-label-main">Pen</span>
+              <span class="mode-sub" id="mode-label-sub">tap for pencil</span>
+            </span>
+          </button>
+          <button class="btn btn-coach" id="btn-coach" aria-label="Coach">Coach</button>
+          <button class="btn btn-hint" id="btn-hint" aria-label="Hint">
+            Hint <span class="hint-badge" id="hint-count">0</span>
+          </button>
+        </div>
+        <div class="tool-group" role="group" aria-label="Corrections">
+          <button class="btn btn-undo" id="btn-undo" aria-label="Undo last move" disabled>Undo</button>
+          <button class="btn" id="btn-clear" aria-label="Clear selected cell">Clear</button>
+          <button class="btn btn-erase-all" id="btn-erase-all"
+                  aria-label="Erase all pencil marks" disabled>Erase all pencil</button>
+        </div>
       </div>
       <div class="numpad-bottom-row2">
         <button class="btn btn-check" id="btn-check" aria-label="Check answers">Check</button>
@@ -146,8 +146,8 @@ function _buildNumpad() {
     announce('All pencil marks erased');
   });
 
-  // Toolbar pattern: prevent pointer-driven focus transfer so the selected cell
-  // keeps focus across multiple button taps. Tab/Enter/Space are unaffected.
+  // Pointer taps keep focus on the selected cell: prevent pointer-driven focus
+  // transfer across multiple button taps. Tab/Enter/Space are unaffected.
   _root.querySelectorAll('button').forEach(btn => {
     btn.addEventListener('mousedown', e => e.preventDefault());
   });

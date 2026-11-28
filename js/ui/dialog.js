@@ -12,14 +12,20 @@ let _onCancel = null;
 let _backdrop = null;
 let _cancelBtn = null;
 let _confirmBtn = null;
+let _beforeOpen = null;
 
 /**
  * Mounts the dialog into `root`. Must be called once before `open`.
  *
  * @param {HTMLElement} root - The `#dialog-root` element.
+ * @param {object} [opts]
+ * @param {?function(): void} [opts.beforeOpen] - Runs at the start of every
+ *   `open`, before the trigger is captured: closes any surface (menu,
+ *   Statistics dialog) that must not stay open beneath the dialog.
  */
-export function mount(root) {
+export function mount(root, { beforeOpen = null } = {}) {
   _root = root;
+  _beforeOpen = beforeOpen;
 
   _root.innerHTML = `
     <div
@@ -85,6 +91,8 @@ export function mount(root) {
  *   way: Cancel, Escape, or being replaced by another `open`.
  */
 export function open({ title, body, confirmLabel, onConfirm, onCancel = null }) {
+  _beforeOpen?.();
+
   // Opening over a pending dialog cancels it.
   const replaced = _onCancel;
   _onCancel = null;

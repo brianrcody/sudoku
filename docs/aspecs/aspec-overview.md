@@ -79,7 +79,8 @@ sudoku/
 │   ├── base.css                      # Reset, layout, typography (default Minimalist)
 │   ├── grid.css                      # Sudoku grid and cells
 │   ├── controls.css                  # Number pad, buttons, selectors, modals
-│   ├── stats.css                     # Statistics panel
+│   ├── menu.css                      # V4: header menu button + hamburger menu (aspec-hamburger-menu.md)
+│   ├── stats.css                     # Statistics table; V4: Statistics dialog (was the on-page panel)
 │   ├── themes.css                    # All theme body classes + structural overrides
 │   └── dev.css                       # V4: developer-mode styles; injected by devPanel.js only
 ├── js/
@@ -145,19 +146,21 @@ sudoku/
 │   ├── ui/
 │   │   ├── grid.js                   # Renders grid cells; dispatches cell events
 │   │   ├── numpad.js                 # Renders pad + buttons; routes input
-│   │   ├── controls.js               # New Puzzle, Reset, Difficulty, Check, theme select
-│   │   ├── stats.js                  # Stats table renderer
+│   │   ├── controls.js               # Difficulty selector; V4: next-game cluster incl. New Puzzle
+│   │   ├── stats.js                  # Stats table; V4: Statistics dialog (aspec-hamburger-menu.md §5)
 │   │   ├── winBanner.js              # Win overlay + animation trigger
 │   │   ├── dialog.js                 # Reusable confirmation dialog
 │   │   ├── srLive.js                 # Screen reader live region helper
-│   │   ├── themes.js                 # Theme class swap + cookie persistence
-│   │   ├── handedness.js             # V4: left-hand layout preference + header switch (aspec-left-hand.md)
+│   │   ├── themes.js                 # Theme class swap + cookie persistence; V4: THEME_OPTIONS for the menu
+│   │   ├── handedness.js             # V4: left-hand layout preference (aspec-left-hand.md); toggled from the menu
 │   │   ├── keyboard.js               # Desktop keyboard shortcuts
 │   │   ├── coach.js                  # Coach button, panel, recap, toast, lifecycle (aspec-coach-ui.md)
 │   │   ├── coachOverlay.js           # SVG arrow overlay renderer (aspec-coach-ui.md)
 │   │   ├── busy.js                   # V3: generation progress card + Cancel (aspec-harder-tiers.md §5.3)
 │   │   ├── notice.js                 # V4: notice card under the board (aspec-puzzle-sharing.md §7)
-│   │   └── share.js                  # V4: Share button + share-link builder
+│   │   ├── share.js                  # V4: share action + share-link builder (invoked from the menu)
+│   │   ├── menu.js                   # V4: hamburger menu — button, roving focus, items (aspec-hamburger-menu.md §4)
+│   │   └── requestFocus.js           # V4: focus policy when a New Puzzle / Difficulty request ends (§6)
 │   ├── coach/
 │   │   └── analyzer.js               # Pure-function coach analyzer (aspec-coach-analyzer.md)
 │   ├── dev/                          # V4 developer mode (aspec-dev-mode.md)
@@ -223,6 +226,7 @@ sudoku/
 │       │   ├── (V4 developer mode)   # devMode, inspect, devPanel, pipeline-diagnostics
 │       │   ├── (V4 debug instrumentation) # sessionCodec, machine, recorder, recorderStore, devLog, replay,
 │       │   │                         #   devSession, devApi, recorderPanel, state-devtools, session-fixtures, foreground
+│       │   ├── (V4 hamburger menu)   # ui-menu, ui-requestFocus; reworked ui-stats, ui-share (aspec-hamburger-menu.md §13–14)
 │       │   └── coach/
 │       │       ├── analyzer.test.js  # Coach analyzer unit tests (aspec-coach-analyzer.md §13)
 │       │       └── session.test.js   # CoachSession reducer unit tests (aspec-coach-ui.md §16.1)
@@ -246,7 +250,7 @@ sudoku/
 ```
 
 Notes:
-- `index.html` pulls in CSS files in order `themes.css → base.css → grid.css → controls.css → stats.css`, then loads `js/main.js` as `type="module"`.
+- `index.html` pulls in CSS files in order `themes.css → base.css → grid.css → controls.css → menu.css → stats.css`, then loads `js/main.js` as `type="module"`.
 - `js/worker/generator.worker.js` is instantiated with `new Worker('./js/worker/generator.worker.js', { type: 'module' })` from `clientGenProvider.js`. Browsers resolve the relative URL against `index.html` the same way in `file://` and HTTPS.
 - `package.json` exists **only** for development tooling (test runner). Production deployment uploads `index.html`, `css/`, `js/`. `node_modules/` and `package.json` are not deployed.
 - No bundling, no transpilation. The `js/` tree is what the browser loads verbatim.
@@ -403,6 +407,14 @@ c8 with `--include=js/**` and `--exclude=js/tests/**`. Target: **100% branch cov
 60. `recorderPanel.js`; Generation diagnostics additions; `dev.css`
 61. Integration, a11y, and performance tests
 
+**Phase 15 — Hamburger Menu and Control Consolidation (V4)** (see `aspec-hamburger-menu.md` §15)
+62. `foreground.startNew` `onOutcome`; `ui/requestFocus.js`
+63. `themes.js` `THEME_OPTIONS`/`currentTheme`; `handedness.js` `toggleHandedness`; `dialog.js` `beforeOpen`
+64. `ui/stats.js` → Statistics dialog; `ui/share.js` → `share()`; `ui/menu.js` + `css/menu.css`
+65. `controls.js` next-game cluster; `numpad.js` two-column tool block; `index.html`, `base.css` grid layout, focus-ring CSS (R14, R15)
+66. `main.js` wiring; `keyboard.js` grid-container arrow focus
+67. Test updates (removed action row, stats panel, theme select, hand switch, toolbar role), dev scripts, README
+
 **Milestone exits:**
 - Phase 2: solver correctly rates 100% of a curated 50-puzzle regression set at known difficulty.
 - Phase 3: `generateForTier` produces a correctly-rated puzzle for all five tiers within budget.
@@ -492,4 +504,5 @@ All other fspec and vspec requirements map cleanly onto this plan.
 | `aspec-left-hand.md` | V4 left-hand layout — `<html data-hand>`, `ui/handedness.js`, head-script extension, CSS column swap, header switch | Implementor (Phase 12), Reviewer, QE |
 | `aspec-puzzle-sharing.md` | V4 puzzle loading and sharing — the Unrated tier, the single loader (codec → worker → `puzzleLoader`), load protocol, statistics gating, Share UI, notice, link handling | Implementor (Phase 13), Reviewer, QE |
 | `aspec-dev-mode.md` | V4 developer mode — flag, lazy loading, grid decorator seam, `inspect.js`, `devPanel.js`, generation diagnostics data | Implementor (Phase 13), Reviewer, QE |
+| `aspec-hamburger-menu.md` | V4 hamburger menu and control consolidation — `ui/menu.js` (roving focus, type-ahead, shortcut suppression), Statistics dialog, next-game cluster, number pad regrouping, request-end focus policy (`ui/requestFocus.js`), grid/Coffee focus rings, test impact | Implementor (Phase 15), Reviewer, QE |
 | `aspec-debug-instrumentation.md` | V4 debug instrumentation — dispatch tap, session recorder and IndexedDB store, session document format, headless replay and divergence report, `window.sudokuDev`, seeded generation, logging and error capture, regression-fixture helper | Implementor (Phase 14), Reviewer, QE |

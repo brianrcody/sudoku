@@ -19,6 +19,8 @@ const UI_MODULES = [
   '/js/ui/keyboard.js',
   '/js/ui/notice.js',
   '/js/ui/share.js',
+  '/js/ui/menu.js',
+  '/js/ui/requestFocus.js',
 ];
 
 // Forbidden import patterns: any import from ../game/ or ../providers/ (relative paths).
@@ -48,7 +50,8 @@ describe('arch: developer tooling is only ever imported lazily', () => {
     '/js/util/events.js', '/js/persist/storage.js', '/js/util/clipboard.js', '/js/game/statistics.js',
     '/js/providers/cookieStatsStore.js', '/js/providers/clientGenProvider.js', '/js/ui/srLive.js',
     '/js/ui/dialog.js', '/js/ui/coach.js', '/js/generator/pipeline.js', '/js/generator/loadPuzzle.js',
-    '/js/worker/protocol.js', '/js/worker/generator.worker.js', '/js/game/foreground.js'];
+    '/js/worker/protocol.js', '/js/worker/generator.worker.js', '/js/game/foreground.js',
+    '/js/ui/menu.js', '/js/ui/requestFocus.js'];
   const STATIC_DEV_IMPORT =
     /^\s*import\s+(?:[^;'"]*\sfrom\s+)?['"][^'"]*\/dev\/(?!devMode\.js['"])[^'"]*['"]/m;
 
