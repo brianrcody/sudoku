@@ -1,10 +1,8 @@
 /**
  * @fileoverview System tests (SYS1–SYS10; HMS1–HMS2, tspec-hamburger-menu §3.2).
  *
- * SYS1: Full Kiddie solve is skipped with a documented reason — puzzle seeds
- * are not controllable from outside the iframe, so the puzzle content is
- * non-deterministic. The GF1 test in game-flows.test.js covers a programmatic
- * full-solve using the exposed game state, which is the practical equivalent.
+ * SYS1: Full Kiddie solve. Generation is not seeded; the test solves whatever
+ * Kiddie puzzle arrives, using the solution in the exposed game state.
  *
  * SYS3: Expert generation perf gate — verified by loading the app with
  * a DM difficulty pre-set and measuring time to puzzle load.
@@ -12,6 +10,7 @@
 
 import {
   createApp, waitFor, waitForPuzzle as waitForAppPuzzle, appFrame, gsOf, enter,
+  solveAll, readStats, STATE_KEY, DIFF_KEY,
 } from './_app.js';
 
 async function waitForPuzzle(iframe, timeoutMs = 12000) {
@@ -50,13 +49,27 @@ describe('system tests', () => {
     iframe = null;
   });
 
-  // SYS1: Full solve
-  // DOCUMENTED SKIP: Puzzle seeds are not externally controllable; we cannot
-  // guarantee a specific Kiddie puzzle loads. The equivalent functionality is
-  // covered by GF1 (game-flows.test.js) which uses the exposed game state to
-  // programmatically solve whatever puzzle the app loads.
-  it('SYS1: full Kiddie solve — covered by GF1 (seed not externally controllable)', function () {
-    this.skip();
+  // SYS1: Cold start → select Kiddie → solve → win. Any generated Kiddie puzzle
+  // will do: the solution comes from the exposed state, so no seed control is needed.
+  it('SYS1: cold start, select Kiddie, solve, win; stats gain one attempt and one win', async function () {
+    this.timeout(30000);
+    localStorage.removeItem(STATE_KEY);
+    localStorage.setItem(DIFF_KEY, JSON.stringify('easy'));
+    const t0 = performance.now();
+
+    iframe = createApp();
+    await waitForAppPuzzle(iframe);
+    const before = readStats(iframe).Kiddie;
+
+    const select = iframe.contentDocument.getElementById('difficulty-select');
+    select.value = 'kiddie';
+    select.dispatchEvent(new iframe.contentWindow.Event('change'));
+    await waitFor(() => gsOf(iframe).getState().puzzle.difficulty === 'kiddie', 20000, 'Kiddie puzzle');
+
+    solveAll(iframe);
+    expect(gsOf(iframe).getState().won).to.be.true;
+    expect(performance.now() - t0).to.be.below(10000);
+    expect(readStats(iframe).Kiddie).to.deep.equal({ attempted: before.attempted + 1, won: before.won + 1 });
   });
 
   // SYS2: Resume after reload mid-game continues cleanly

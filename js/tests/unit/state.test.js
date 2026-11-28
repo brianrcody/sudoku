@@ -1222,41 +1222,52 @@ describe('game/state.js', () => {
       expect(gs.getState().hintsRemaining).to.equal(initialHints);
     });
 
-    // S71: UNDO ends coach session via direct null
-    it('S71: UNDO sets coachSession=null and emits coachSession + undoSnapshot in changed', () => {
+    // S71: UNDO ends coach session via direct null (also covers tspec-coach SS17)
+    it('S71: UNDO sets coachSession=null, restores post-auto-reveal pencil, emits coachSession + undoSnapshot', () => {
       loadPuzzle(gs, makeEasyPuzzle());
 
-      // Build a minimal COACH_START result (placement, no auto-reveal).
+      // Minimal rank-4 elimination result with auto-reveal, so the session writes
+      // pencil marks that the pen entry then disturbs.
       const coachResult = {
-        type: 'placement',
-        technique: 'Naked Single',
-        rank: 1,
-        digits: [3],
+        type: 'elimination',
+        technique: 'Naked Pair',
+        rank: 4,
+        digits: [1, 2],
         roles: {
-          target: 1,
-          cause: [],
-          elimTarget: [],
+          target: null,
+          cause: [2, 3],
+          elimTarget: [4],
           unitMember: [],
           scA: [],
           scB: [],
         },
-        unit: null,
+        unit: { type: 'row', index: 0 },
         arrows: [],
-        eliminations: [],
-        autoReveal: { required: false, cells: [] },
-        supportingText: 'Only 3 can go here.',
+        eliminations: [{ cellIndex: 4, digit: 1 }],
+        autoReveal: {
+          required: true,
+          cells: [
+            { cellIndex: 2, candidates: 0b011 },
+            { cellIndex: 3, candidates: 0b011 },
+            { cellIndex: 4, candidates: 0b111 },
+          ],
+        },
+        supportingText: 'These two cells must contain *1* and *2*.',
         complexity: { acknowledged: false, note: null, endpoints: null },
       };
 
       gs.dispatch({ type: 'COACH_START', result: coachResult });
       expect(gs.getState().coachSession).to.not.be.null;
+      const revealedPencil = Array.from(gs.getState().pencil);
+      expect(revealedPencil[2]).to.equal(0b011);
 
       // PEN_ENTER to create a snapshot while coach session is active.
       select(gs, 2);
       gs.dispatch({ type: 'PEN_ENTER', digit: 5 });
       expect(gs.getState().undoSnapshot).to.not.be.null;
+      expect(gs.getState().pencil[2]).to.equal(0);
 
-      // UNDO — should null coachSession and emit both keys.
+      // UNDO — should null coachSession, restore pencil, and emit both keys.
       let lastChanged = null;
       const unsub = gs.on('changed', ({ changed }) => { lastChanged = changed; });
       gs.dispatch({ type: 'UNDO' });
@@ -1264,6 +1275,7 @@ describe('game/state.js', () => {
 
       expect(gs.getState().coachSession).to.be.null;
       expect(gs.getState().undoSnapshot).to.be.null;
+      expect(Array.from(gs.getState().pencil)).to.deep.equal(revealedPencil);
       expect(lastChanged).to.not.be.null;
       expect(lastChanged.has('coachSession')).to.be.true;
       expect(lastChanged.has('undoSnapshot')).to.be.true;

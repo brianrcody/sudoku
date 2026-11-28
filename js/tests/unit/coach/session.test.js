@@ -1425,9 +1425,7 @@ describe('SS16: ON_COMPLETION_EVALUATE natural win path via PEN_ENTER', () => {
   });
 });
 
-describe('SS17: UNDO clears coachSession — deferred', () => {
-  it.skip('SS17: UNDO clears coachSession — deferred to tspec-undo S71', () => {});
-});
+// SS17 (UNDO clears coachSession, reverts pencil) is covered by S71 in state.test.js.
 
 describe('SS18: ERASE_ALL_PENCIL ends session', () => {
   it('SS18: ERASE_ALL_PENCIL ends session', () => {

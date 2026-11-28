@@ -664,7 +664,7 @@ XYC1 length-4 chain; XYC2 length-6 chain; XYC3 non-fire; AIC1 short AIC; AIC2 lo
 
 | # | Test | Type | Covers | Input | Expected |
 |---|---|---|---|---|---|
-| SYS1 | Cold start → select difficulty → New Puzzle → solve → win | S | Full Kiddie happy path | deterministic seed | win in <10 s total, stats +1 attempt +1 won |
+| SYS1 | Cold start → select difficulty → New Puzzle → solve → win | S | Full Kiddie happy path | any generated Kiddie puzzle (solved from the exposed solution; no seed needed) | win in <10 s total, stats +1 attempt +1 won |
 | SYS2 | Resume after reload mid-game continues cleanly | S | Resume flow | enter+reload+continue | state preserved, solve completes |
 | SYS3 | Death March cold-start completes within 5 s budget | S | Perf gate | deterministic seed | <5 s, puzzle delivered |
 | SYS4 | Theme switch across all 5 themes preserves puzzle state | S | Theme extensibility | cycle themes mid-game | no state loss, no flicker |
